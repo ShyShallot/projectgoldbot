@@ -1,0 +1,37 @@
+const Discord = require('discord.js');
+const config = require('../config.json');
+const fs = require('fs');
+module.exports = {
+    name: 'automsgT',
+    description: 'Toggle the Automated Message for when some fuck asks for beta release',
+    execute(message, args, bot){
+      let modRole = message.guild.roles.cache.find(r => r.name === "PG Member");
+      if (message.member.roles.cache.some(role => role.name === modRole)){
+        var data = fs.readFileSync('./automatedmessagestatus.json', 'utf-8');
+        var state = JSON.parse(data);
+        console.log(state.state);
+        if (state.state == 1 ){
+          var stateW = {
+            state: "0"
+          }
+        } else {
+          var stateW = {
+            state: "1"
+          }
+        }
+        if (stateW){
+          var stateJS = JSON.stringify(stateW)
+          fs.writeFile('./automatedmessagestatus.json', stateJS, err => {
+            if (err) {
+                console.log('Error writing file', err)
+            } else {
+                console.log('Successfully wrote file')
+            }
+          })
+          var data = fs.readFileSync('./automatedmessagestatus.json', 'utf-8');
+          var state = JSON.parse(data);
+          message.channel.send("Automated Message Toggled. Current State: " + state.state.toString())
+        }
+      }
+  }
+}

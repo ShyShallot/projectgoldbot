@@ -1,0 +1,18 @@
+{
+  "name": "projectgoldbot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "mainbotfile.js",
+  "dependencies": {
+    "@discordjs/rest": "0.1.0-canary.0",
+    "discord-api-types": "^0.22.0",
+    "discord.js": "^13.1.0",
+    "unb-api": "^1.2.3"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
