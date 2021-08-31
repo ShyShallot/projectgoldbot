@@ -2,6 +2,7 @@ const Discord = require('discord.js');
 const config = require('../config.json');
 const fs = require('fs');
 module.exports = {
+    // this shit is a mess
     name: 'setminbet',
     description: 'set the minimum bet',
     execute(message, args, bot){

@@ -48,30 +48,30 @@ bot.on('guildMemberRemove', member => { // When someone leaves the server
 
 bot.on('error', console.error); // prevent bot from crashing and log error to console
 bot.on('messageCreate', (message) =>{ // when someone sends a message
-    if (message.author.bot){
+    if (message.author.bot){ // if the message is sent by a bot don't even bother
         return;
     }
-    const args = message.content.slice(config.prefix.length).split(/ +/g); // basic argument by spliting a message by spaces
+    const args = message.content.slice(config.prefix.length).split(/ +/g); // basic argument by spliting a message by spaces, with the first argument given is args[0]
     const command = args.shift().toLowerCase(); 
     const eargs = message.content.slice(config.econprefix.length).split(/ +/g);
     const ecommand = eargs.shift().toLowerCase();
-    let modRole = message.guild.roles.cache.find(r => r.name === "PG Member");
+    let modRole = message.guild.roles.cache.find(r => r.name === "PG Member"); // check for a mod role, set this to the name of your servers admin role
     console.log(command);
     console.log(ecommand);
     AutomatedMessage(message);
-    if (message.content.startsWith(config.econprefix)) {
+    if (message.content.startsWith(config.econprefix)) { // this is to extend UnbelievaBoat's functionality
         if (ecommand === "coinflip"){
             bot.commands.get("coinflip").execute(message, args, bot);
         }
         if (ecommand === "raffle"){
             bot.commands.get("jackpot").execute(message, args, bot, 0);
         }
-        if (ecommand === "forceraffle" && message.member.roles.cache.some(role => role.name === modRole)){
+        if (ecommand === "forceraffle" && message.member.roles.cache.some(role => role.name === modRole)){ // mod only command
             Jackpot(1);
             message.channel.send(`Forcing Raffle Status`)
         }
     }
-    if (!message.content.startsWith(config.prefix) || message.author.bot){ 
+    if (!message.content.startsWith(config.prefix) || message.author.bot){ // if the message doesn't start with our prefix don't bother
         return;
     }
 
@@ -94,7 +94,7 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
 });
 bot.login(config.token);
 
-function AutomatedMessage(message) {
+function AutomatedMessage(message) { // this is to keep annoying as people from asking annoying questions you can remove this or use it as a base for automoding 
     let modRole = message.guild.roles.cache.find(r => r.name === "PG Member");
     const automessge = require(`./automatedmessagestatus.json`);
     if (automessge.state == "1"){
@@ -112,58 +112,58 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function Jackpot(forced) { // Changed to a raffle but am too lazy to update names -- Dyl 8/28/2021 
+async function Jackpot(forced) { // Changed to a raffle but am too lazy to update names -- Dyl 8/28/2021 also this function is a janky mess
     console.log(`Checking For Jackpot Status`);
-    var jackpotData = UpdateJackpotData();
+    var jackpotData = UpdateJackpotData(); // define jackpotData which is an array
     console.log(jackpotData);
     var runLoop = 1;
-    var [day, hour] = UpdateDate();
+    var [day, hour] = UpdateDate(); // set a var day and hour from the return from UpdateDate()
     console.log(day, hour);
-    while (runLoop == 1) {
-        [day, hour] = UpdateDate();
+    while (runLoop == 1) { // a loop function
+        [day, hour] = UpdateDate(); // don't redefine the var but update it
         console.log(`Day and Hour: ${day}, ${hour}`);
-        if (forced == 1 || RaffleValid(jackpotData, day)) {
-            if (jackpotData.raffleactive == 0){
+        if (forced == 1 || RaffleValid(jackpotData, day)) { // if the Jackpot function was forced or the Raffle is Valid to start
+            if (jackpotData.raffleactive == 0){ // if a raffle is not active
                 console.log(hour, day);
                 console.log(`Raffle Not Active Might Start One`);
-                if ((forced == 1) && jackpotData.raffleactive == 0 || hour == 12 && jackpotData.raffleactive == 0) {
+                if ((forced == 1) && jackpotData.raffleactive == 0 || hour == 12 && jackpotData.raffleactive == 0) { // the Jackpot function was forced and their is no raffle active OR its 12pm and their is no raffle active
                     console.log(`Starting Jackpot`);
-                    bot.commands.get("jackpot").execute(null, null, bot, 1);
-                    await sleep(20000);
-                } else {
+                    bot.commands.get("jackpot").execute(null, null, bot, 1); // run jackpot.js with a state of 1
+                    await sleep(20000); // wait 20 seconds
+                } else { // if neither of those conditions is true
                     await sleep(20000);
                 }
-            } else {
+            } else { // else if there is a raffle active
                 jackpotData = UpdateJackpotData();
                 console.log(`Raffle Currently Active`);
                 console.log(hour, day);
-                if ((forced == 1) && jackpotData.raffleactive == 1 || hour >= 22 && jackpotData.raffleactive == 1) {
+                if ((forced == 1) && jackpotData.raffleactive == 1 || hour >= 22 && jackpotData.raffleactive == 1) { // the Jackpot function was forced and their is a raffle active OR its 10pm and their is a raffle active
                     console.log('Stop Jackpot');
-                    bot.commands.get("jackpot").execute(null, null, bot, 0);
+                    bot.commands.get("jackpot").execute(null, null, bot, 0); // run jackpot.js with a state of 0, telling it to stop
                     await sleep(20000);
                 } else {
                     await sleep(20000);
                 }
             }
         } else {
-            await sleep(20000);
+            await sleep(20000); // the raffle is not valid or it wasn't forced wait 20 seconds, as you dont want this running every tick
         }
-        jackpotData = UpdateJackpotData();
-        if (forced == 1 ) {
+        jackpotData = UpdateJackpotData(); // update jackpotData to constatly check if a raffle is active or not
+        if (forced == 1 ) { // because the forceraffle function runs the function again and creates essenatilly another instance of it, if the jackpot function was forced stop it, this does not interupt the naturally ran jackpot function
             console.log(`Stopping Forced Raffle Run`);
             return;
         }
-        await sleep(20000);
+        await sleep(20000); // wait 20 seconds to keep this from running every possible tick
     }
 }
 
-function UpdateJackpotData(){
+function UpdateJackpotData(){ // update the jackpot data array
     jackpot = fs.readFileSync(`jackpot.json`, 'utf-8');
     data = JSON.parse(jackpot);
     return data;
 }
 
-function UpdateDate(){
+function UpdateDate(){ // update the date
     var date = new Date();
     var hour = date.getHours();
     var day = date.getDay();
@@ -171,7 +171,7 @@ function UpdateDate(){
     return [day, hour];
 }
 
-function RaffleValid(json, day) {
+function RaffleValid(json, day) { // a simple function that checks if the current day is equal to the last day found in jackpot.json
     if (!(json.lastraffleday == day)) {
         console.log(`Raffle is allowed to start. ${json.lastraffleday}, ${day}`);
         return true;
