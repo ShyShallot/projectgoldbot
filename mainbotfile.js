@@ -6,6 +6,7 @@ const welcome = require('./welcomemessages.json'); // Welcome Messages
 const fs = require('fs'); // File System for JS
 const talkedRecently = new Set(); // unused for cooldown
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js')); // read our commands folder 
+const pglibrary = require("./libraryfunctions.js");
 
 bot.commands = new Map(); // New Array for our commands
 bot.on('ready', () => { // when the bot has logged in and is ready
@@ -16,7 +17,7 @@ bot.on('ready', () => { // when the bot has logged in and is ready
       const command = require(`./commands/${file}`);
       bot.commands.set(command.name, command); // add our commands to our array
     }
-    Jackpot(0); // Init Raffle
+    //Economy() // handle our encomy functions for stuff that has to calculate every so often
 });
 
 
@@ -70,6 +71,9 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
             Jackpot(1);
             message.channel.send(`Forcing Raffle Status`)
         }
+        if (ecommand === "stocks") {
+            bot.commands.get("stocks").execute(message, args, bot)
+        }
     }
     if (!message.content.startsWith(config.prefix) || message.author.bot){ // if the message doesn't start with our prefix don't bother
         return;
@@ -108,58 +112,53 @@ function AutomatedMessage(message) { // this is to keep annoying as people from 
     }
 }
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 async function Jackpot(forced) { // Changed to a raffle but am too lazy to update names -- Dyl 8/28/2021 also this function is a janky mess
     console.log(`Checking For Jackpot Status`);
     var jackpotData = UpdateJackpotData(); // define jackpotData which is an array
     console.log(jackpotData);
-    var runLoop = 1;
     var [day, hour] = UpdateDate(); // set a var day and hour from the return from UpdateDate()
     console.log(day, hour);
-    while (runLoop == 1) { // a loop function
-        [day, hour] = UpdateDate(); // don't redefine the var but update it
-        console.log(`Day and Hour: ${day}, ${hour}`);
-        if (forced == 1 || RaffleValid(jackpotData, day)) { // if the Jackpot function was forced or the Raffle is Valid to start
-            if (jackpotData.raffleactive == 0){ // if a raffle is not active
-                console.log(hour, day);
-                console.log(`Raffle Not Active Might Start One`);
-                if ((forced == 1) && jackpotData.raffleactive == 0 || hour == 12 && jackpotData.raffleactive == 0) { // the Jackpot function was forced and their is no raffle active OR its 12pm and their is no raffle active
-                    console.log(`Starting Jackpot`);
-                    bot.commands.get("jackpot").execute(null, null, bot, 1); // run jackpot.js with a state of 1
-                    await sleep(20000); // wait 20 seconds
-                } else { // if neither of those conditions is true
-                    await sleep(20000);
-                }
-            } else { // else if there is a raffle active
-                jackpotData = UpdateJackpotData();
-                console.log(`Raffle Currently Active`);
-                console.log(hour, day);
-                if ((forced == 1) && jackpotData.raffleactive == 1 || hour >= 22 && jackpotData.raffleactive == 1) { // the Jackpot function was forced and their is a raffle active OR its 10pm and their is a raffle active
-                    console.log('Stop Jackpot');
-                    bot.commands.get("jackpot").execute(null, null, bot, 0); // run jackpot.js with a state of 0, telling it to stop
-                    await sleep(20000);
-                } else {
-                    await sleep(20000);
-                }
+    if (forced == 1 || RaffleValid(jackpotData, day)) { // if the Jackpot function was forced or the Raffle is Valid to start
+        if (jackpotData.raffleactive == 0){ // if a raffle is not active
+            console.log(hour, day);
+            console.log(`Raffle Not Active Might Start One`);
+            if ((forced == 1) && jackpotData.raffleactive == 0 || hour == 12 && jackpotData.raffleactive == 0) { // the Jackpot function was forced and their is no raffle active OR its 12pm and their is no raffle active
+                console.log(`Starting Jackpot`);
+                bot.commands.get("jackpot").execute(null, null, bot, 1); // run jackpot.js with a state of 1
+                //await sleep(20000); // wait 20 seconds
+            } else { // if neither of those conditions is true
+                //await sleep(20000);
             }
-        } else {
-            await sleep(20000); // the raffle is not valid or it wasn't forced wait 20 seconds, as you dont want this running every tick
+        } else { // else if there is a raffle active
+            jackpotData = UpdateJackpotData();
+            console.log(`Raffle Currently Active`);
+            console.log(hour, day);
+            if ((forced == 1) && jackpotData.raffleactive == 1 || hour >= 22 && jackpotData.raffleactive == 1) { // the Jackpot function was forced and their is a raffle active OR its 10pm and their is a raffle active
+                console.log('Stop Jackpot');
+                bot.commands.get("jackpot").execute(null, null, bot, 0); // run jackpot.js with a state of 0, telling it to stop
+                //await sleep(20000);
+            } else {
+                //await sleep(20000);
+            }
         }
-        jackpotData = UpdateJackpotData(); // update jackpotData to constatly check if a raffle is active or not
-        if (forced == 1 ) { // because the forceraffle function runs the function again and creates essenatilly another instance of it, if the jackpot function was forced stop it, this does not interupt the naturally ran jackpot function
-            console.log(`Stopping Forced Raffle Run`);
-            return;
-        }
-        await sleep(20000); // wait 20 seconds to keep this from running every possible tick
+    } 
+    jackpotData = UpdateJackpotData(); // update jackpotData to constatly check if a raffle is active or not
+    if (forced == 1 ) { // because the forceraffle function runs the function again and creates essenatilly another instance of it, if the jackpot function was forced stop it, this does not interupt the naturally ran jackpot function
+        console.log(`Stopping Forced Raffle Run`);
+        return;
     }
+    //await sleep(20000); // wait 20 seconds to keep this from running every possible tick
 }
 
 function UpdateJackpotData(){ // update the jackpot data array
     jackpot = fs.readFileSync(`jackpot.json`, 'utf-8');
     data = JSON.parse(jackpot);
+    return data;
+}
+
+function GrabStockMarketData(){
+    stockmarket = fs.readFileSync(`stockmarket.json`, 'utf-8');
+    data = JSON.parse(stockmarket);
     return data;
 }
 
@@ -178,5 +177,52 @@ function RaffleValid(json, day) { // a simple function that checks if the curren
     } else {
         console.log(`Raffle is not allowed to start. ${json.lastraffleday}, ${day}`);
         return false;
+    }
+}
+
+async function StockMarket() {
+    console.log("Starting Stock Market");
+    var stockmarket = GrabStockMarketData();
+    console.log(stockmarket);
+    if (stockmarket.stockmarketactive == 1) {
+        var finalstocks = [];
+        for (var i = 0, l = stockmarket.stocks.length; i < l; i++) {
+            console.log(`Running Calculations for Stock: ${stockmarket.stocks[i].name}`);
+            stocks = stockmarket.stocks[i];
+            console.log(stocks);
+            stock = stocks.name;
+            console.log(stock)
+            stockprice = stocks.price;
+            console.log(stockprice)
+            var possibleIncrements = [-500, -450, -400, -350, -300, -250, -200, -100, 0, 100, 200, 250, 300, 350, 400, 450, 500];
+            incrementamountIndex = pglibrary.getRandomInt(possibleIncrements.length); // pick a random number ranging from 0 to the amount of entry's in our startingAmounts array
+            console.log(incrementamountIndex);
+            incrementamount = possibleIncrements[incrementamountIndex]
+            console.log(incrementamount)
+            stockprice += incrementamount * Math.round((pglibrary.numDigits(stockprice) / 2));
+            if (stockprice <= -500) {
+                stockprice = -500;
+            }
+            console.log(stockprice);
+            owners = stocks.owners
+            var companystock = {"name": stock, "price": stockprice, "owners": owners};
+            console.log(`Stock for: ${stock}`);
+            console.log(companystock);
+            finalstocks.push(companystock); 
+            console.log(`Final Stock Array`);
+            console.log(finalstocks);
+        }
+        console.log(`Logging final stock array`);
+        console.log(finalstocks);
+        finaljsonfile = {"stocks": finalstocks, "userswithstocks": stockmarket.userswithstocks, "stockmarketactive": stockmarket.stockmarketactive}
+        pglibrary.WriteToJson(finaljsonfile, './stockmarket.json');
+    }
+}
+
+async function Economy(){ // Janky as fuck but works
+    while (true) {
+        await Jackpot(0); // Init Raffle
+        await StockMarket();
+        await pglibrary.sleep(1000);
     }
 }
