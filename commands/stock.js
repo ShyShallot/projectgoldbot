@@ -21,6 +21,7 @@ function BuyStock(user, args, message) {
     stockdata = JSON.parse(stockfile);
     console.log(stockdata);
     stock = FindStock(args[1]);
+    console.log(`Found Stock`);
     console.log(stock);
     if (typeof stock !== `undefined`) {
         if (args[2]) {
@@ -120,14 +121,14 @@ async function WriteToStocks(user, stock, amount) {
             for (y = 0, x = stockdata.stocks.length; y < x; y++) {
                 curStockIndex = y;
                 console.log(`Current Stock Index: ${curStockIndex}`);
-                console.log(`Current Stock`)
+                console.log(`Current Stock`);
                 curStock = stockdata.stocks[y];
                 console.log(curStock);
                 if (curStock.name == stock.name) {
                     newowner = stockdata.userswithstocks[curUserIndex];
                     if (!IsUserAlreadyInArray(curStock.owners, user.id)) {
                         console.log(`Adding New User to array`);
-                        addUser = {"name": curUser.name, "id": curUser.id}
+                        addUser = {"name": curUser.name, "id": curUser.id, "amount": amount}
                         curStock.owners.push(addUser);
                         console.log(curStock);
                     } 
@@ -151,7 +152,18 @@ async function WriteToStocks(user, stock, amount) {
 async function NewUser(user, stock, amount) {
     stockfile = fs.readFileSync(`./stockmarket.json`, 'utf-8');
     stockdata = JSON.parse(stockfile);
-    newuser = {"name": user.username, "id": user.id, "PJG": 0, "UNSC": 0, "CVN": 0, "avatar": user.displayAvatarURL};
+    usersStock = [];
+    for (i = 0, l = stockdata.stocks.length; i < l; i++) {
+        console.log(`Current Stock Name for New User: ${stockdata.stocks[i].name}`);
+        newStock = {"name": stockdata.stocks[i].name, "amount": 0};
+        console.log(`New Stock to add to user`);
+        console.log(newStock);
+        usersStock.push(newStock);
+    }
+    console.log(`Logging New Users Stock`);
+    console.log(usersStock);
+    await pglibrary.sleep(500);
+    newuser = {"name": user.username, "id": user.id, "stocks": usersStock, "avatar": user.displayAvatarURL};
     stockdata.userswithstocks.push(newuser);
     console.log(stockdata);
     pglibrary.WriteToJson(stockdata, `./stockmarket.json`);
@@ -164,21 +176,34 @@ async function UpdateUser(user, userindex, stock, amount) {
     stockdata = JSON.parse(stockfile);
     userdata = stockdata.userswithstocks[userindex];
     console.log(userdata);
-    if (stock.name == "PJG") {
-        console.log(`Stock is PJG`);
-        pjgnew = userdata.PJG + amount;
-        unscnew = userdata.UNSC;
-        cvnnew = userdata.CVN;
-    } else if (stock.name == "UNSC") {
-        pjgnew = userdata.PJG;
-        unscnew = userdata.UNSC + amount;
-        cvnnew = userdata.CVN;
-    } else if (stock.name == "CVN") {
-        pjgnew = userdata.PJG;
-        unscnew = userdata.UNSC;
-        cvnnew = userdata.CVN + amount;
+    console.log(`Requested Stock Data`);
+    console.log(stock);
+    var stockName = stock.name;
+    usersStock = [];
+    for (y = 0, x = stockdata.userswithstocks[userindex].stocks.length; y < x; y++) {
+        curUserStock = stockdata.userswithstocks[userindex].stocks[y];
+        console.log(`Currently Updating stock: ${curUserStock.name}`);
+        console.log(curUserStock);
+        console.log(`Requested stock name ${stockName}`);
+        if (curUserStock.name == stockName) {
+            console.log(`Adding to current requested stock`);
+            amount = curUserStock.amount + amount;
+            console.log(amount);
+            var stock = {"name": curUserStock.name, "amount": amount};
+            console.log(stock);
+            usersStock.push(stock);
+        } else {
+            console.log(`Current Stock does not match requested stock`);
+            var stock = {"name": curUserStock.name, "amount": curUserStock.amount};
+            console.log(stock);
+            usersStock.push(stock);
+        }
     }
-    updateduser = {"name": user.username, "id": user.id, "PJG": pjgnew, "UNSC": unscnew, "CVN": cvnnew, "avatar": user.displayAvatarURL};
+    console.log(`Logging Updated User Stocks`);
+    console.log(usersStock);
+    updateduser = {"name": user.username, "id": user.id, "stocks": usersStock, "avatar": user.displayAvatarURL};
+    console.log(`Updated User Array`);
+    console.log(updateduser);
     stockdata.userswithstocks.splice(userindex, 1);
     await pglibrary.sleep(100);
     stockdata.userswithstocks.push(updateduser);
