@@ -309,7 +309,7 @@ function ListStock(bot, args, message){
         .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot");
         stockdata.stocks.forEach(stock => {
             console.log(stock);
-            if(stock.owners.length > 0) {
+            if(stock.owners.length > 0 && IsUserAlreadyInArray(stock.owners, message.author.id)) {
                 console.log(stock.owners);
                 user = stock.owners.find(({name}) => name === message.author.username);
                 console.log(`User to find stock for: ${user.name}`);
