@@ -36,7 +36,7 @@ function BuyStock(user, args, message) {
             if (typeof args[2] === `number` && args[2] > 0) {
                 console.log(args[2]);
                 client.getUserBalance(message.guild.id, user.id).then(econuser => {
-                    if ((Math.abs(stock.price) * args[2]) <= econuser.cash) {
+                    if (stock.price * args[2] <= econuser.cash) {
                         client.editUserBalance(message.guild.id, user.id, {cash: -Math.abs(stock.price * args[2]), bank: 0});
                         GiveUserStock(user, stock, args[2]);
                         message.channel.send(`<@${message.author.id}>, you have bought ${args[2]} of ${stock.name} for ${stock.price * args[2]} points.`);
