@@ -137,7 +137,7 @@ function WritetoJson(content) {
     });
 }
 
-function JackpotEnd(bot){
+async function JackpotEnd(bot){
     var serverID = '631008739830267915'; // define our server ID
     var jackpot = fs.readFileSync(`./jackpot.json`, 'utf-8'); // read from the JSON file
     var data = JSON.parse(jackpot);
@@ -158,10 +158,10 @@ function JackpotEnd(bot){
                     .setColor("#2bff00")
                     .setDescription(`<@&${jackpotid}>, <@${winner.id}> has won the raffle and has gained ${gain} points!`)
                 bot.channels.cache.get(rafflechannel).send({ content: `<@&${jackpotid}>`, embeds: [embed] }); 
-                console.log("Resetting Jackpot.JSON")
-                ResetRaffleJson(data); // reset our jackpot.JSON for the next raffle to start
+                console.log("Resetting Jackpot.JSON");
             });
         });
+        await ResetRaffleJson(data); // reset our jackpot.JSON for the next raffle to start
     } else { // if not enough people entered the raffle end it with no winner
         const embed = new MessageEmbed()
                 .setTitle("Raffle")
@@ -169,8 +169,8 @@ function JackpotEnd(bot){
                 .setColor("#2bff00")
                 .setDescription(`<@&${jackpotid}>, Not enough people entered the Raffle in time, ending today's raffle.`)
                 bot.channels.cache.get(rafflechannel).send({ content: `<@&${jackpotid}>`, embeds: [embed] });
-                console.log("Resetting Jackpot.JSON")
-                ResetRaffleJson(data);
+                console.log("Resetting Jackpot.JSON");
+        await ResetRaffleJson(data);
     }
 }
 
@@ -178,16 +178,17 @@ function getRandomInt(max) {
     return Math.floor(Math.random() * max);
 }
 
-function ResetRaffleJson(data) {
+async function ResetRaffleJson(data) {
     var jsonupdate = {raffleactive: 0, rafflepot: 0, lastraffleday: SetLastRaffleDay(data), users: []}; // empty and reset our json file
     var JSONIFY = JSON.stringify(jsonupdate); // turn our array into a json file format and write to it
     console.log(JSONIFY)
-    fs.writeFile("./jackpot.json", JSON.stringify(jsonupdate), 'utf8', function(err){
+    fs.writeFileSync("./jackpot.json", JSON.stringify(jsonupdate), 'utf8', function(err){
         if(err){
           return console.log(err);
         }
         console.log("The File was saved");
     });
+    return true;
 }
 
 function SetLastRaffleDay(data) {

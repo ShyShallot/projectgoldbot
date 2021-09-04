@@ -125,7 +125,7 @@ async function Jackpot(forced) { // Changed to a raffle but am too lazy to updat
             console.log(`Raffle Not Active Might Start One`);
             if ((forced == 1) && jackpotData.raffleactive == 0 || hour == 12 && jackpotData.raffleactive == 0) { // the Jackpot function was forced and their is no raffle active OR its 12pm and their is no raffle active
                 console.log(`Starting Jackpot`);
-                bot.commands.get("jackpot").execute(null, null, bot, 1); // run jackpot.js with a state of 1
+                await bot.commands.get("jackpot").execute(null, null, bot, 1); // run jackpot.js with a state of 1
                 //await sleep(20000); // wait 20 seconds
             } else { // if neither of those conditions is true
                 //await sleep(20000);
@@ -136,7 +136,7 @@ async function Jackpot(forced) { // Changed to a raffle but am too lazy to updat
             console.log(hour, day);
             if ((forced == 1) && jackpotData.raffleactive == 1 || hour >= 22 && jackpotData.raffleactive == 1) { // the Jackpot function was forced and their is a raffle active OR its 10pm and their is a raffle active
                 console.log('Stop Jackpot');
-                bot.commands.get("jackpot").execute(null, null, bot, 0); // run jackpot.js with a state of 0, telling it to stop
+                await bot.commands.get("jackpot").execute(null, null, bot, 0); // run jackpot.js with a state of 0, telling it to stop
                 //await sleep(20000);
             } else {
                 //await sleep(20000);
