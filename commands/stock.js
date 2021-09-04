@@ -14,6 +14,8 @@ module.exports = {
             BuyStock(message.author, args, message);
         } else if (args[0] == "sell") {
             SellStock(message.author, args, message);
+        } else if (args[0] == "list") {
+            ListStock(bot, args, message);
         }
     }
 }
@@ -288,4 +290,19 @@ function UserHasEnoughStocks(user, stock, amount) {
             }
         }
     }
+}
+
+function ListStock(bot, args, message){
+    stockfile = fs.readFileSync(`./stockmarket.json`, 'utf-8');
+    stockdata = JSON.parse(stockfile);
+    let embed = new MessageEmbed()
+        .setTitle(`Stock Information`)
+        .setAuthor(bot.user.username, bot.user.displayAvatarURL)
+        .setColor(`#87a9ff`)
+        .setDescription("Current Stock Information, Be Mindful this information gets updated Every 5 seconds.")
+        .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot");
+        stockdata.stocks.forEach(stock => {
+            embed.addField(stock.name, `Price: ${stock.price.toString()}`);
+        });
+    message.channel.send({content: `<@${message.author.id}>`, embeds: [embed]});
 }

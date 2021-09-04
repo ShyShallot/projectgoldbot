@@ -1,4 +1,4 @@
-const { Client, Intents, MessageEmbed } = require('discord.js'); // Setup our basic stuff
+const { Client, Intents, MessageEmbed, MessageAttachment } = require('discord.js'); // Setup our basic stuff
 const bot = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MEMBERS] }); // If events are not triggering check intents list and add it to this one search it to find it
 const config = require('./config.json'); // basic load of config file
 const game = require('./game.json'); // Game Status
@@ -7,6 +7,7 @@ const fs = require('fs'); // File System for JS
 const talkedRecently = new Set(); // unused for cooldown
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js')); // read our commands folder 
 const pglibrary = require("./libraryfunctions.js");
+const stock = require('./commands/stock');
 
 bot.commands = new Map(); // New Array for our commands
 bot.on('ready', () => { // when the bot has logged in and is ready
@@ -17,7 +18,7 @@ bot.on('ready', () => { // when the bot has logged in and is ready
       const command = require(`./commands/${file}`);
       bot.commands.set(command.name, command); // add our commands to our array
     }
-    //Economy() // handle our encomy functions for stuff that has to calculate every so often
+    Economy() // handle our encomy functions for stuff that has to calculate every so often
 });
 
 
@@ -184,28 +185,37 @@ async function StockMarket() {
     console.log("Starting Stock Market");
     var stockmarket = GrabStockMarketData();
     console.log(stockmarket);
-    if (stockmarket.stockmarketactive == 1) {
+    if (stockmarket.stockmarketactive == 1 ) {
         var finalstocks = [];
         for (var i = 0, l = stockmarket.stocks.length; i < l; i++) {
             console.log(`Running Calculations for Stock: ${stockmarket.stocks[i].name}`);
             stocks = stockmarket.stocks[i];
             console.log(stocks);
-            stock = stocks.name;
-            console.log(stock)
+            stockName = stocks.name;
+            console.log(stockName)
             stockprice = stocks.price;
             console.log(stockprice)
             var possibleIncrements = [-500, -450, -400, -350, -300, -250, -200, -100, 0, 100, 200, 250, 300, 350, 400, 450, 500];
             incrementamountIndex = pglibrary.getRandomInt(possibleIncrements.length); // pick a random number ranging from 0 to the amount of entry's in our startingAmounts array
             console.log(incrementamountIndex);
-            incrementamount = possibleIncrements[incrementamountIndex]
-            console.log(incrementamount)
-            stockprice += incrementamount * Math.round((pglibrary.numDigits(stockprice) / 2));
-            if (stockprice <= -500) {
-                stockprice = -500;
+            incrementamount = possibleIncrements[incrementamountIndex];
+            console.log(incrementamount);
+            owners = stocks.owners.length;
+            if (owners <= 0){
+                owners = 1
+            } else if (owners >= 1 && incrementamount >= 0){
+                incrementamount += Math.round(incrementamount * -1 * 0.65);
+                console.log(`New Increment Amount: ${incrementamount}`);
             }
-            console.log(stockprice);
-            owners = stocks.owners
-            var companystock = {"name": stock, "price": stockprice, "owners": owners};
+            newstockprice = stockprice + (incrementamount * pglibrary.numDigits(stockprice) / 2 * owners);
+            console.log(`New Stock Price: ${newstockprice}`);
+            if (newstockprice <= -500) {
+                newstockprice = -500;
+            }
+            console.log(newstockprice);
+            owners = stocks.owners;
+            
+            var companystock = {"name": stockName, "price": newstockprice, "owners": owners};
             console.log(`Stock for: ${stock}`);
             console.log(companystock);
             finalstocks.push(companystock); 
@@ -223,6 +233,6 @@ async function Economy(){ // Janky as fuck but works
     while (true) {
         await Jackpot(0); // Init Raffle
         await StockMarket();
-        await pglibrary.sleep(1000);
+        await pglibrary.sleep(5000);
     }
 }
