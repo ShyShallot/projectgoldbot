@@ -5,7 +5,7 @@ const client = new Client(config.econtoken);
 const jackpotid = '875821312998793247' // same as below but for a role
 const rafflechannel = '844002249872113665'; // since this is used for one server we just define the channel we want to use by ID
 const fs = require('fs'); // File System for JS
-const pglibrary = require(`../libraryfunctions.js`);
+const pglibrary = require("../libraryfunctions.js");
 // This was a jackpot command but was changed to a raffle, this file handles the starting, ending and current raffle functions
 module.exports = {
     name: 'jackpot',
@@ -84,7 +84,7 @@ function UpdateJsonFile(state, bet, user) { // this function is a bit of a mess
     var totalpot = rafflepotT + bet; // add the given bet to our raffle pot
     console.log(`Total Bet ${totalpot}`);
     var jsonupdate = {raffleactive: state, rafflepot: totalpot, lastraffleday: data.lastraffleday, users: jsonuA}; // recreate our JSON file here so we can then write to the file
-    pglibrary.WritetoJson(jsonupdate, './jackpot.json') // run our custom WritetoJson function with the given Json'd format of our array
+    pglibrary.WriteToJson(jsonupdate, './jackpot.json') // run our custom WritetoJson function with the given Json'd format of our array
 }
 
 function StartJackpot(bot) {
