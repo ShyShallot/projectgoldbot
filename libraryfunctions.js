@@ -24,7 +24,7 @@ function getRandomInt(max) {
  */
 function WriteToJson(rawdata, location) {
     var final = JSON.stringify(rawdata);
-    fs.writeFile(location, final, function(err){
+    fs.writeFileSync(location, final, function(err){
         if(err){
           return console.log(err);
         }

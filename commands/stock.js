@@ -36,7 +36,7 @@ function BuyStock(user, args, message) {
             if (typeof args[2] === `number` && args[2] > 0) {
                 console.log(args[2]);
                 client.getUserBalance(message.guild.id, user.id).then(econuser => {
-                    if ((stock.price * args[2]) <= econuser.cash) {
+                    if ((Math.abs(stock.price) * args[2]) <= econuser.cash) {
                         client.editUserBalance(message.guild.id, user.id, {cash: -Math.abs(stock.price * args[2]), bank: 0});
                         GiveUserStock(user, stock, args[2]);
                         message.channel.send(`<@${message.author.id}>, you have bought ${args[2]} of ${stock.name} for ${stock.price * args[2]} points.`);
@@ -115,7 +115,7 @@ function GiveUserStock(user, stock, amount) {
         console.log(`User Array is empty`)
         NewUser(user, stock, amount);
     } else {
-        if(IsUserAlreadyInArray(stockdata.userswithstocks , user)) {
+        if(IsUserAlreadyInArray(stockdata.userswithstocks , user.id)) {
             console.log(`User is already in array`);
             WriteToStocks(user, stock, amount)
         } else {
@@ -129,18 +129,18 @@ function IsUserAlreadyInArray(array, userID){
     console.log(`Checking if ${userID} is in the array`);
     stockfile = fs.readFileSync(`./stockmarket.json`, 'utf-8');
     stockdata = JSON.parse(stockfile);
+    console.log(array);
     if (!(array.length == 0)) { // if the length of the Users object array in our original array is not empty
+        console.log(array.length);
         for (var i = 0, l = array.length; i < l; i++) { // initially i is set to 0, then l is set to the amount of entry's in data.users, and if I is less than L add 1 to I.
             curUser = array[i].id; // get the ID for the current user 
             console.log(curUser);
             if (userID == curUser) { // if the userID we want to check is equal to the curUser in the arrray return true
                 console.log(`User ${userID} is already in the array`);
                 return true;
-            } else { // if we cant find the user in the array return false
-                console.log(`User ${userID} is not already in the array`);
-                return false;
-            }
+            } 
         }
+        return false;
     } else {
         return false; // return false if the amount of entry's in the Users object array is empty
     }
@@ -155,10 +155,14 @@ async function WriteToStocks(user, stock, amount) {
     for (var i = 0, l = stockdata.userswithstocks.length; i < l; i++) {
         curUserIndex = i;
         console.log(`Current User Index: ${curUserIndex}`);
-        curUser = stockdata.userswithstocks[i];
+        var curUser = stockdata.userswithstocks[i];
+        var curUserName = curUser.name;
+        console.log(curUserName);
+        var curUserId = curUser.id;
+        console.log(curUserId);
         console.log(`Current User`);
         console.log(curUser);
-        if (curUser.id == user.id) {
+        if (curUserId == user.id) {
             for (y = 0, x = stockdata.stocks.length; y < x; y++) {
                 curStockIndex = y;
                 console.log(`Current Stock Index: ${curStockIndex}`);
@@ -169,7 +173,7 @@ async function WriteToStocks(user, stock, amount) {
                     newowner = stockdata.userswithstocks[curUserIndex];
                     if (!IsUserAlreadyInArray(curStock.owners, user.id)) {
                         console.log(`Adding New User to array`);
-                        addUser = {"name": curUser.name, "id": curUser.id, "amount": amount}
+                        addUser = {"name": curUserName, "id": curUserId, "amount": amount}
                         curStock.owners.push(addUser);
                         console.log(curStock);
                     } else {
@@ -304,7 +308,18 @@ function ListStock(bot, args, message){
         .setDescription("Current Stock Information, Be Mindful this information gets updated Every 5 seconds.")
         .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot");
         stockdata.stocks.forEach(stock => {
-            embed.addField(stock.name, `Price: ${stock.price.toString()}`);
+            console.log(stock);
+            if(stock.owners.length > 0) {
+                console.log(stock.owners);
+                user = stock.owners.find(({name}) => name === message.author.username);
+                console.log(`User to find stock for: ${user.name}`);
+                console.log(`The user owns ${user.amount} stock for ${stock.name}`);
+                userAmount = user.amount;
+            } else {
+                userAmount = 0;
+            }
+            embed.addField(stock.name, `Price: ${stock.price.toString()}, Amount you own: ${userAmount}`);
         });
     message.channel.send({content: `<@${message.author.id}>`, embeds: [embed]});
 }
+
