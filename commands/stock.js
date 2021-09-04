@@ -35,6 +35,9 @@ function BuyStock(user, args, message) {
             args[2] = parseInt(args[2]);
             if (typeof args[2] === `number` && args[2] > 0) {
                 console.log(args[2]);
+                if(stock.price < 0 && args[2] > 1) {
+                    args[2] = 1;
+                }
                 client.getUserBalance(message.guild.id, user.id).then(econuser => {
                     if (stock.price * args[2] <= econuser.cash) {
                         client.editUserBalance(message.guild.id, user.id, {cash: -Math.abs(stock.price * args[2]), bank: 0});
