@@ -37,7 +37,7 @@ function BuyStock(user, args, message) {
                 console.log(args[2]);
                 client.getUserBalance(message.guild.id, user.id).then(econuser => {
                     if ((stock.price * args[2]) <= econuser.cash) {
-                        //client.editUserBalance(message.guild.id, user.id, {cash: -stock.price * args[2], bank: 0});
+                        client.editUserBalance(message.guild.id, user.id, {cash: -stock.price * args[2], bank: 0});
                         GiveUserStock(user, stock, args[2]);
                         message.channel.send(`<@${message.author.id}>, you have bought ${args[2]} of ${stock.name} for ${stock.price * args[2]} points.`);
                     } else {
@@ -71,7 +71,7 @@ function SellStock(user, args, message) {
                 console.log(args[2]);
                 client.getUserBalance(message.guild.id, user.id).then(econuser => {
                     if (UserHasEnoughStocks(user, stock, args[2])) {
-                        //client.editUserBalance(message.guild.id, user.id, {cash: -stock.price * args[2], bank: 0});
+                        client.editUserBalance(message.guild.id, user.id, {cash: stock.price * args[2], bank: 0});
                         GiveUserStock(user, stock, args[2]);
                         message.channel.send(`<@${message.author.id}>, you have sold ${Math.abs(args[2])} of ${stock.name} for ${stock.price * Math.abs(args[2])} points.`);
                     } else {
