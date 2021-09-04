@@ -12,11 +12,14 @@ module.exports = {
         if (args[0] == "buy") {
             console.log(args);
             BuyStock(message.author, args, message);
+        } else if (args[0] == "sell") {
+            SellStock(message.author, args, message);
         }
     }
 }
 
 function BuyStock(user, args, message) {
+    console.log(`Buying Stock(s)`);
     stockfile = fs.readFileSync(`./stockmarket.json`, 'utf-8');
     stockdata = JSON.parse(stockfile);
     console.log(stockdata);
@@ -26,15 +29,49 @@ function BuyStock(user, args, message) {
     if (typeof stock !== `undefined`) {
         if (args[2]) {
             args[2] = parseInt(args[2]);
-            if (typeof args[2] === `number`) {
+            if (typeof args[2] === `number` && args[2] > 0) {
                 console.log(args[2]);
                 client.getUserBalance(message.guild.id, user.id).then(econuser => {
                     if ((stock.price * args[2]) <= econuser.cash) {
                         //client.editUserBalance(message.guild.id, user.id, {cash: -stock.price * args[2], bank: 0});
                         GiveUserStock(user, stock, args[2]);
-                        message.channel.send(`<@${message.author.id}>, you have bought ${args[2]} of ${stock.name}`);
+                        message.channel.send(`<@${message.author.id}>, you have bought ${args[2]} of ${stock.name} for ${stock.price * args[2]} points.`);
                     } else {
                         message.channel.send(`<@${message.author.id}>, you don't have enough money for that action.`);
+                    }
+                })
+            } else {
+                message.channel.send(`<@${user.id}>, the 3rd Argument provided is not a number`);
+            }
+        } else {
+            message.channel.send(`<@${user.id}>, No 3rd Argument was provided`);
+        }
+    } else {
+        message.channel.send(`<@${user.id}>, Could not find the requested stock.`)
+    }
+}
+
+function SellStock(user, args, message) {
+    console.log(`Selling Stock(s)`);
+    stockfile = fs.readFileSync(`./stockmarket.json`, 'utf-8');
+    stockdata = JSON.parse(stockfile);
+    console.log(stockdata);
+    stock = FindStock(args[1]);
+    console.log(`Found Stock`);
+    console.log(stock);
+    if (typeof stock !== `undefined`) {
+        if (args[2]) {
+            args[2] = parseInt(args[2]);
+            if (typeof args[2] === `number` && args[2] > 0) {
+                args[2] = args[2] * - 1;
+                console.log(args[2]);
+                client.getUserBalance(message.guild.id, user.id).then(econuser => {
+                    if (UserHasEnoughStocks(user, stock, args[2])) {
+                        //client.editUserBalance(message.guild.id, user.id, {cash: -stock.price * args[2], bank: 0});
+                        GiveUserStock(user, stock, args[2]);
+                        message.channel.send(`<@${message.author.id}>, you have sold ${Math.abs(args[2])} of ${stock.name} for ${stock.price * Math.abs(args[2])} points.`);
+                    } else {
+                        message.channel.send(`<@${message.author.id}>, you don't have enough stocks for that action.`);
                     }
                 })
             } else {
@@ -131,7 +168,19 @@ async function WriteToStocks(user, stock, amount) {
                         addUser = {"name": curUser.name, "id": curUser.id, "amount": amount}
                         curStock.owners.push(addUser);
                         console.log(curStock);
-                    } 
+                    } else {
+                        for (a = 0, b = curStock.owners.length; a < b; a++) {
+                            curOwner = curStock.owners[a];
+                            if (curOwner.id == user.id) {
+                                console.log(`Updating Current User in owners array`);
+                                addUser = {"name": curOwner.name, "id": curOwner.id, "amount": curOwner.amount + amount}
+                                curStock.owners.splice(a, 1);
+                                await pglibrary.sleep(500);
+                                curStock.owners.push(addUser);
+                                console.log(curStock);
+                            }
+                        }
+                    }
                     newstock = {"name": stock.name, "price": stock.price, "owners": curStock.owners};
                     console.log(`New Stock`);
                     console.log(newstock);
@@ -210,4 +259,33 @@ async function UpdateUser(user, userindex, stock, amount) {
     console.log(stockdata);
     pglibrary.WriteToJson(stockdata, `./stockmarket.json`);
     await pglibrary.sleep(500);
+}
+
+function UserHasEnoughStocks(user, stock, amount) {
+    console.log(`Checking if user ${user.username} has enough stocks`);
+    stockfile = fs.readFileSync(`./stockmarket.json`, 'utf-8');
+    stockdata = JSON.parse(stockfile);
+    stockName = stock.name;
+    amount =  Math.abs(amount);
+    console.log(`Amount to sell: ${amount}`)
+    for (i = 0, l = stockdata.userswithstocks.length; i < l; i++) {
+        usrIndex = i;
+        curUsr = stockdata.userswithstocks[usrIndex];
+        console.log(curUsr);
+        if (curUsr.id == user.id) {
+            for(stockA = 0, stocksIndex = curUsr.stocks.length; stockA < stocksIndex; stockA++ ) {
+                curStock = curUsr.stocks[stockA];
+                console.log(curStock);
+                if(curStock.name == stockName) {
+                    if(amount <= curStock.amount && curStock.amount > 0) {
+                        console.log(`User has enough stocks`)
+                        return true;
+                    } else {
+                        console.log(`User doesn't have enough stocks.`)
+                        return false;
+                    }
+                }
+            }
+        }
+    }
 }
