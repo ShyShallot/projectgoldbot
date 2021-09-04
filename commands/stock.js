@@ -16,6 +16,8 @@ module.exports = {
             SellStock(message.author, args, message);
         } else if (args[0] == "list") {
             ListStock(bot, args, message);
+        } else {
+            message.channel.send(`<@${message.author.id}>, please provide valid arguments of buy/sell/list.`);
         }
     }
 }
