@@ -72,7 +72,7 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
             Jackpot(1);
             message.channel.send(`Forcing Raffle Status`)
         }
-        if (ecommand === "stocks") {
+        if (ecommand === "stockstest") {
             bot.commands.get("stocks").execute(message, args, bot)
         }
     }
@@ -194,12 +194,19 @@ async function StockMarket() {
             stockName = stocks.name;
             console.log(stockName)
             stockprice = stocks.price;
-            console.log(stockprice)
-            var possibleIncrements = [-500, -450, -400, -350, -300, -250, -200, -100, 0, 100, 200, 250, 300, 350, 400, 450, 500];
+            console.log(stockprice);
+            var possibleIncrements= [0, 100, 200, 250, 300, 350, 400, 450, 500, 1000];
             incrementamountIndex = pglibrary.getRandomInt(possibleIncrements.length); // pick a random number ranging from 0 to the amount of entry's in our startingAmounts array
             console.log(incrementamountIndex);
-            incrementamount = possibleIncrements[incrementamountIndex];
+            var chance = Math.random();
+            console.log(chance);
+            if (chance <= 0.5) {
+                incrementamount = possibleIncrements[incrementamountIndex];
+            } else {
+                incrementamount = possibleIncrements[incrementamountIndex] * - 1;
+            }
             console.log(incrementamount);
+            
             owners = stocks.owners.length;
             if (owners <= 0){
                 owners = 1
@@ -209,13 +216,22 @@ async function StockMarket() {
             }
             newstockprice = stockprice + (incrementamount * pglibrary.numDigits(stockprice) / 2 * owners);
             console.log(`New Stock Price: ${newstockprice}`);
-            if (newstockprice <= -500) {
-                newstockprice = -500;
+            if (newstockprice < 0) {
+                newstockprice = 0;
             }
-            console.log(newstockprice);
+            if(owners >= 1) { // Market Cap
+                if (newstockprice > 10000000 / Math.round(owners * 0.75)) {
+                    newstockprice = Math.round(10000000 / Math.round(owners * 1.5));
+                    console.log(newstockprice);
+                }
+            } else {
+              if(newstockprice > 10000000) {
+                  newstockprice = 10000000;
+              }  
+            }
+            console.log(`Final Stock Price: ${Math.round(newstockprice)}`);
             owners = stocks.owners;
-            
-            var companystock = {"name": stockName, "price": newstockprice, "owners": owners};
+            var companystock = {"name": stockName, "price": Math.round(newstockprice), "owners": owners};
             console.log(`Stock for: ${stock}`);
             console.log(companystock);
             finalstocks.push(companystock); 
