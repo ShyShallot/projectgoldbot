@@ -72,7 +72,7 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
             Jackpot(1);
             message.channel.send(`Forcing Raffle Status`)
         }
-        if (ecommand === "stockstest") {
+        if (ecommand === "stocks") {
             bot.commands.get("stocks").execute(message, args, bot)
         }
     }
