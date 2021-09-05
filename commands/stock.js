@@ -159,6 +159,7 @@ async function WriteToStocks(user, stock, amount) {
         curUserIndex = i;
         console.log(`Current User Index: ${curUserIndex}`);
         var curUser = stockdata.userswithstocks[i];
+        console.log(curUser);
         var curUserName = curUser.name;
         console.log(curUserName);
         var curUserId = curUser.id;
@@ -184,6 +185,9 @@ async function WriteToStocks(user, stock, amount) {
                             curOwner = curStock.owners[a];
                             if (curOwner.id == user.id) {
                                 console.log(`Updating Current User in owners array`);
+                                if(curOwner.amount + amount < 0) {
+                                    amount = 0;
+                                }
                                 addUser = {"name": curOwner.name, "id": curOwner.id, "amount": curOwner.amount + amount}
                                 curStock.owners.splice(a, 1);
                                 await pglibrary.sleep(500);
@@ -202,6 +206,7 @@ async function WriteToStocks(user, stock, amount) {
                     pglibrary.WriteToJson(stockdata, `./stockmarket.json`);
                     await pglibrary.sleep(500);
                     UpdateUser(user, curUserIndex, stock, amount);
+                    return;
                 }
             }
         }
