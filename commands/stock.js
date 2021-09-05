@@ -43,12 +43,15 @@ function BuyStock(user, args, message) {
                 }
                 client.getUserBalance(message.guild.id, user.id).then(econuser => {
                     if (stock.price * args[2] <= econuser.cash) {
-                        stockprice = stock.price;
-                        finalprice = stockprice * args[2];
+                        var stockprice = stock.price;
+                        console.log(stockprice);
+                        var finalprice = stockprice * args[2];
+                        console.log(finalprice);
                         if (stockprice <= 0 ) {
-                            finalprice = 0
+                            console.log(`Points to remove is 0, continuing`);
+                        } else {
+                            client.editUserBalance(message.guild.id, user.id, {cash: finalprice, bank: 0});
                         }
-                        client.editUserBalance(message.guild.id, user.id, {cash: finalprice, bank: 0});
                         GiveUserStock(user, stock, args[2]);
                         message.channel.send(`<@${message.author.id}>, you have bought ${args[2]} of ${stock.name} for ${stock.price * args[2]} points.`);
                     } else {
@@ -86,12 +89,15 @@ function SellStock(user, args, message) {
                 console.log(negativeAmount)
                 client.getUserBalance(message.guild.id, user.id).then(econuser => {
                     if (UserHasEnoughStocks(user, stock, args[2])) {
-                        stockprice = stock.price;
-                        finalprice = stockprice * args[2];
+                        var stockprice = stock.price;
+                        console.log(stockprice);
+                        var finalprice = stockprice * args[2];
+                        console.log(finalprice);
                         if (stockprice <= 0 ) {
-                            finalprice = 0
+                            console.log(`Points to give is 0, continuing`);
+                        } else {
+                            client.editUserBalance(message.guild.id, user.id, {cash: finalprice, bank: 0});
                         }
-                        client.editUserBalance(message.guild.id, user.id, {cash: finalprice, bank: 0});
                         GiveUserStock(user, stock, negativeAmount);
                         message.channel.send(`<@${message.author.id}>, you have sold ${args[2]} of ${stock.name} for ${stock.price * args[2]} points.`);
                     } else {
