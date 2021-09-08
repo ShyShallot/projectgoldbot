@@ -1,1 +1,1 @@
-{"stocks":[{"name":"UNSC","price":2500,"owners":[]},{"name":"CVN","price":3500,"owners":[]},{"name":"PJG","price":2000,"owners":[]}],"userswithstocks":[],"stockmarketactive":1}
+{"stocks":[{"name":"UNSC","price":2000,"owners":[]},{"name":"CVN","price":2500,"owners":[]},{"name":"PJG","price":1,"owners":[]}],"stockmarketactive":1,"maxownedstocks":150,"lastupdatedday":1}

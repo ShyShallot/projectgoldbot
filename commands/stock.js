@@ -34,12 +34,19 @@ function BuyStock(user, args, message) {
         if (args[2]) {
             args[2] = parseInt(args[2]);
             if (typeof args[2] === `number` && args[2] > 0) {
-                console.log(args[2]);
-                if(stock.price < 0 && args[2] > 1) {
-                    args[2] = 1;
+                if (MaxUserStocks(user.id)) {
+                    message.channel.send(`<@${user.id}>, you own the max amount stocks, purchase did not go through`);
+                    return;
                 }
-                if (args[2] < 0) {
-                    args[2] = Math.abs(args[2]);
+                if (GrabUserInfo(user.id, stock)) {
+                    curUser = GrabUserInfo(user.id, stock);
+                    if (args[2] + curUser.amount > stockdata.maxownedstocks) {
+                        message.channel.send(`<@${user.id}>, The entered amount of stocks (${args[2]}) along with your currently owned stocks (${curUser.amount}) will go over the allowed amount of owned stocks which is ${stockdata.maxownedstocks}.`);
+                        return;
+                    }
+                } else if (args[2] > stockdata.maxownedstocks) {
+                    message.channel.send(`<@${user.id}>, you cannot buy over the max allowed amount of stocks which is ${stockdata.maxownedstocks}.`);
+                    return;
                 }
                 client.getUserBalance(message.guild.id, user.id).then(econuser => {
                     if (stock.price * args[2] <= econuser.cash) {
@@ -52,7 +59,7 @@ function BuyStock(user, args, message) {
                         } else {
                             client.editUserBalance(message.guild.id, user.id, {cash: finalprice, bank: 0});
                         }
-                        GiveUserStock(user, stock, args[2]);
+                        WriteToStocks(user, stock, args[2]);
                         message.channel.send(`<@${message.author.id}>, you have bought ${args[2]} of ${stock.name} for ${stock.price * args[2]} points.`);
                     } else {
                         message.channel.send(`<@${message.author.id}>, you don't have enough money for that action.`);
@@ -98,7 +105,7 @@ function SellStock(user, args, message) {
                         } else {
                             client.editUserBalance(message.guild.id, user.id, {cash: finalprice, bank: 0});
                         }
-                        GiveUserStock(user, stock, negativeAmount);
+                        WriteToStocks(user, stock, negativeAmount);
                         message.channel.send(`<@${message.author.id}>, you have sold ${args[2]} of ${stock.name} for ${stock.price * args[2]} points.`);
                     } else {
                         message.channel.send(`<@${message.author.id}>, you don't have enough stocks for that action.`);
@@ -134,22 +141,6 @@ function FindStock(requestedstock) {
     }
 }
 
-function GiveUserStock(user, stock, amount) {
-    stockfile = fs.readFileSync(`./stockmarket.json`, 'utf-8');
-    stockdata = JSON.parse(stockfile);
-    if (stockdata.userswithstocks.length == 0) {
-        console.log(`User Array is empty`)
-        NewUser(user, stock, amount);
-    } else {
-        if(IsUserAlreadyInArray(stockdata.userswithstocks , user.id)) {
-            console.log(`User is already in array`);
-            WriteToStocks(user, stock, amount)
-        } else {
-            console.log(`User Array is not empty but user is not in it`)
-            NewUser(user, stock, amount);
-        }
-    }
-}
 
 function IsUserAlreadyInArray(array, userID){
     console.log(`Checking if ${userID} is in the array`);
@@ -178,126 +169,46 @@ async function WriteToStocks(user, stock, amount) {
     stockdata = JSON.parse(stockfile);
     console.log(stockdata);
     console.log(user, stock, amount);
-    for (var i = 0, l = stockdata.userswithstocks.length; i < l; i++) {
-        curUserIndex = i;
-        console.log(`Current User Index: ${curUserIndex}`);
-        var curUser = stockdata.userswithstocks[i];
-        console.log(curUser);
-        var curUserName = curUser.name;
-        console.log(curUserName);
-        var curUserId = curUser.id;
-        console.log(curUserId);
-        console.log(`Current User`);
-        console.log(curUser);
-        if (curUserId == user.id) {
-            for (y = 0, x = stockdata.stocks.length; y < x; y++) {
-                curStockIndex = y;
-                console.log(`Current Stock Index: ${curStockIndex}`);
-                console.log(`Current Stock`);
-                curStock = stockdata.stocks[y];
+    for (y = 0, x = stockdata.stocks.length; y < x; y++) {
+        curStockIndex = y;
+        console.log(`Current Stock Index: ${curStockIndex}`);
+        console.log(`Current Stock`);
+        curStock = stockdata.stocks[y];
+        console.log(curStock);
+        if (curStock.name == stock.name) {
+            if (!IsUserAlreadyInArray(curStock.owners, user.id)) {
+                console.log(`Adding New User to array`);
+                addUser = {"name": user.username, "id": user.id, "amount": amount}
+                curStock.owners.push(addUser);
                 console.log(curStock);
-                if (curStock.name == stock.name) {
-                    newowner = stockdata.userswithstocks[curUserIndex];
-                    if (!IsUserAlreadyInArray(curStock.owners, user.id)) {
-                        console.log(`Adding New User to array`);
-                        addUser = {"name": curUserName, "id": curUserId, "amount": amount}
+            } else {
+                for (a = 0, b = curStock.owners.length; a < b; a++) {
+                    curOwner = curStock.owners[a];
+                    if (curOwner.id == user.id) {
+                        console.log(`Updating Current User in owners array`);
+                        if(curOwner.amount + amount < 0) {
+                            amount = 0;
+                        }
+                        addUser = {"name": curOwner.name, "id": curOwner.id, "amount": curOwner.amount + amount}
+                        curStock.owners.splice(a, 1);
+                        await pglibrary.sleep(500);
                         curStock.owners.push(addUser);
                         console.log(curStock);
-                    } else {
-                        for (a = 0, b = curStock.owners.length; a < b; a++) {
-                            curOwner = curStock.owners[a];
-                            if (curOwner.id == user.id) {
-                                console.log(`Updating Current User in owners array`);
-                                if(curOwner.amount + amount < 0) {
-                                    amount = 0;
-                                }
-                                addUser = {"name": curOwner.name, "id": curOwner.id, "amount": curOwner.amount + amount}
-                                curStock.owners.splice(a, 1);
-                                await pglibrary.sleep(500);
-                                curStock.owners.push(addUser);
-                                console.log(curStock);
-                            }
-                        }
                     }
-                    newstock = {"name": stock.name, "price": stock.price, "owners": curStock.owners};
-                    console.log(`New Stock`);
-                    console.log(newstock);
-                    stockdata.stocks.splice(curStockIndex, 1);
-                    stockdata.stocks.push(newstock);
-                    console.log(`Logging Updated Stock Data`);
-                    console.log(stockdata);
-                    pglibrary.WriteToJson(stockdata, `./stockmarket.json`);
-                    await pglibrary.sleep(500);
-                    UpdateUser(user, curUserIndex, stock, amount);
-                    return;
                 }
             }
+            newstock = {"name": stock.name, "price": stock.price, "owners": curStock.owners};
+            console.log(`New Stock`);
+            console.log(newstock);
+            stockdata.stocks.splice(curStockIndex, 1);
+            stockdata.stocks.push(newstock);
+            console.log(`Logging Updated Stock Data`);
+            console.log(stockdata);
+            pglibrary.WriteToJson(stockdata, `./stockmarket.json`);
+            await pglibrary.sleep(500);
+            return;
         }
     }
-
-}
-
-async function NewUser(user, stock, amount) {
-    stockfile = fs.readFileSync(`./stockmarket.json`, 'utf-8');
-    stockdata = JSON.parse(stockfile);
-    usersStock = [];
-    for (i = 0, l = stockdata.stocks.length; i < l; i++) {
-        console.log(`Current Stock Name for New User: ${stockdata.stocks[i].name}`);
-        newStock = {"name": stockdata.stocks[i].name, "amount": 0};
-        console.log(`New Stock to add to user`);
-        console.log(newStock);
-        usersStock.push(newStock);
-    }
-    console.log(`Logging New Users Stock`);
-    console.log(usersStock);
-    await pglibrary.sleep(500);
-    newuser = {"name": user.username, "id": user.id, "stocks": usersStock, "avatar": user.displayAvatarURL};
-    stockdata.userswithstocks.push(newuser);
-    console.log(stockdata);
-    pglibrary.WriteToJson(stockdata, `./stockmarket.json`);
-    await pglibrary.sleep(500);
-    WriteToStocks(user, stock, amount);
-}
-
-async function UpdateUser(user, userindex, stock, amount) {
-    stockfile = fs.readFileSync(`./stockmarket.json`, 'utf-8');
-    stockdata = JSON.parse(stockfile);
-    userdata = stockdata.userswithstocks[userindex];
-    console.log(userdata);
-    console.log(`Requested Stock Data`);
-    console.log(stock);
-    var stockName = stock.name;
-    usersStock = [];
-    for (y = 0, x = stockdata.userswithstocks[userindex].stocks.length; y < x; y++) {
-        curUserStock = stockdata.userswithstocks[userindex].stocks[y];
-        console.log(`Currently Updating stock: ${curUserStock.name}`);
-        console.log(curUserStock);
-        console.log(`Requested stock name ${stockName}`);
-        if (curUserStock.name == stockName) {
-            console.log(`Adding to current requested stock`);
-            amount = curUserStock.amount + amount;
-            console.log(amount);
-            var stock = {"name": curUserStock.name, "amount": amount};
-            console.log(stock);
-            usersStock.push(stock);
-        } else {
-            console.log(`Current Stock does not match requested stock`);
-            var stock = {"name": curUserStock.name, "amount": curUserStock.amount};
-            console.log(stock);
-            usersStock.push(stock);
-        }
-    }
-    console.log(`Logging Updated User Stocks`);
-    console.log(usersStock);
-    updateduser = {"name": user.username, "id": user.id, "stocks": usersStock, "avatar": user.displayAvatarURL};
-    console.log(`Updated User Array`);
-    console.log(updateduser);
-    stockdata.userswithstocks.splice(userindex, 1);
-    await pglibrary.sleep(100);
-    stockdata.userswithstocks.push(updateduser);
-    console.log(stockdata);
-    pglibrary.WriteToJson(stockdata, `./stockmarket.json`);
-    await pglibrary.sleep(500);
 }
 
 function UserHasEnoughStocks(user, stock, amount) {
@@ -307,26 +218,23 @@ function UserHasEnoughStocks(user, stock, amount) {
     stockName = stock.name;
     amount =  Math.abs(amount);
     console.log(`Amount to sell: ${amount}`)
-    for (i = 0, l = stockdata.userswithstocks.length; i < l; i++) {
-        usrIndex = i;
-        curUsr = stockdata.userswithstocks[usrIndex];
-        console.log(curUsr);
-        if (curUsr.id == user.id) {
-            for(stockA = 0, stocksIndex = curUsr.stocks.length; stockA < stocksIndex; stockA++ ) {
-                curStock = curUsr.stocks[stockA];
-                console.log(curStock);
-                if(curStock.name == stockName) {
-                    if(amount <= curStock.amount && curStock.amount > 0) {
-                        console.log(`User has enough stocks`)
+    for (i = 0, l = stocksdata.stocks.length; i < l; i++) {
+        curStock = stockdata.stocks[i];
+        if (curStock.name == stock.name) {
+            console.log(`Requested Stock is equal to the current stock`)
+            curStock.owners.forEach(owner => {
+                console.log(owner);
+                if (owner.id == userID) {
+                    console.log(`Stock owner id is equal to given userid`);
+                    if (amount <= owner.amount){
+                        console.log(`User has enough stocks`);
                         return true;
-                    } else {
-                        console.log(`User doesn't have enough stocks.`)
-                        return false;
                     }
                 }
-            }
+            });
         }
     }
+    return false;
 }
 
 function ListStock(bot, args, message){
@@ -352,4 +260,43 @@ function ListStock(bot, args, message){
             embed.addField(stock.name, `Price: ${stock.price.toString()}, Amount you own: ${userAmount}`);
         });
     message.channel.send({content: `<@${message.author.id}>`, embeds: [embed]});
+}
+
+function GrabUserInfo(userID, stock) {
+    stockfile = fs.readFileSync(`./stockmarket.json`, 'utf-8');
+    stockdata = JSON.parse(stockfile);
+    if(stock.owners.length <= 0) {
+        return false;
+    }
+    for(i = 0, l = stock.owners.length; i < l; i++) {
+        curStockOwner = stock.owners[i];
+        curSOID = curStockOwner.id;
+        if (curSOID == userID) {
+            return true, curStockOwner;
+        }
+    }
+
+}
+
+function MaxUserStocks(userID) {
+    console.log(`Checking if User has maximum stocks`);
+    stockfile = fs.readFileSync(`./stockmarket.json`, 'utf-8');
+    stockdata = JSON.parse(stockfile);
+    ownedStocks = 0;
+    for (i = 0, l = stockdata.stocks.length; i < l; i++) {
+        curStock = stockdata.stocks[i];
+        curStock.owners.forEach(owner => {
+            console.log(owner);
+            if (owner.id == userID) {
+                ownedStocks += owner.amount;
+                console.log(ownedStocks);
+            }
+        });
+    }
+    console.log(`Total Owned Stocks: ${ownedStocks}`);
+    if (ownedStocks >= stockdata.maxownedstocks) {
+        return true;
+    } else {
+        return false;
+    }
 }

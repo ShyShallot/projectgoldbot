@@ -185,53 +185,20 @@ async function StockMarket() {
     console.log("Starting Stock Market");
     var stockmarket = GrabStockMarketData();
     console.log(stockmarket);
-    if (stockmarket.stockmarketactive == 1 ) {
+    date = new Date();
+    day = date.getDay();
+    if (stockmarket.stockmarketactive == 1 && stockmarket.lastupdatedday != day) {
         var finalstocks = [];
         for (var i = 0, l = stockmarket.stocks.length; i < l; i++) {
             console.log(`Running Calculations for Stock: ${stockmarket.stocks[i].name}`);
             stocks = stockmarket.stocks[i];
             console.log(stocks);
-            stockName = stocks.name;
-            console.log(stockName)
-            stockprice = stocks.price;
-            console.log(stockprice);
-            var possibleIncrements= [0, 100, 200, 250, 300, 350, 400, 450, 500, 1000];
-            incrementamountIndex = pglibrary.getRandomInt(possibleIncrements.length); // pick a random number ranging from 0 to the amount of entry's in our startingAmounts array
-            console.log(incrementamountIndex);
-            var chance = Math.random();
-            console.log(chance);
-            if (chance <= 0.5) {
-                incrementamount = possibleIncrements[incrementamountIndex];
-            } else {
-                incrementamount = possibleIncrements[incrementamountIndex] * - 1;
-            }
-            console.log(incrementamount);
-            
-            owners = stocks.owners.length;
-            if (owners <= 0){
-                owners = 1
-            } else if (owners >= 1 && incrementamount >= 0){
-                incrementamount += Math.round(incrementamount * -1 * 0.65);
-                console.log(`New Increment Amount: ${incrementamount}`);
-            }
-            newstockprice = stockprice + (incrementamount * pglibrary.numDigits(stockprice) / 2 * owners);
-            console.log(`New Stock Price: ${newstockprice}`);
-            if (newstockprice < 0) {
-                newstockprice = 0;
-            }
-            if(owners >= 1) { // Market Cap
-                if (newstockprice > 10000000 / Math.round(owners * 0.75)) {
-                    newstockprice = Math.round(10000000 / Math.round(owners * 1.5));
-                    console.log(newstockprice);
-                }
-            } else {
-              if(newstockprice > 10000000) {
-                  newstockprice = 10000000;
-              }  
-            }
+            var stock = stockmarket.stocks[i];
+            console.log(`Calculating Stock price for ${stock.name}`);
+            newstockprice = CalculateStockPrice(stock);
             console.log(`Final Stock Price: ${Math.round(newstockprice)}`);
             owners = stocks.owners;
-            var companystock = {"name": stockName, "price": Math.round(newstockprice), "owners": owners};
+            var companystock = {"name": stock.name, "price": Math.round(newstockprice), "owners": owners};
             console.log(`Stock for: ${stock}`);
             console.log(companystock);
             finalstocks.push(companystock); 
@@ -240,9 +207,64 @@ async function StockMarket() {
         }
         console.log(`Logging final stock array`);
         console.log(finalstocks);
-        finaljsonfile = {"stocks": finalstocks, "userswithstocks": stockmarket.userswithstocks, "stockmarketactive": stockmarket.stockmarketactive}
+        lastday = UpdateLastDay(stockmarket.lastupdatedday);
+        finaljsonfile = {"stocks": finalstocks, "stockmarketactive": stockmarket.stockmarketactive, "maxownedstocks": stockmarket.maxownedstocks, "lastupdatedday": lastday}
         pglibrary.WriteToJson(finaljsonfile, './stockmarket.json');
     }
+}
+
+function CalculateStockPrice(stock) {
+    var possibleIncrements= [0, 100, 200, 250, 500, 1000, 1250, 1500];
+    incrementamountIndex = pglibrary.getRandomInt(possibleIncrements.length); // pick a random number ranging from 0 to the amount of entry's in our startingAmounts array
+    console.log(incrementamountIndex);
+    var chance = Math.random();
+    console.log(chance);
+    if (chance <= 0.5) {
+        console.log(`Increment amount is positive`);
+        incrementamount = possibleIncrements[incrementamountIndex];
+    } else {
+        console.log(`Increment amount is negative`);
+        incrementamount = possibleIncrements[incrementamountIndex] * - 1;
+    }
+    console.log(incrementamount);
+    
+    stocksinService = GrabStocksinOwnership(stock);
+    console.log(`Stocks in Service for stock ${stock.name}: ${stocksinService}`);
+    if (stocksinService <= 0) {
+        stocksinService = 1
+    }
+    ownerfactor = Math.round(stocksinService * 0.65)
+    newstockprice = stock.price + incrementamount * ownerfactor * pglibrary.getRandomInt(3);
+    console.log(`Final Stock Price: ${newstockprice}`);
+    if (newstockprice >= 1000000 / ownerfactor) {
+        console.log(`Stock hit is market cap`);
+        newstockprice = 1000000 / ownerfactor;
+    }
+    return newstockprice;
+}
+
+function UpdateLastDay(day) {
+    day += day++;
+    if (day == 7) { 
+        console.log(currentday);
+        day = 0; // if the current day is 7 which is not a day, then it will set it to the proper 0
+    }
+    return day;
+}
+
+function GrabStocksinOwnership(stock) { // Modified Max User Stocks function
+    var stockmarket = GrabStockMarketData();
+    ownedStocks = 0;
+    console.log(ownedStocks)
+    stock.owners.forEach(owner => {
+        console.log(owner);
+        ownerAmount = owner.amount;
+        console.log(ownerAmount);
+        ownedStocks += ownedStocks.ownerAmount;
+        console.log(ownedStocks);
+    });
+    console.log(ownedStocks);
+    return ownedStocks;
 }
 
 async function Economy(){ // Janky as fuck but works
