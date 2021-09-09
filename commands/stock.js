@@ -54,11 +54,13 @@ function BuyStock(user, args, message) {
                         console.log(stockprice);
                         var finalprice = stockprice * args[2]; // calculate the final price and define it to a var.
                         console.log(finalprice);
-                        if (stockprice <= 0 ) { 
-                            console.log(`Points to remove is 0, continuing`);
-                        } else {
+                        if (stockprice <= 500) { 
+                            console.log(`Stock is under are required amount`);
+                            message.channel.send(`<@${user.id}>, stock ${stock.name} is under the minimum buy allowed cost. Stock Price: ${stock.price}.`);
+                            return;
+                        } else if (stockprice > 0) {
                             client.editUserBalance(message.guild.id, user.id, {cash: finalprice, bank: 0});
-                        }
+                        } 
                         WriteToStocks(user, stock, args[2]); // run our function to add the user and the requested amount of stock to our stockmarket.json.
                         message.channel.send(`<@${message.author.id}>, you have bought ${args[2]} of ${stock.name} for ${stock.price * args[2]} points.`);
                     } else {

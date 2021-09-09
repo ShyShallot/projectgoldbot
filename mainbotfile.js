@@ -8,6 +8,8 @@ const talkedRecently = new Set(); // unused for cooldown
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js')); // read our commands folder 
 const pglibrary = require("./libraryfunctions.js");
 const stock = require('./commands/stock');
+const sqlconfig = require('./sql.json');
+const SQL = require('mssql');
 
 bot.commands = new Map(); // New Array for our commands
 bot.on('ready', () => { // when the bot has logged in and is ready
@@ -271,6 +273,85 @@ async function Economy(){ // Janky as fuck but works
     while (true) {
         await Jackpot(0); // Init Raffle
         await StockMarket();
+        await ClearSQLDB(); // Temp thing till i figure out SQL more
+        await WritetoSQLDB();
         await pglibrary.sleep(5000);
     }
 }
+
+async function ClearSQLDB(){
+    console.log("Clearing MSSQL DB");
+    var SQLconfig = {
+        server: sqlconfig.server,
+        user: sqlconfig.user,
+        password: sqlconfig.password,
+        database: sqlconfig.database,
+        port: 1433,
+        options: {
+            "encrypt": true
+        }
+    }
+    var dbConn = new SQL.ConnectionPool(SQLconfig);
+    dbConn.connect().then(function() {
+        var transaction = new SQL.Transaction(dbConn);
+        transaction.begin().then(function (){
+            var request = new SQL.Request(transaction);
+            request.query('DELETE FROM StockInfo', function(err, result){
+                if(err) {
+                    console.log(err);
+                }
+                transaction.commit().then(function (recordSet){
+                    console.log(`Cleared Stock Info Table`);
+                    console.log(recordSet);
+                    dbConn.close();
+                });
+            });
+        });
+    });
+}
+
+async function WritetoSQLDB() {
+    console.log("Writing to MSSQL DB");
+    var stockmarket = GrabStockMarketData();
+
+    var SQLconfig = {
+        server: sqlconfig.server,
+        user: sqlconfig.user,
+        password: sqlconfig.password,
+        database: sqlconfig.database,
+        port: 1433,
+        options: {
+            "encrypt": true
+        }
+    }
+
+    const table = new SQL.Table(`StockInfo`);
+    table.create = true;
+    table.columns.add('Name', SQL.NVarChar(10), {nullable: true});
+    table.columns.add('Price', SQL.Int, {nullable: true});
+    console.log(table);
+    stockmarket.stocks.forEach(stock => {
+        console.log(stock);
+        table.rows.add(stock.name, stock.price);
+    });
+    console.log(table);
+    var dbConn = new SQL.ConnectionPool(SQLconfig);
+    dbConn.connect().then(function() {
+        var transaction = new SQL.Transaction(dbConn);
+        transaction.begin().then(function (){
+            var request = new SQL.Request(transaction);
+            request.bulk(table, (err, result) => {
+                if(err) {
+                    console.log(err);
+                }
+                if(result){
+                    console.log(result);
+                }
+                transaction.commit().then(function (recordSet){
+                    console.log(recordSet);
+                    dbConn.close();
+                });
+            });
+        });
+    });
+} // https://docs.microsoft.com/en-us/sql/connect/node-js/step-3-proof-of-concept-connecting-to-sql-using-node-js?view=sql-server-ver15
