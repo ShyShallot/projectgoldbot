@@ -197,8 +197,8 @@ async function StockMarket() {
             console.log(stocks);
             var stock = stockmarket.stocks[i];
             console.log(`Calculating Stock price for ${stock.name}`);
-            newstockprice = CalculateStockPrice(stock);
-            console.log(`Final Stock Price: ${Math.round(newstockprice)}`);
+            newstockprice = await CalculateStockPrice(stock);
+            console.log(`Final Stock Price: ${newstockprice}`);
             owners = stocks.owners;
             var companystock = {"name": stock.name, "price": Math.round(newstockprice), "owners": owners};
             console.log(`Stock for: ${stock}`);
@@ -215,12 +215,12 @@ async function StockMarket() {
     }
 }
 
-function CalculateStockPrice(stock) {
+async function CalculateStockPrice(stock) {
     var possibleIncrements= [0, 100, 200, 250, 500, 1000, 1250, 1500];
     incrementamountIndex = pglibrary.getRandomInt(possibleIncrements.length); // pick a random number ranging from 0 to the amount of entry's in our startingAmounts array
-    console.log(incrementamountIndex);
+    console.log(`Increment Amount Index: ${incrementamountIndex}`);
     var chance = Math.random();
-    console.log(chance);
+    console.log(`P/N Chance: ${chance}`);
     if (chance <= 0.5) {
         console.log(`Increment amount is positive`);
         incrementamount = possibleIncrements[incrementamountIndex];
@@ -228,7 +228,7 @@ function CalculateStockPrice(stock) {
         console.log(`Increment amount is negative`);
         incrementamount = possibleIncrements[incrementamountIndex] * - 1;
     }
-    console.log(incrementamount);
+    console.log(`Increment Amount: ${incrementamount}`);
     
     stocksinService = GrabStocksinOwnership(stock);
     console.log(`Stocks in Service for stock ${stock.name}: ${stocksinService}`);
@@ -242,7 +242,35 @@ function CalculateStockPrice(stock) {
         console.log(`Stock hit is market cap`);
         newstockprice = 1000000 / ownerfactor;
     }
+    if (newstockprice < 0) {
+        await StockCrash(stock);
+        return stock.price;
+    }
+    console.log(newstockprice);
     return newstockprice;
+}
+
+async function StockCrash(stock) {
+    console.log(`Stock ${stock.name} reached crashing point`);
+    var stockmarket = GrabStockMarketData();
+    for (i = 0, l = stockmarket.stocks.length; i < l; i++){
+        curStockIndex = i
+        console.log(`Current Stock Index: ${curStockIndex}`);
+        curStock = stockmarket.stocks[curStockIndex];
+        console.log(`Current Stock`);
+        console.log(curStock);
+        if (curStock.name == stock.name) {
+            newstockinfo = {"name": stock.name, "price": 2000, "owners": []};
+            console.log(newstockinfo);
+            console.log(`Removing current stock ${stock.name} off of index`);
+            stockmarket.stocks.splice(curStockIndex, 1);
+            console.log(`Pushing new stock info to array`);
+            stockmarket.stocks.push(newstockinfo);
+            console.log(`Writing to Stockmarket`);
+            pglibrary.WriteToJson(stockmarket, './stockmarket.json');
+            return true;
+        }
+    }
 }
 
 function UpdateLastDay(day) {

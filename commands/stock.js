@@ -220,7 +220,7 @@ function UserHasEnoughStocks(userID, stock, amount) { // stock should only be a 
     stockName = stock.name;
     amount =  Math.abs(amount); // used to make sure the given amount is positve, grabs Absolute of a given number.
     console.log(`Amount to sell: ${amount}`)
-    for (i = 0, l = stocksdata.stocks.length; i < l; i++) {
+    for (i = 0, l = stockdata.stocks.length; i < l; i++) {
         curStock = stockdata.stocks[i];
         if (curStock.name == stock.name) { // check if the currentstock's name is equal to the given stocks name. 
             console.log(`Requested Stock is equal to the current stock`)
