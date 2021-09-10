@@ -97,7 +97,9 @@ function SellStock(user, args, message) { // this function runs similar to our B
                 console.log(args[2]);
                 console.log(negativeAmount)
                 client.getUserBalance(message.guild.id, user.id).then(econuser => {
+                    console.log(UserHasEnoughStocks(user.id, stock, args[2]));
                     if (UserHasEnoughStocks(user.id, stock, args[2])) { // run our function to check if the user has enough stocks to sell in the first place.
+                        console.log(`User has enough stocks continuing`);
                         var stockprice = stock.price;
                         console.log(stockprice);
                         var finalprice = stockprice * args[2];
@@ -110,6 +112,7 @@ function SellStock(user, args, message) { // this function runs similar to our B
                         WriteToStocks(user, stock, negativeAmount);
                         message.channel.send(`<@${message.author.id}>, you have sold ${args[2]} of ${stock.name} for ${stock.price * args[2]} points.`);
                     } else {
+                        console.log(`User doesn't have enough stocks to sell.`);
                         message.channel.send(`<@${message.author.id}>, you don't have enough stocks for that action.`);
                     }
                 })
@@ -214,29 +217,33 @@ async function WriteToStocks(user, stock, amount) { // our main function to writ
 }
 
 function UserHasEnoughStocks(userID, stock, amount) { // stock should only be a stock array.
-    console.log(`Checking if user ${user.username} has enough stocks`);
+    console.log(`Checking if user ${userID} has enough stocks`);
     stockfile = fs.readFileSync(`./stockmarket.json`, 'utf-8');
     stockdata = JSON.parse(stockfile);
     stockName = stock.name;
-    amount =  Math.abs(amount); // used to make sure the given amount is positve, grabs Absolute of a given number.
-    console.log(`Amount to sell: ${amount}`)
+    console.log(`Amount to sell: ${amount}`);
     for (i = 0, l = stockdata.stocks.length; i < l; i++) {
         curStock = stockdata.stocks[i];
         if (curStock.name == stock.name) { // check if the currentstock's name is equal to the given stocks name. 
             console.log(`Requested Stock is equal to the current stock`)
-            curStock.owners.forEach(owner => { // for every owner in the current stocks owner array
+            for(uI = 0, uL = curStock.owners.length; uI < uL; uI++){
+                owner = curStock.owners[uI];
                 console.log(owner);
                 if (owner.id == userID) { // check if our current owner.id is equal to the give User Id
                     console.log(`Stock owner id is equal to given userid`);
+                    console.log(owner.amount);
                     if (amount <= owner.amount){ // the request amount is less than or equal to the owner amount.
                         console.log(`User has enough stocks`);
-                        return true; // return true if user has enough stocks.
+                        return true; 
+                    } else {
+                        console.log('User does not have enough stocks')
+                        return false;
                     }
                 }
-            });
+            };
         }
     }
-    return false; // return false, this will only be ran if the return true never gets called.
+
 }
 
 function ListStock(bot, args, message){
