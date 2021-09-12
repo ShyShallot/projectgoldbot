@@ -59,7 +59,7 @@ function BuyStock(user, args, message) {
                             message.channel.send(`<@${user.id}>, stock ${stock.name} is under the minimum buy allowed cost. Stock Price: ${stock.price}.`);
                             return;
                         } else if (stockprice > 0) {
-                            client.editUserBalance(message.guild.id, user.id, {cash: finalprice, bank: 0});
+                            client.editUserBalance(message.guild.id, user.id, {cash: -finalprice, bank: 0});
                         } 
                         WriteToStocks(user, stock, args[2]); // run our function to add the user and the requested amount of stock to our stockmarket.json.
                         message.channel.send(`<@${message.author.id}>, you have bought ${args[2]} of ${stock.name} for ${stock.price * args[2]} points.`);
@@ -253,7 +253,7 @@ function ListStock(bot, args, message){
         .setTitle(`Stock Information`)
         .setAuthor(bot.user.username, bot.user.displayAvatarURL)
         .setColor(`#87a9ff`)
-        .setDescription("Current Stock Information, Be Mindful this information gets updated Every 5 seconds.")
+        .setDescription("Current Stock Information, Be Mindful this information gets updated One a Day.")
         .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot");
         stockdata.stocks.forEach(stock => {
             console.log(stock);

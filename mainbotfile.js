@@ -189,7 +189,9 @@ async function StockMarket() {
     console.log(stockmarket);
     date = new Date();
     day = date.getDay();
+    console.log(`Current Day: ${day}`);
     if (stockmarket.stockmarketactive == 1 && stockmarket.lastupdatedday != day) {
+        console.log(`Updating Stock Market`);
         var finalstocks = [];
         for (var i = 0, l = stockmarket.stocks.length; i < l; i++) {
             console.log(`Running Calculations for Stock: ${stockmarket.stocks[i].name}`);
