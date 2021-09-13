@@ -92,11 +92,11 @@ function StartJackpot(bot) {
     var data = JSON.parse(jackpot);
     if (data.raffleactive == 0) { // if a raffle is not active
         var startingAmounts = [500, 750, 1000, 1250, 1500, 1750, 2000, 2500, 3000, 4000]; // an array of defined starting amounts to then randomly pick from
-        var startingamountIndex = getRandomInt(startingAmounts.length); // pick a random number ranging from 0 to the amount of entry's in our startingAmounts array
+        var startingamountIndex = pglibrary.getRandomInt(startingAmounts.length); // pick a random number ranging from 0 to the amount of entry's in our startingAmounts array
         var startingamount = startingAmounts[startingamountIndex]; // our final starting amount is equal to our startingAmounts array's picked index
         console.log(startingamount);
         var startingamountMultipliers = [0.95, 1, 1.15, 1.2, 1.35, 1.5, 1.65, 1.75, 2]; // this is pretty much the same process as picking our startingAmount
-        var startingamountMultipliersIndex = getRandomInt(startingamountMultipliers.length);
+        var startingamountMultipliersIndex = pglibrary.getRandomInt(startingamountMultipliers.length);
         var startingMultiplier = startingamountMultipliers[startingamountMultipliersIndex];
         var bigmulti = Math.random(); // get a random number ranging from 0 to 1, as an example it could return 0.57124867 and so on
         console.log(bigmulti);
@@ -135,7 +135,7 @@ async function JackpotEnd(bot){
     console.log(data);
     console.log(`User Table Length ${data.users.length}`); // log the amount of entry's in users array
     if (data.users.length >= 5) { // if it is over 5, this value sets the minimum amount of people needed for the raffle to properly end, you could set this in the json file and have a command to change it
-        var randomPick = getRandomInt(data.users.length); // get a random whole number ranging from 0 to the amount of entry's in the users array
+        var randomPick = pglibrary.getRandomInt(data.users.length); // get a random whole number ranging from 0 to the amount of entry's in the users array
         console.log(`Pick: ${randomPick}`);
         var winner = data.users[randomPick]; // grab the winner from array using the index from our randomPick var
         console.log(`Winner ID: ${winner}`);
@@ -165,9 +165,6 @@ async function JackpotEnd(bot){
     }
 }
 
-function getRandomInt(max) {
-    return Math.floor(Math.random() * max);
-}
 
 async function ResetRaffleJson(data) {
     var jsonupdate = {raffleactive: 0, rafflepot: 0, lastraffleday: SetLastRaffleDay(data), users: []}; // empty and reset our json file

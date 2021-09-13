@@ -211,7 +211,7 @@ async function StockMarket() {
         }
         console.log(`Logging final stock array`);
         console.log(finalstocks);
-        lastday = UpdateLastDay(stockmarket.lastupdatedday);
+        lastday = UpdateLastDay();
         finaljsonfile = {"stocks": finalstocks, "stockmarketactive": stockmarket.stockmarketactive, "maxownedstocks": stockmarket.maxownedstocks, "lastupdatedday": lastday}
         pglibrary.WriteToJson(finaljsonfile, './stockmarket.json');
     }
@@ -275,12 +275,9 @@ async function StockCrash(stock) {
     }
 }
 
-function UpdateLastDay(day) {
-    day += day++;
-    if (day == 7) { 
-        console.log(currentday);
-        day = 0; // if the current day is 7 which is not a day, then it will set it to the proper 0
-    }
+function UpdateLastDay() {
+    date = new Date();
+    day = date.getDay();
     return day;
 }
 
