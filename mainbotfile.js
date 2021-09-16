@@ -105,7 +105,7 @@ function AutomatedMessage(message) { // this is to keep annoying as people from 
     let modRole = message.guild.roles.cache.find(r => r.name === "PG Member");
     const automessge = require(`./automatedmessagestatus.json`);
     if (automessge.state == "1"){
-        if (!message.member.roles.has(modRole.id)){
+        if (!message.member.roles.cache.some(role => role.name === modRole)){
             const args = message.content.split(/ +/g);
             console.log(args.includes('beta'));
             if (args.includes('beta') && args.includes('release') && args.includes('when')){
