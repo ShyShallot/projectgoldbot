@@ -211,8 +211,7 @@ async function StockMarket() {
         }
         console.log(`Logging final stock array`);
         console.log(finalstocks);
-        lastday = UpdateLastDay();
-        finaljsonfile = {"stocks": finalstocks, "stockmarketactive": stockmarket.stockmarketactive, "maxownedstocks": stockmarket.maxownedstocks, "lastupdatedday": lastday}
+        finaljsonfile = {"stocks": finalstocks, "stockmarketactive": stockmarket.stockmarketactive, "maxownedstocks": stockmarket.maxownedstocks, "lastupdatedday": day}
         pglibrary.WriteToJson(finaljsonfile, './stockmarket.json');
     }
 }
@@ -275,11 +274,7 @@ async function StockCrash(stock) {
     }
 }
 
-function UpdateLastDay() {
-    date = new Date();
-    day = date.getDay();
-    return day;
-}
+
 
 function GrabStocksinOwnership(stock) { // Modified Max User Stocks function
     var stockmarket = GrabStockMarketData();
