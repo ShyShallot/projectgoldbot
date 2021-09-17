@@ -118,6 +118,17 @@ function AutomatedMessage(message) { // this is to keep annoying as people from 
     }
 }
 
+async function Economy(){ // Janky as fuck but works
+    while (true) {
+        await Jackpot(0); // Init Raffle
+        await StockMarket();
+        await ClearSQLDB(); // Temp thing till i figure out SQL more
+        await WritetoSQLDB();
+        await pglibrary.sleep(5000);
+    }
+}
+
+// Jackpot Functions Related Functions
 async function Jackpot(forced) { // Changed to a raffle but am too lazy to update names -- Dyl 8/28/2021 also this function is a janky mess
     console.log(`Checking For Jackpot Status`);
     var jackpotData = UpdateJackpotData(); // define jackpotData which is an array
@@ -156,16 +167,14 @@ async function Jackpot(forced) { // Changed to a raffle but am too lazy to updat
     //await sleep(20000); // wait 20 seconds to keep this from running every possible tick
 }
 
-function UpdateJackpotData(){ // update the jackpot data array
-    jackpot = fs.readFileSync(`jackpot.json`, 'utf-8');
-    data = JSON.parse(jackpot);
-    return data;
-}
-
-function GrabStockMarketData(){
-    stockmarket = fs.readFileSync(`stockmarket.json`, 'utf-8');
-    data = JSON.parse(stockmarket);
-    return data;
+function RaffleValid(json, day) { // a simple function that checks if the current day is equal to the last day found in jackpot.json
+    if (!(json.lastraffleday == day)) {
+        console.log(`Raffle is allowed to start. ${json.lastraffleday}, ${day}`);
+        return true;
+    } else {
+        console.log(`Raffle is not allowed to start. ${json.lastraffleday}, ${day}`);
+        return false;
+    }
 }
 
 function UpdateDate(){ // update the date
@@ -176,15 +185,13 @@ function UpdateDate(){ // update the date
     return [day, hour];
 }
 
-function RaffleValid(json, day) { // a simple function that checks if the current day is equal to the last day found in jackpot.json
-    if (!(json.lastraffleday == day)) {
-        console.log(`Raffle is allowed to start. ${json.lastraffleday}, ${day}`);
-        return true;
-    } else {
-        console.log(`Raffle is not allowed to start. ${json.lastraffleday}, ${day}`);
-        return false;
-    }
+function UpdateJackpotData(){ // update the jackpot data array
+    jackpot = fs.readFileSync(`jackpot.json`, 'utf-8');
+    data = JSON.parse(jackpot);
+    return data;
 }
+
+// Stock Market Related Functions
 
 async function StockMarket() {
     console.log("Starting Stock Market");
@@ -219,6 +226,12 @@ async function StockMarket() {
         finaljsonfile = {"stocks": finalstocks, "stockmarketactive": stockmarket.stockmarketactive, "maxownedstocks": stockmarket.maxownedstocks, "lastupdatehour":hour,"updateinterval":stockmarket.updateinterval}
         pglibrary.WriteToJson(finaljsonfile, './stockmarket.json');
     }
+}
+
+function GrabStockMarketData(){
+    stockmarket = fs.readFileSync(`stockmarket.json`, 'utf-8');
+    data = JSON.parse(stockmarket);
+    return data;
 }
 
 function CanStockMarketUpdate(){
@@ -319,15 +332,7 @@ function GrabStocksinOwnership(stock) { // Modified Max User Stocks function
     return ownedStocks;
 }
 
-async function Economy(){ // Janky as fuck but works
-    while (true) {
-        await Jackpot(0); // Init Raffle
-        await StockMarket();
-        //await ClearSQLDB(); // Temp thing till i figure out SQL more
-        //await WritetoSQLDB();
-        await pglibrary.sleep(5000);
-    }
-}
+// Database Related Functions
 
 async function ClearSQLDB(){
     console.log("Clearing MSSQL DB");
