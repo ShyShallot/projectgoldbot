@@ -11,9 +11,11 @@ module.exports = {
     execute(message, args, bot){
         if(args[0]){
             argN = parseInt(args[0]);
-            if (typeof argN == 'bigint') {
+            if (typeof argN == `number`) {
                 if(argN >= 1 && argN < 23) {
-                    finaljsonfile = {"stocks": stockmarket.stocks, "stockmarketactive": stockmarket.stockmarketactive, "maxownedstocks": stockmarket.maxownedstocks, "lastupdatehour":stockmarket.lastupdatehour,"updateinterval":argN};
+                    stockfile = fs.readFileSync(`./stockmarket.json`, 'utf-8');
+                    stockdata = JSON.parse(stockfile);
+                    finaljsonfile = {"stocks": stockdata.stocks, "stockmarketactive": stockdata.stockmarketactive, "maxownedstocks": stockdata.maxownedstocks, "lastupdatehour":stockdata.lastupdatehour,"updateinterval":argN};
                     pglibrary.WriteToJson(finaljsonfile, './stockmarket.json');
                     message.channel.send(`<@${message.author.id}>, successfuly set the Stock Market Update Interval to ${argN}.`);
                     return;

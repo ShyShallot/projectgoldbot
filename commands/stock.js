@@ -261,7 +261,7 @@ function ListStock(bot, args, message){
             console.log(stock);
             if(stock.owners.length > 0 && IsUserAlreadyInArray(stock.owners, message.author.id)) {
                 console.log(stock.owners);
-                user = stock.owners.find(({name}) => name === message.author.username);
+                user = stock.owners.find(({id}) => id === message.author.id);
                 console.log(`User to find stock for: ${user.name}`);
                 console.log(`The user owns ${user.amount} stock for ${stock.name}`);
                 userAmount = user.amount;
