@@ -98,6 +98,9 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     if (command === "setminbet"){
         bot.commands.get("setminbet").execute(message, args, bot);
     }
+    if (command === "sui" && message.member.roles.cache.some(role => role.name === modRole)) {
+        bot.commands.get("sui").execute(message,args,bot);
+    }
 });
 bot.login(config.token);
 
@@ -189,8 +192,9 @@ async function StockMarket() {
     console.log(stockmarket);
     date = new Date();
     day = date.getDay();
+    hour = date.getHours();
     console.log(`Current Day: ${day}`);
-    if (stockmarket.stockmarketactive == 1 && stockmarket.lastupdatedday != day) {
+    if (CanStockMarketUpdate()) {
         console.log(`Updating Stock Market`);
         var finalstocks = [];
         for (var i = 0, l = stockmarket.stocks.length; i < l; i++) {
@@ -211,8 +215,21 @@ async function StockMarket() {
         }
         console.log(`Logging final stock array`);
         console.log(finalstocks);
-        finaljsonfile = {"stocks": finalstocks, "stockmarketactive": stockmarket.stockmarketactive, "maxownedstocks": stockmarket.maxownedstocks, "lastupdatedday": day}
+        finaljsonfile = {"stocks": finalstocks, "stockmarketactive": stockmarket.stockmarketactive, "maxownedstocks": stockmarket.maxownedstocks, "lastupdatehour":hour,"updateinterval":stockmarket.updateinterval}
         pglibrary.WriteToJson(finaljsonfile, './stockmarket.json');
+    }
+}
+
+function CanStockMarketUpdate(){
+    var stockmarket = GrabStockMarketData();
+    date = new Date();
+    hour = date.getHours();
+    nexthour = stockmarket.lastupdatehour + stockmarket.updateinterval; // predict the next hour to update based off the last updated hour plus our updateinterval
+    if (nexthour >= 23) { // then check if our nexthour is going to be over the max possible hour we are then going to compensate for that.
+        nexthour = nexthour - 23 - 1; // calculate the compensated nexthour then subtract 1 to account for getHours going from 0-23 instead of 1-24
+    }
+    if (nexthour == hour && stockmarket.stockmarketactive == 1) {
+        return true;
     }
 }
 
@@ -235,9 +252,12 @@ async function CalculateStockPrice(stock) {
     console.log(`Stocks in Service for stock ${stock.name}: ${stocksinService}`);
     if (stocksinService <= 0) {
         stocksinService = 1
+    } 
+    ownerfactor = Math.round(stocksinService * 0.65);
+    if (ownerfactor >= 5) {
+        ownerfactor = 5;
     }
-    ownerfactor = Math.round(stocksinService * 0.65)
-    newstockprice = stock.price + incrementamount * ownerfactor * pglibrary.getRandomInt(3);
+    newstockprice = stock.price + incrementamount * ownerfactor * pglibrary.getRandomInt(2);
     console.log(`Final Stock Price: ${newstockprice}`);
     if (newstockprice >= 1000000 / ownerfactor) {
         console.log(`Stock hit is market cap`);

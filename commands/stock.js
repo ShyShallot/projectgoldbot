@@ -206,6 +206,7 @@ async function WriteToStocks(user, stock, amount) { // our main function to writ
             console.log(`New Stock`);
             console.log(newstock);
             stockdata.stocks.splice(curStockIndex, 1); // remove the stock from the stocks array based off the current index.
+            await pglibrary.sleep(500);
             stockdata.stocks.push(newstock); // add it back to the array.
             console.log(`Logging Updated Stock Data`);
             console.log(stockdata);
