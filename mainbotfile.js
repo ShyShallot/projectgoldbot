@@ -194,6 +194,7 @@ async function StockMarket() {
     day = date.getDay();
     hour = date.getHours();
     console.log(`Current Day: ${day}`);
+    console.log(`Current Hour: ${hour}`);
     if (CanStockMarketUpdate()) {
         console.log(`Updating Stock Market`);
         var finalstocks = [];
@@ -221,14 +222,20 @@ async function StockMarket() {
 }
 
 function CanStockMarketUpdate(){
+    console.log(`Checking if Stock Market can update`);
     var stockmarket = GrabStockMarketData();
     date = new Date();
     hour = date.getHours();
+    console.log(`Checking Hour: ${hour}`);
     nexthour = stockmarket.lastupdatehour + stockmarket.updateinterval; // predict the next hour to update based off the last updated hour plus our updateinterval
+    console.log(`Next Hour to Update on: ${nexthour}`);
     if (nexthour >= 23) { // then check if our nexthour is going to be over the max possible hour we are then going to compensate for that.
+        console.log(`Next hour would overflow`);
         nexthour = nexthour - 23 - 1; // calculate the compensated nexthour then subtract 1 to account for getHours going from 0-23 instead of 1-24
+        console.log(`Updated Next Hour: ${nexthour}`);
     }
     if (nexthour == hour && stockmarket.stockmarketactive == 1) {
+        console.log(`Stock Market can Update`);
         return true;
     }
 }
@@ -316,8 +323,8 @@ async function Economy(){ // Janky as fuck but works
     while (true) {
         await Jackpot(0); // Init Raffle
         await StockMarket();
-        await ClearSQLDB(); // Temp thing till i figure out SQL more
-        await WritetoSQLDB();
+        //await ClearSQLDB(); // Temp thing till i figure out SQL more
+        //await WritetoSQLDB();
         await pglibrary.sleep(5000);
     }
 }
