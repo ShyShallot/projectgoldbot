@@ -105,7 +105,7 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
 bot.login(config.token);
 
 function AutomatedMessage(message) { // this is to keep annoying as people from asking annoying questions you can remove this or use it as a base for automoding 
-    let modRole = message.guild.roles.cache.find(r => r.name === "PG Member");
+    let modRole = "PG Member";
     const automessge = require(`./automatedmessagestatus.json`);
     if (automessge.state == "1"){
         if (!message.member.roles.cache.some(role => role.name === modRole)){
