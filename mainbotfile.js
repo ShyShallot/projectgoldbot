@@ -280,13 +280,14 @@ function GrabStocksinOwnership(stock) { // Modified Max User Stocks function
     var stockmarket = GrabStockMarketData();
     ownedStocks = 0;
     console.log(ownedStocks)
-    stock.owners.forEach(owner => {
+    for(i = 0, l = stock.owners.length; i < l; i++){
+        owner = stock.owners[i];
         console.log(owner);
         ownerAmount = owner.amount;
         console.log(ownerAmount);
         ownedStocks += ownedStocks + ownerAmount;
         console.log(ownedStocks);
-    });
+    }
     console.log(ownedStocks);
     return ownedStocks;
 }
