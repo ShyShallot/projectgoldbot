@@ -59,7 +59,7 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     const command = args.shift().toLowerCase(); 
     const eargs = message.content.slice(config.econprefix.length).split(/ +/g);
     const ecommand = eargs.shift().toLowerCase();
-    let modRole = message.guild.roles.cache.find(r => r.name === "PG Member"); // check for a mod role, set this to the name of your servers admin role
+    let modRole = "PG Member"; // check for a mod role, set this to the name of your servers admin role
     console.log(command);
     console.log(ecommand);
     AutomatedMessage(message);
@@ -70,7 +70,7 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
         if (ecommand === "raffle"){
             bot.commands.get("jackpot").execute(message, args, bot, 0);
         }
-        if (ecommand === "forceraffle" && message.member.roles.cache.some(role => role.name === modRole)){ // mod only command
+        if (ecommand === "forceraffle" && message.member.roles.cache.find(role => role.name === modRole)){ // mod only command
             Jackpot(1);
             message.channel.send(`Forcing Raffle Status`)
         }
@@ -89,16 +89,16 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     //if (command === "stafflist") {
     //    bot.commands.get("stafflist").execute(message, args, bot);
     //}
-    if (command === "toggleauto"){
+    if (command === "toggleauto" && message.member.roles.cache.find(role => role.name === modRole)){
         bot.commands.get("automsgT").execute(message, args, bot);
     }
     if (command === "setgame"){
         bot.commands.get("setgame").execute(message, args, bot);
     }
-    if (command === "setminbet"){
+    if (command === "setminbet" && message.member.roles.cache.find(role => role.name === modRole)){
         bot.commands.get("setminbet").execute(message, args, bot);
     }
-    if (command === "sui" && message.member.roles.cache.some(role => role.name === modRole)) {
+    if (command === "sui" && message.member.roles.cache.find(role => role.name === modRole)) {
         bot.commands.get("sui").execute(message,args,bot);
     }
 });
