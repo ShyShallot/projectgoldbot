@@ -254,8 +254,9 @@ function ListStock(bot, args, message){
         .setTitle(`Stock Information`)
         .setAuthor(bot.user.username, bot.user.displayAvatarURL)
         .setColor(`#87a9ff`)
-        .setDescription("Current Stock Information, Be Mindful this information gets updated One a Day.")
-        .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot");
+        .setDescription(`Current Stock Information, Be Mindful this information gets updated every ${stockdata.updateinterval} hour(s).`)
+        .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
+        .addField(`Stock Price Website`, "https://www.projectgold.dev/stocks/")
         stockdata.stocks.forEach(stock => {
             console.log(stock);
             if(stock.owners.length > 0 && IsUserAlreadyInArray(stock.owners, message.author.id)) {
