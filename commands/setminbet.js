@@ -8,8 +8,8 @@ module.exports = {
     execute(message, args, bot){
         if (args[0]){
             if(!isNaN(args[0])){
-                config = fs.readFileSync(`config.json`, 'utf-8');
-                data = JSON.parse(config);
+                configdata = fs.readFileSync(`config.json`, 'utf-8');
+                data = JSON.parse(configdata);
                 console.log(data);
                 var minbet = args[0]
                 console.log(minbet);
