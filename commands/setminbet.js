@@ -1,6 +1,7 @@
 const Discord = require('discord.js');
 const config = require('../config.json');
 const fs = require('fs');
+const pglibrary = require("../libraryfunctions.js"); // load our custom library functions.
 module.exports = {
     // this shit is a mess
     name: 'setminbet',
@@ -8,7 +9,7 @@ module.exports = {
     execute(message, args, bot){
         if (args[0]){
             if(!isNaN(args[0])){
-                configdata = fs.readFileSync(`config.json`, 'utf-8');
+                configdata = fs.readFileSync(`./config.json`, 'utf-8');
                 data = JSON.parse(configdata);
                 console.log(data);
                 var minbet = args[0]
