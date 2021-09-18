@@ -328,7 +328,7 @@ function GrabStocksinOwnership(stock) { // Modified Max User Stocks function
         console.log(owner);
         ownerAmount = owner.amount;
         console.log(ownerAmount);
-        ownedStocks += ownedStocks + ownerAmount;
+        ownedStocks += ownerAmount;
         console.log(ownedStocks);
     }
     console.log(ownedStocks);
