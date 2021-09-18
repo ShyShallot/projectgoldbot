@@ -7,7 +7,6 @@ const fs = require('fs'); // File System for JS
 const talkedRecently = new Set(); // unused for cooldown
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js')); // read our commands folder 
 const pglibrary = require("./libraryfunctions.js");
-const stock = require('./commands/stock');
 const sqlconfig = require('./sql.json');
 const SQL = require('mssql');
 
@@ -242,10 +241,14 @@ function CanStockMarketUpdate(){
     console.log(`Checking Hour: ${hour}`);
     nexthour = stockmarket.lastupdatehour + stockmarket.updateinterval; // predict the next hour to update based off the last updated hour plus our updateinterval
     console.log(`Next Hour to Update on: ${nexthour}`);
-    if (nexthour >= 23) { // then check if our nexthour is going to be over the max possible hour we are then going to compensate for that.
+    if (nexthour > 23) { // then check if our nexthour is going to be over the max possible hour we are then going to compensate for that.
         console.log(`Next hour would overflow`);
         nexthour = nexthour - 23 - 1; // calculate the compensated nexthour then subtract 1 to account for getHours going from 0-23 instead of 1-24
         console.log(`Updated Next Hour: ${nexthour}`);
+    }
+    if (nexthour < 0) {
+        console.log(`Next Hour went under 0, setting it to 0`);
+        nexthour = 0;
     }
     if (nexthour == hour && stockmarket.stockmarketactive == 1) {
         console.log(`Stock Market can Update`);
