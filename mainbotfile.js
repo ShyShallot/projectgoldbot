@@ -100,6 +100,9 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     if (command === "sui" && message.member.roles.cache.find(role => role.name === modRole)) {
         bot.commands.get("sui").execute(message,args,bot);
     }
+    if (command === "heist"){
+        bot.commands.get("heist").execute(message,args,bot);
+    }
 });
 bot.login(config.token);
 
