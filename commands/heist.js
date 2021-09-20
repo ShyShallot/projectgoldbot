@@ -8,7 +8,7 @@ module.exports = {
     name: 'heist',
     description: 'Heist System',
     execute(message, args, bot){
-
+        console.log(args);
         switch (args[0]){
             case 'list':
                 ListHeistLocations(message, args, bot);
@@ -19,6 +19,13 @@ module.exports = {
             case 'status':
                 //todo
                 break;
+            case 'equipment':
+                if(args[1] == "list"){
+                    ListEquipment(message, bot);
+                } else if (args[1] == "buy"){
+                    
+                }
+                break;
             default: 
                 message.channel.send(`<@${message.author.id}>, please provide a valid argument of start/status/list.`);
                 break;
@@ -26,14 +33,20 @@ module.exports = {
     }
 }
 
-function HeistData(){
+function HeistLocationData(){
     heistlocationdata = fs.readFileSync('./heists/locations.json');
     heistlocations = JSON.parse(heistlocationdata);
     return heistlocations;
 }
 
+function HeistItemData(){
+    heistequipsdata = fs.readFileSync('./heists/items.json');
+    heistequipment = JSON.parse(heistequipsdata);
+    return heistequipment;
+}
+
 function ListHeistLocations(message, args, bot){
-    heistlocations = HeistData();
+    heistlocations = HeistLocationData();
     if (!args[1]){
         let embed = new MessageEmbed()
         .setTitle(`Heist Location Information`)
@@ -79,4 +92,27 @@ function ListHeistLocations(message, args, bot){
             }
         }
     }
+}
+
+function ListEquipment(message, bot){
+    heistequipment = HeistItemData()
+    let embed = new MessageEmbed()
+    .setTitle(`Heist Equipment Information`)
+    .setAuthor(bot.user.username, bot.user.displayAvatarURL)
+    .setColor(`#87a9ff`)
+    .setDescription(`Current Heist Equipment Information.`)
+    .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
+    for (i=0; i<heistequipment.items.length; i++){
+        console.log(`Level 1`)
+        console.log(heistequipment.items[i]);
+        equipment = [];
+        for(l=0; l<heistequipment.items[i].items.length; l++){
+            console.log(`Level 2`)
+            console.log(heistequipment.items[i].items[l]);
+            equipment.push(heistequipment.items[i].items[l]);
+        }
+        console.log(equipment);
+        embed.addField(`${heistequipment.items[i].name}`, `${equipment[0].name} Cost: $${equipment[0].cost}, \n ${equipment[1].name} Cost: $${equipment[1].cost}, \n ${equipment[2].name} Cost: $${equipment[2].cost}`);
+    }
+    message.channel.send({content: `<@${message.author.id}>`, embeds: [embed]});
 }
