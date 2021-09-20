@@ -223,28 +223,21 @@ function UserHasEnoughStocks(userID, stock, amount) { // stock should only be a 
     stockdata = JSON.parse(stockfile);
     stockName = stock.name;
     console.log(`Amount to sell: ${amount}`);
-    for (i = 0, l = stockdata.stocks.length; i < l; i++) {
-        curStock = stockdata.stocks[i];
-        if (curStock.name == stock.name) { // check if the currentstock's name is equal to the given stocks name. 
-            console.log(`Requested Stock is equal to the current stock`)
-            for(uI = 0, uL = curStock.owners.length; uI < uL; uI++){
-                owner = curStock.owners[uI];
-                console.log(owner);
-                if (owner.id == userID) { // check if our current owner.id is equal to the give User Id
-                    console.log(`Stock owner id is equal to given userid`);
-                    console.log(owner.amount);
-                    if (amount <= owner.amount){ // the request amount is less than or equal to the owner amount.
-                        console.log(`User has enough stocks`);
-                        return true; 
-                    } else {
-                        console.log('User does not have enough stocks')
-                        return false;
-                    }
-                }
-            };
+    for(uI = 0, uL = stock.owners.length; uI < uL; uI++){
+        owner = stock.owners[uI];
+        console.log(owner);
+        if (owner.id == userID) { // check if our current owner.id is equal to the give User Id
+            console.log(`Stock owner id is equal to given userid`);
+            console.log(owner.amount);
+            if (amount <= owner.amount){ // the request amount is less than or equal to the owner amount.
+                console.log(`User has enough stocks`);
+                return true; 
+            } else {
+                console.log('User does not have enough stocks')
+                return false;
+            }
         }
-    }
-
+    };
 }
 
 function ListStock(bot, args, message){
