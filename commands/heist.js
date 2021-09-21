@@ -13,8 +13,25 @@ module.exports = {
             case 'list':
                 ListHeistLocations(message, args, bot);
                 break;
-            case 'start':
-                // todo
+            case 'setup':
+                if(fs.existsSync(`./heists/heist${user.id}.json`)){
+                    message.channel.send(`<@${user.id}>, you already have a heist going, canceling request.`);
+                    return;
+                }
+                message.channel.send(`<@${message.author.id}>, respond to select a location to get started.`);
+                rLocation = GetLocationFromName(message.author, message);
+                if(typeof rLocation === `undefined`){ 
+                    message.channel.send(`<@${message.author.id}>, could not find the location, or no input was provided.`) 
+                    return;
+                }
+                SetupHeist(user, message, rLocation);
+                break;
+            case 'join':
+                //todo
+                break;
+            case 'split':
+                message.channel.send(`<@${message.author.id}>, choose a split for each user in your heist. Format: 70/25/5. User 1 Gets 70%, User 2 gets 25%, and User 3 gets 5%. Total Split must be less than 100%.`);
+                ChooseSplit(message.author,message);
                 break;
             case 'status':
                 //todo
@@ -55,7 +72,110 @@ function HeistInvData(){
     return heistinv;
 }
 
+function UserHesitInfo(file){
+    userheistinforaw = fs.readFileSync(file);
+    userheistinfo = JSON.parse(userheistinforaw);
+    return userheistinfo;
+}
+
 // Main Heist Related Functions
+
+function GetLocationFromName(user, message){
+    collector = message.channel.createMessageCollector(message.channel, {time: 10000});
+    heistlocations = HeistLocationData();
+    collector.on('collect', m => {
+        
+        if (m.author.bot) return;
+        if (m.author.id != user.id) return;
+        if (m.channel.id != message.channel.id) return;
+        if(typeof m === 'undefined') return;
+        console.log(m.content);
+        rLocation = m.content;
+        for (i=0;i<heistlocations.locations.length;i++){
+            curLocation = heistlocations.locations[i];
+            if(curlocation.name == m.content){
+                m.channel.send(`<@${m.author.id}>, You have selected ${curLocation.name}.`)
+                return curLocation;
+            }
+        }
+        collector.stop();
+    });
+}
+
+async function SetupHeist(user, message, location){
+    invData = HeistInvData();
+    for(i=0;i<invData.users.length;i++){
+        curUser = invData.users[i];
+        if(curUser.id == user.id){
+            totalmatching = 0
+            curUser.inv.forEach(item => {
+                if(location.reqs.includes(item)){
+                    totalmatching++;
+                }
+            });
+            if(totalmatching != location.reqs.length){
+                message.channel.send(`<@${user.id}>, You do not have the equipment requirements for this location.`);
+                return;
+            }
+        }
+    }
+    newfile = `./heists/heist${user.id}.json`;
+    userinfo = {"name": user.username, "id": user.id, "host": true, "split":100}
+    users = [];
+    users.push(userinfo);
+    fileinfo = {"users":users, "location": [location], "started": false};
+    await pglibrary.WriteToJson(fileinfo, newfile);
+    message.channel.send(`<@${user.id}>, You have successfuly setup your heist, you can wait for users to join or you can start it.`);
+}
+
+function ChooseSplit(user, message){
+    file = `./heists/heist${user.id}.json`;
+    if(!fs.existsSync(file)){
+        message.channel.send(`<@${user.id}>, you do not have a heist going, cancelling.`);
+        return;
+    }
+    userheistinfo = UserHesitInfo(file);
+    if(userheistinfo.users.length <= 1){
+        message.channel.send(`<@${user.id}>, you lack the required amount of users to set a split`);
+    }
+    collector.on('collect', m => {
+        if (m.author.bot) return;
+        if (m.author.id != user.id) return;
+        if (m.channel.id != message.channel.id) return;
+        if(typeof m === 'undefined') return;
+        console.log(m.content);
+        split = m.content;
+        split.split('/');
+        totalsplitpercent = 0
+        for(i=0;i<split.length;i++){
+            split[i] = parseInt(split[i]);
+            if(typeof split[i] !== `number`) {
+                m.channel.send(`<@${user.id}>, a givin split was not a number, please provid a valid number.`);
+                return;
+            }
+            if(i>userheistinfo.users.length){
+                split.splice(i, 1);
+            }
+            if(split[i] >= 100){
+                m.channel.send(`<@${user.id}>, any split cannot be greater than or equal to 100.`);
+                return;
+            }
+            totalsplitpercent += split[i];
+        }
+        if(totalsplitpercent > 100){
+            m.channel.send(`<@${user.id}>, the total split totals to over 100%, please provide a valid split.`);
+        }
+        for(i=0;i<userheistinfo.users.length;i++){
+            curUser = userheistinfo.users[i];
+            curUser.split = split[i];
+            userheistinfo.users.splice(i, 1);
+            userheistinfo.users.push(curUser);
+        }
+        fileinfo = {"users":userheistinfo.users, "location": userheistinfo.location, "started": userheistinfo.started};
+        pglibrary.WriteToJson(fileinfo, file);
+        collector.stop();
+    });
+}
 
 function DifficultyDisplay(diff){
     display = ""
