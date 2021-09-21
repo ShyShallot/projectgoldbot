@@ -138,15 +138,16 @@ async function SetupHeist(user, message, location){
 }
 
 function JoinHeist(user, message){
-    target = message.mentions.users.first().id;
     if(!message.mentions.users.first()){
         message.channel.send(`<@${user.id}>, please provide a valid user mention.`);
         return;
     }
+    target = message.mentions.users.first().id;
     file = `./heists/heist${target}.json`;
     requestedHeist = UserHesitInfo(file);
     if(requestedHeist.users.length >= 4){
         message.channel.send(`<@${user.id}>, You cannot join this heist as the max Amount of users in heist has been met.`);
+        return;
     }  
     console.log(target);
     if(requestedHeist.started){
@@ -154,22 +155,36 @@ function JoinHeist(user, message){
         return;
     }
     console.log(requestedHeist);
-    userinfo = {"name": user.username, "id": user.id, "host": false, "split": 100 / requestedHeist.users.length}
+    usersInHeist = requestedHeist.users.length + 1;
+    userinfo = {"name": user.username, "id": user.id, "host": false, "split": 100 / usersInHeist }
+    console.log(userinfo);
     requestedHeist.users.push(userinfo);
     fileinfo = {"users":requestedHeist.users, "location": requestedHeist.location, "started": false};
-    for(i=0;i<requestedHeist.users.length;i++){
-        usersinHeist = requestedHeist.users.length;
-        curUser = requestedHeist.users[i];
-        defaultsplit = 100 / usersinHeist;
-        updatedUserInfo = {"name": curUser.username, "id": curUser.id, "host": curUser.host, "split": defaultsplit}
-        requestedHeist.users.splice(i, 1);
-        requestedHeist.users.push(updatedUserInfo);
-    }
     pglibrary.WriteToJson(fileinfo, file);
+    UpdateUserSplits(target);
+    message.channel.send(`<@${user.id}>, you have successfuly joined ${requestedHeist.users.find(user => user.host == true).name}'s heist.`);
+}
 
+function UpdateUserSplits(userID){
+    file = `./heists/heist${userID}.json`;
+    requestedHeist = UserHesitInfo(file);
+    newusers = [];
+    console.log(newusers);
+    for(i=0;i<requestedHeist.users.length;i++){
+        curUser = requestedHeist.users[i];
+        console.log(`Updating Split for user ${curUser.name}`);
+        console.log(curUser);
+        userinfo = {"name": curUser.name, "id": curUser.id, "host": curUser.host, "split": Math.round(100 / usersInHeist)};
+        console.log(userinfo);
+        newusers.push(userinfo);
+        console.log(newusers);
+    }
+    fileinfo = {"users":newusers, "location": requestedHeist.location, "started": false};
+    pglibrary.WriteToJson(fileinfo, file);
 }
 
 function ChooseSplit(user, message){
+    collector = message.channel.createMessageCollector(message.channel, {time: 10000});
     file = `./heists/heist${user.id}.json`;
     if(!fs.existsSync(file)){
         message.channel.send(`<@${user.id}>, you do not have a heist going, cancelling.`);
@@ -186,33 +201,46 @@ function ChooseSplit(user, message){
         if(typeof m === 'undefined') return;
         console.log(m.content);
         split = m.content;
-        split.split('/');
+        splitN = split.split("/");
+        console.log(splitN);
         totalsplitpercent = 0
-        for(i=0;i<split.length;i++){
-            split[i] = parseInt(split[i]);
-            if(typeof split[i] !== `number`) {
+        for(i=0;i<splitN.length;i++){
+            console.log(splitN[i]);
+            currentSplit = splitN[i]
+            console.log(currentSplit);
+            currentSplit = parseInt(currentSplit);
+            console.log(currentSplit);
+            if(typeof currentSplit !== `number`) {
                 m.channel.send(`<@${user.id}>, a givin split was not a number, please provid a valid number.`);
                 return;
             }
             if(i>userheistinfo.users.length){
-                split.splice(i, 1);
+                splitN.splice(i, 1);
             }
-            if(split[i] >= 100){
+            if(currentSplit >= 100){
                 m.channel.send(`<@${user.id}>, any split cannot be greater than or equal to 100.`);
                 return;
             }
-            totalsplitpercent += split[i];
+            totalsplitpercent += currentSplit;
         }
-        if(totalsplitpercent > 100){
-            m.channel.send(`<@${user.id}>, the total split totals to over 100%, please provide a valid split.`);
-        }
+        if(totalsplitpercent != 100){
+            m.channel.send(`<@${user.id}>, the total split has to be a total 100%, your split is less or greater than 100%.`);
+        } 
+        newusers = [];
+        console.log(newusers);
         for(i=0;i<userheistinfo.users.length;i++){
             curUser = userheistinfo.users[i];
-            curUser.split = split[i];
-            userheistinfo.users.splice(i, 1);
-            userheistinfo.users.push(curUser);
+            console.log(curUser);
+            curSplit = splitN[i];
+            console.log(`Current Split in String: ${curSplit}`);
+            curSplit = parseInt(curSplit);
+            console.log(`Current Split in Int: ${curSplit}`);
+            newuser = {"name": curUser.name, "id": curUser.id, "host": curUser.host, "split": curSplit};
+            console.log(newuser);
+            newusers.push(newuser);
+            console.log(newusers);
         }
-        fileinfo = {"users":userheistinfo.users, "location": userheistinfo.location, "started": userheistinfo.started};
+        fileinfo = {"users":newusers, "location": userheistinfo.location, "started": userheistinfo.started};
         pglibrary.WriteToJson(fileinfo, file);
         collector.stop();
     });
