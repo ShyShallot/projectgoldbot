@@ -34,6 +34,9 @@ module.exports = {
                 ChooseSplit(message.author,message);
                 break;
             case 'status':
+                HeistStatus(message.author);
+                break;
+            case 'start':
                 //todo
                 break;
             case 'equipment':
@@ -175,6 +178,33 @@ function ChooseSplit(user, message){
         pglibrary.WriteToJson(fileinfo, file);
         collector.stop();
     });
+}
+
+function HeistStatus(user){
+    file = `./heists/heist${user.id}.json`;
+    if(!fs.existsSync(file)){
+        message.channel.send(`<@${user.id}>, you do not have a heist going, cancelling.`);
+        return;
+    }
+    userheistinfo = UserHesitInfo(file);
+    if(userheistinfo.started) {
+        status = "Started"
+    } else {
+        status = "Has Not been Started"
+    }
+    let embed = new MessageEmbed()
+    .setTitle(`Heist Information for ${user.username}`)
+    .setAuthor(bot.user.username, bot.user.displayAvatarURL)
+    .setColor(`#87a9ff`)
+    .setDescription(`Current Heist Information.`)
+    .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
+    .addField(`Heist Location`, userheistinfo.location[0].name)
+    .addField(`Heist Start Status`, `${status}`);
+    userheistinfo.users.forEach(user => {
+        console.log(user);
+        embed.addField(user.name, `Slot: ${userheistinfo.users.indexOf(user)} \n Is Host: ${user.host} \n Reward Cut: ${user.split}%`);
+    });
+    message.channel.send({content: `<@${message.author.id}>`, embeds: [embed]});
 }
 
 function DifficultyDisplay(diff){
