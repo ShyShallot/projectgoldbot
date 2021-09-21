@@ -1,6 +1,6 @@
 const {MessageEmbed} = require('discord.js'); // required for Rich Message Embeds
 const config = require('../config.json'); // basic config file read
-const { Client } = require('unb-api'); // define our basic client for the UNB-API
+const { Client, User } = require('unb-api'); // define our basic client for the UNB-API
 const client = new Client(config.econtoken); // define the rest of the client for economy and verify with our econ token
 const pglibrary = require("../libraryfunctions.js"); // load our custom library functions.
 const fs = require('fs'); // File System for JS 
@@ -22,7 +22,7 @@ module.exports = {
                 GetLocationFromName(message.author, message);
                 break;
             case 'join':
-                //todo
+                JoinHeist(message.author, message);
                 break;
             case 'split':
                 message.channel.send(`<@${message.author.id}>, choose a split for each user in your heist. Format: 70/25/5. User 1 Gets 70%, User 2 gets 25%, and User 3 gets 5%. Total Split must be less than 100%.`);
@@ -135,6 +135,38 @@ async function SetupHeist(user, message, location){
     fileinfo = {"users":users, "location": [location], "started": false};
     await pglibrary.WriteToJson(fileinfo, newfile);
     message.channel.send(`<@${user.id}>, You have successfuly setup your heist, you can wait for users to join or you can start it.`);
+}
+
+function JoinHeist(user, message){
+    target = message.mentions.users.first().id;
+    if(!message.mentions.users.first()){
+        message.channel.send(`<@${user.id}>, please provide a valid user mention.`);
+        return;
+    }
+    file = `./heists/heist${target}.json`;
+    requestedHeist = UserHesitInfo(file);
+    if(requestedHeist.users.length >= 4){
+        message.channel.send(`<@${user.id}>, You cannot join this heist as the max Amount of users in heist has been met.`);
+    }  
+    console.log(target);
+    if(requestedHeist.started){
+        message.channel.send(`<@${user.id}>, This heist has already started, cancelling request.`);
+        return;
+    }
+    console.log(requestedHeist);
+    userinfo = {"name": user.username, "id": user.id, "host": false, "split": 100 / requestedHeist.users.length}
+    requestedHeist.users.push(userinfo);
+    fileinfo = {"users":requestedHeist.users, "location": requestedHeist.location, "started": false};
+    for(i=0;i<requestedHeist.users.length;i++){
+        usersinHeist = requestedHeist.users.length;
+        curUser = requestedHeist.users[i];
+        defaultsplit = 100 / usersinHeist;
+        updatedUserInfo = {"name": curUser.username, "id": curUser.id, "host": curUser.host, "split": defaultsplit}
+        requestedHeist.users.splice(i, 1);
+        requestedHeist.users.push(updatedUserInfo);
+    }
+    pglibrary.WriteToJson(fileinfo, file);
+
 }
 
 function ChooseSplit(user, message){
