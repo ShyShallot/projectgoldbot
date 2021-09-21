@@ -7,24 +7,19 @@ const fs = require('fs'); // File System for JS
 module.exports = {
     name: 'heist',
     description: 'Heist System',
-    execute(message, args, bot){
+    async execute(message, args, bot){
         console.log(args);
         switch (args[0]){ // first arg
             case 'list':
                 ListHeistLocations(message, args, bot);
                 break;
             case 'setup':
-                if(fs.existsSync(`./heists/heist${user.id}.json`)){
-                    message.channel.send(`<@${user.id}>, you already have a heist going, canceling request.`);
+                if(fs.existsSync(`./heists/heist${message.author.id}.json`)){
+                    message.channel.send(`<@${message.author.id}>, you already have a heist going, canceling request.`);
                     return;
                 }
                 message.channel.send(`<@${message.author.id}>, respond to select a location to get started.`);
-                rLocation = GetLocationFromName(message.author, message);
-                if(typeof rLocation === `undefined`){ 
-                    message.channel.send(`<@${message.author.id}>, could not find the location, or no input was provided.`) 
-                    return;
-                }
-                SetupHeist(user, message, rLocation);
+                GetLocationFromName(message.author, message);
                 break;
             case 'join':
                 //todo
@@ -34,7 +29,11 @@ module.exports = {
                 ChooseSplit(message.author,message);
                 break;
             case 'status':
-                HeistStatus(message.author);
+                if(!fs.existsSync(`./heists/heist${message.author.id}.json`)){
+                    message.channel.send(`<@${message.author.id}>, you do not have a heist going, canceling request.`);
+                    return;
+                }
+                HeistStatus(message.author, message, bot);
                 break;
             case 'start':
                 //todo
@@ -45,6 +44,9 @@ module.exports = {
                     break;
                 } else if (args[1] == "buy"){
                     BuyEquipment(message, bot, args);
+                    break;
+                } else {
+                    message.channel.send(`<@${message.author.id}>, Valid Equipment Args: list/buy`);
                     break;
                 }
                 break;
@@ -83,7 +85,7 @@ function UserHesitInfo(file){
 
 // Main Heist Related Functions
 
-function GetLocationFromName(user, message){
+async function GetLocationFromName(user, message){
     collector = message.channel.createMessageCollector(message.channel, {time: 10000});
     heistlocations = HeistLocationData();
     collector.on('collect', m => {
@@ -96,13 +98,17 @@ function GetLocationFromName(user, message){
         rLocation = m.content;
         for (i=0;i<heistlocations.locations.length;i++){
             curLocation = heistlocations.locations[i];
-            if(curlocation.name == m.content){
-                m.channel.send(`<@${m.author.id}>, You have selected ${curLocation.name}.`)
-                return curLocation;
+            console.log(curLocation);
+            if(curLocation.name == m.content){
+                m.channel.send(`<@${m.author.id}>, You have selected ${curLocation.name}.`);
+                SetupHeist(message.author, message, curLocation);
+                collector.stop();
+                return;
             }
         }
         collector.stop();
     });
+    
 }
 
 async function SetupHeist(user, message, location){
@@ -180,12 +186,8 @@ function ChooseSplit(user, message){
     });
 }
 
-function HeistStatus(user){
+function HeistStatus(user, message, bot){
     file = `./heists/heist${user.id}.json`;
-    if(!fs.existsSync(file)){
-        message.channel.send(`<@${user.id}>, you do not have a heist going, cancelling.`);
-        return;
-    }
     userheistinfo = UserHesitInfo(file);
     if(userheistinfo.started) {
         status = "Started"
@@ -202,7 +204,7 @@ function HeistStatus(user){
     .addField(`Heist Start Status`, `${status}`);
     userheistinfo.users.forEach(user => {
         console.log(user);
-        embed.addField(user.name, `Slot: ${userheistinfo.users.indexOf(user)} \n Is Host: ${user.host} \n Reward Cut: ${user.split}%`);
+        embed.addField(user.name, `Slot: ${userheistinfo.users.indexOf(user) + 1} \n Is Host: ${user.host} \n Reward Cut: ${user.split}%`);
     });
     message.channel.send({content: `<@${message.author.id}>`, embeds: [embed]});
 }
@@ -303,17 +305,17 @@ function ListEquipment(message, bot){
         for (l=0; l<embed.fields.length;l++){
             curField = embed.fields[l];
             console.log(curField);
-            if(curItem.name.includes('Tier 1') && curField.name.includes('Tier 1')){
+            if((curItem.name.includes('Tier 1') || curItem.name.includes('Small')) && curField.name.includes('Tier 1')){
                 if(curField.value.startsWith('1')){
                     curField.value = ``;
                 }
                 curField.value += `${curItem.name}, Cost: $${pglibrary.commafy(curItem.cost)} \n`
-            } else if (curItem.name.includes('Tier 2') && curField.name.includes('Tier 2')){
+            } else if ((curItem.name.includes('Tier 2') || curItem.name.includes('Medium')) && curField.name.includes('Tier 2')){
                 if(curField.value.startsWith('1')){
                     curField.value = ``;
                 }
                 curField.value += `${curItem.name}, Cost: $${pglibrary.commafy(curItem.cost)} \n`
-            } else if (curItem.name.includes('Tier 3') && curField.name.includes('Tier 3')){
+            } else if ((curItem.name.includes('Tier 3') || curItem.name.includes('Large')) && curField.name.includes('Tier 3')){
                 if(curField.value.startsWith('1')){
                     curField.value = ``;
                 }

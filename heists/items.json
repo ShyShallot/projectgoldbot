@@ -13,5 +13,9 @@
     
     {"name": "Tier 1 Medkit", "cost": 25000},
     {"name":"Tier 2 Medkit", "cost":  55000},
-    {"name": "Tier 3 Medkit", "cost": 150000}
+    {"name": "Tier 3 Medkit", "cost": 150000},
+
+    {"name": "Small Dufflebags", "cost": 25000},
+    {"name": "Medium Dufflebags", "cost": 50000},
+    {"name": "Large Dufflebags", "cost": 100000}
 ]}
