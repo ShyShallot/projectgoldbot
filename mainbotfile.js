@@ -64,7 +64,7 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     console.log(ecommand);
     AutomatedMessage(message);
     if (message.content.startsWith(config.econprefix)) { // this is to extend UnbelievaBoat's functionality
-        if (ecommand === "coinfliptest"){
+        if (ecommand === "coinflip"){
             bot.commands.get("coinflip").execute(message, args, bot);
         }
         if (ecommand === "raffle"){
@@ -74,7 +74,7 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
             Jackpot(1);
             message.channel.send(`Forcing Raffle Status`)
         }
-        if (ecommand === "stockstest") {
+        if (ecommand === "stocks") {
             bot.commands.get("stocks").execute(message, args, bot)
         }
     }
