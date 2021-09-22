@@ -125,8 +125,8 @@ async function Economy(){ // Janky as fuck but works
     while (true) {
         await Jackpot(0); // Init Raffle
         await StockMarket();
-        //await ClearSQLDB(); // Temp thing till i figure out SQL more
-        //await WritetoSQLDB();
+        await ClearSQLDB(); // Temp thing till i figure out SQL more
+        await WritetoSQLDB();
         await pglibrary.sleep(5000);
     }
 }
@@ -350,6 +350,7 @@ async function Heists(){
     if(hour == heistBasic.lasthour){
         return;
     }
+    heistBasic.lasthour = hour;
     for(i=0;i<heists.length;i++){
         heist = heists[i];
         heistDataRaw = fs.readFileSync(`./heists/${heist}`);
@@ -366,16 +367,19 @@ async function Heists(){
     }
 }
 
-function HeistEnd(heist){
+function HeistEndWin(heist){
+    finalstring = "";
     for(i=0;i<heist.users.length;i++){
         curUser = heist.users[i];
+        fs.readFileSync(`./heists/heistecon.js`).execute(curUser, heist, 1);
+        finalstring += `<@${curUser.id}>,`;
         if(curUser.host){
             server = bot.guilds.cache.get("631008739830267915");
             username = curUser.name;
             let channel = server.channels.cache.find(c => c.name == `${username}'s Heist'`);
-            if(channel){
-                //todo
-            }
+        }
+        if(i=heist.users.length){
+            finalstring += ` the heist has ended and you have succeeded, you will be rewarded with your cut.`;
         }
     }
 }

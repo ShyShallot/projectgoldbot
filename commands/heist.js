@@ -173,14 +173,14 @@ async function StartHeist(user, message, bot){
         message.channel.send(`<@${user.id}>, The heist has already started started, run ${config.prefix}heist status instead.`);
         return;
     }
-    newHeistInfo = {"users":userHeist.users, "location": userHeist.location, "started": true, "timeleft": userHeist.timeleft};
-    await pglibrary.WriteToJson(newHeistInfo, file);
     server = bot.guilds.cache.get("631008739830267915");
     console.log(server);
     server.channels.create(`${user.username}'s Heist`).then(channel =>{
         let catergory = server.channels.cache.find(c => c.name == "Heists")
         if(!catergory) throw new Error("Category cannot be found");
         channel.setParent(catergory.id);
+        newHeistInfo = {"users":userHeist.users, "location": userHeist.location, "started": true, "timeleft": userHeist.timeleft};
+        pglibrary.WriteToJson(newHeistInfo, file);
         channel.send(`<@${user.id}>, you have started the Heist, Time until Heist is done: ${userHeist.timeleft} Hour(s).`);
     }).catch(console.error);
 }
