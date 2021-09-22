@@ -45,6 +45,10 @@ module.exports = {
                 break;
             case 'equipment':
                 if(args[1] == "list"){ // second arg
+                    if(args[2] == "inventory" || args[2] == 'inv'){
+                        ListUsersInventory(message, message.author, bot);
+                        return;
+                    } 
                     ListEquipment(message, bot);
                     break;
                 } else if (args[1] == "buy"){
@@ -145,7 +149,7 @@ async function GetLocationFromName(user, message){
 }
 
 function IsUserAlreadyInAHeist(userID){
-    if(fs.existsSync(`./heists/heist${message.author.id}.json`)){
+    if(fs.existsSync(`./heists/heist${userID}.json`)){
         return;
     } else {
         fs.readdir('./heists/', (err, files) => {
@@ -154,6 +158,7 @@ function IsUserAlreadyInAHeist(userID){
                     console.log(file);
                     filedata = UserHesitInfo(`./heists/${file}`);
                     userids = [];
+                    if(!filedata.users) return;
                     for(i=0;i<filedata.users.length;i++){
                         curUser = filedata.users[i];
                         if(curUser.id == userID){
@@ -485,6 +490,30 @@ function ListEquipment(message, bot){
     message.channel.send({content: `<@${message.author.id}>`, embeds: [embed]});
 }
 
+function ListUsersInventory(message, user, bot){
+    inv = HeistInvData();
+    for(i=0;i<inv.users.length;i++){
+        curUser = inv.users[i];
+        if(curUser.id == user.id){
+            console.log(curUser);
+            console.log(curUser.inv);
+            let embed = new MessageEmbed()
+            .setTitle(`${user.username}'s Invetory'`)
+            .setAuthor(bot.user.username, bot.user.displayAvatarURL)
+            .setColor(`#87a9ff`)
+            .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
+            .addField(`Your Inventory`, `1`);
+            curUser.inv.forEach(item => {
+                if(embed.fields[0].value.startsWith('1')){
+                    embed.fields[0].value = ``;
+                }
+                embed.fields[0].value += `${item} \n`;
+            });
+            message.channel.send({content: `<@${user.id}>`, embeds: [embed]});
+        }
+    }
+}
+
 function BuyEquipment(message, bot, args){
     heistequipment = HeistItemData();
     message.channel.send(`<@${message.author.id}>, Select an item to buy by replying to this message with the item name.`);
@@ -511,6 +540,7 @@ function BuyEquipment(message, bot, args){
                     m.channel.send(`<@${m.author.id}>, You already have (a) ${requestedItem.name}, canceling request.`);
                     return;
                 }
+                client.editUserBalance(m.guild.id, m.author.id, {cash: -requestedItem.cost, bank:0});
                 await HeistInventoryMain(m.author, requestedItem.name);
                 message.channel.send(`<@${m.author.id}>, You have bought (a) ${requestedItem.name}.`);
             } else {

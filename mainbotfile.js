@@ -123,6 +123,7 @@ function AutomatedMessage(message) { // this is to keep annoying as people from 
 
 async function Economy(){ // Janky as fuck but works
     while (true) {
+        await Heists();
         await Jackpot(0); // Init Raffle
         await StockMarket();
         await ClearSQLDB(); // Temp thing till i figure out SQL more
@@ -367,6 +368,42 @@ async function Heists(){
     }
 }
 
+function HeistEnd(heist){
+    heistDiff = heist.location[0].difficulty;
+    heistReward = heist.location[0].maxreward;
+    usersInHeist = heist.users.length;
+    diffMulti = 1 + heistDiff/10;
+    usersExtras = CheckForOptionalReqs(hesit) / 10;
+    chance = Math.random() * diffDecimal - usersExtras;
+
+    if(chance <= 0.5){
+        HeistEndWin(heist);
+    } else if (chance > 0.5 && chance < 0.6){
+        HeistEndDraw(heist);
+    } else if (chance >= 0.6){
+        HeistEndLoss(heist);
+    }
+}
+
+function CheckForOptionalReqs(heist){
+    invRaw = fs.readFileSync(`./heists/usersinventory.json`);
+    inv = JSON.parse(invRaw);
+    amountOfOpReq = 0;
+    for(i=0;i<heist.users.length;i++){
+        curUser = heist.users[i];
+        for(l=0;l<inv.users.length;l++){
+            curUserInv = inv.users[l];
+            if(curUserInv.id == curUser){
+                curUserInv.inv.forEach(item =>{
+                    if(heist.location[0].optionalreqs.includes(item)){
+                        amountOfOpReq++;
+                    }
+                })
+            }
+        }
+    }
+}
+
 function HeistEndWin(heist){
     finalstring = "";
     for(i=0;i<heist.users.length;i++){
@@ -380,6 +417,40 @@ function HeistEndWin(heist){
         }
         if(i=heist.users.length){
             finalstring += ` the heist has ended and you have succeeded, you will be rewarded with your cut.`;
+        }
+    }
+}
+
+function HeistEndLoss(heist){
+    finalstring = "";
+    for(i=0;i<heist.users.length;i++){
+        curUser = heist.users[i];
+        fs.readFileSync(`./heists/heistecon.js`).execute(curUser, heist, 0);
+        finalstring += `<@${curUser.id}>,`;
+        if(curUser.host){
+            server = bot.guilds.cache.get("631008739830267915");
+            username = curUser.name;
+            let channel = server.channels.cache.find(c => c.name == `${username}'s Heist'`);
+        }
+        if(i=heist.users.length){
+            finalstring += ` the heist has ended and you have failed, costs for equipment, damages and bail will be detucted from you balance.`;
+        }
+    }
+}
+
+function HeistEndDraw(heist){
+    finalstring = "";
+    for(i=0;i<heist.users.length;i++){
+        curUser = heist.users[i];
+        ClearUsersInventory(curUser);
+        finalstring += `<@${curUser.id}>,`;
+        if(curUser.host){
+            server = bot.guilds.cache.get("631008739830267915");
+            username = curUser.name;
+            let channel = server.channels.cache.find(c => c.name == `${username}'s Heist'`);
+        }
+        if(i=heist.users.length){
+            finalstring += ` the heist has ended but you retreated, you have only lost your items.`;
         }
     }
 }
@@ -399,6 +470,17 @@ function HeistFiles(){
         });
     });
     return heists;
+}
+
+function ClearUsersInventory(user){
+    inventory = HeistInvData();
+    console.log(`Clearing users inventory`);
+    for(i=0;i<inventory.users.length;i++){
+        curUser = inventory.users[i];
+        curUser.inv = [];
+        pglibrary.WriteToJson(inventory, `usersinventory.json`);
+        console.log(`Cleared Uses inventory`);
+    }
 }
 
 // Database Related Functions
