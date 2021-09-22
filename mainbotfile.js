@@ -9,7 +9,8 @@ const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('
 const pglibrary = require("./libraryfunctions.js");
 const sqlconfig = require('./sql.json');
 const SQL = require('mssql');
-const heist = require('./commands/heist');
+const { channel } = require('diagnostics_channel');
+const heistEcon = require('./heists/heistecon.js');
 
 bot.commands = new Map(); // New Array for our commands
 bot.on('ready', () => { // when the bot has logged in and is ready
@@ -345,15 +346,19 @@ function GrabStocksinOwnership(stock) { // Modified Max User Stocks function
 async function Heists(){
     date = new Date();
     hour = date.getHours();
-    heists = HeistFiles();
+    heists = await HeistFiles();
+    console.log(heists);
     heistBasicRaw = fs.readFileSync('./heists/heist.json');
     heistBasic = JSON.parse(heistBasicRaw);
+    console.log(heistBasic);
     if(hour == heistBasic.lasthour){
+        console.log(`Our Current hour is equal to the last hour, stopping`);
         return;
     }
     heistBasic.lasthour = hour;
     for(i=0;i<heists.length;i++){
         heist = heists[i];
+        console.log(heist);
         heistDataRaw = fs.readFileSync(`./heists/${heist}`);
         heistData = JSON.parse(heistDataRaw);
         if(heistData.started){
@@ -363,18 +368,24 @@ async function Heists(){
                 HeistEnd(heistData);
             }
             heistData.timeleft = timeleft;
-            pglibrary.WriteToJson(heistData, `./heists/${hesit}`);
+            pglibrary.WriteToJson(heistData, `./heists/${heist}`);
         }
     }
+    pglibrary.WriteToJson(heistBasic, `./heists/heist.json`);
 }
 
 function HeistEnd(heist){
+    console.log(`Ending Heist`);
+    console.log(heist);
     heistDiff = heist.location[0].difficulty;
-    heistReward = heist.location[0].maxreward;
-    usersInHeist = heist.users.length;
+    usersInHeistMutli = 1 + heist.users.length /10;
+    if(heist.users.length == 1){
+        usersInHeistMutli = 1;
+    }
     diffMulti = 1 + heistDiff/10;
-    usersExtras = CheckForOptionalReqs(hesit) / 10;
-    chance = Math.random() * diffDecimal - usersExtras;
+    usersExtras = CheckForOptionalReqs(heist) / 10;
+    chance = Math.random() * diffMulti * usersInHeistMutli - usersExtras;
+    console.log(`Final Chance: ${chance}, Modifiers: Difficulty: ${heistDiff}, User Multiplier: ${usersInHeistMutli}, Extras Mutliplier: ${usersExtras}`);
 
     if(chance <= 0.5){
         HeistEndWin(heist);
@@ -402,40 +413,53 @@ function CheckForOptionalReqs(heist){
             }
         }
     }
+    return amountOfOpReq;
 }
 
 function HeistEndWin(heist){
     finalstring = "";
     for(i=0;i<heist.users.length;i++){
         curUser = heist.users[i];
-        fs.readFileSync(`./heists/heistecon.js`).execute(curUser, heist, 1);
+        heistEcon.execute(curUser, heist, 1);
         finalstring += `<@${curUser.id}>,`;
         if(curUser.host){
             server = bot.guilds.cache.get("631008739830267915");
             username = curUser.name;
-            let channel = server.channels.cache.find(c => c.name == `${username}'s Heist'`);
+            hChannel = server.channels.cache.find(c => c.name == `${username.toLowerCase()}s-heist`);
+            if(!hChannel){
+                console.log(`Could not find that channel`);
+                return;
+            }
+            console.log(hChannel);
         }
         if(i=heist.users.length){
             finalstring += ` the heist has ended and you have succeeded, you will be rewarded with your cut.`;
         }
     }
+    hChannel.send(finalstring);
 }
 
 function HeistEndLoss(heist){
     finalstring = "";
     for(i=0;i<heist.users.length;i++){
         curUser = heist.users[i];
-        fs.readFileSync(`./heists/heistecon.js`).execute(curUser, heist, 0);
+        heistEcon.execute(curUser, heist, 0);
         finalstring += `<@${curUser.id}>,`;
         if(curUser.host){
             server = bot.guilds.cache.get("631008739830267915");
             username = curUser.name;
-            let channel = server.channels.cache.find(c => c.name == `${username}'s Heist'`);
+            hChannel = server.channels.cache.find(c => c.name == `${username.toLowerCase()}s-heist`);
+            if(!hChannel){
+                console.log(`Could not find that channel`);
+                return;
+            }
+            console.log(hChannel);
         }
         if(i=heist.users.length){
             finalstring += ` the heist has ended and you have failed, costs for equipment, damages and bail will be detucted from you balance.`;
         }
     }
+    hChannel.send(finalstring);
 }
 
 function HeistEndDraw(heist){
@@ -447,29 +471,49 @@ function HeistEndDraw(heist){
         if(curUser.host){
             server = bot.guilds.cache.get("631008739830267915");
             username = curUser.name;
-            let channel = server.channels.cache.find(c => c.name == `${username}'s Heist'`);
+            hChannel = server.channels.cache.find(c => c.name == `${username.toLowerCase()}s-heist`);
+            if(!hChannel){
+                console.log(`Could not find that channel`);
+                return;
+            }
+            console.log(hChannel);
         }
         if(i=heist.users.length){
             finalstring += ` the heist has ended but you retreated, you have only lost your items.`;
         }
     }
+    hChannel.send(finalstring);
 }
 
-function HeistFiles(){
-    heists = [];
-    fs.readdir('./heists/', (err, files) => {
-        if(err) {
-            console.log(err);
-            return;
+async function HeistFiles(){
+    let heists = []
+    heistsF = fs.readdirSync(`./heists`);
+    console.log(heistsF);
+    if(!heistsF){
+        console.log(`Reading DIR Failed`);
+        return;
+    }
+    for(i=0;i<heistsF.length;i++){
+        file = heistsF[i];
+        console.log(`File Found: ${file}`);
+        if(file == 'heist.json'){
+            continue;
         }
-        files.forEach(file =>{
-            if(file.startsWith('heist') && file.endsWith('.json')){
-                console.log(file);
-                heists.push(file);
-            }
-        });
-    });
+        if(file.startsWith('heist') && file.endsWith('.json')){
+            console.log(file);
+            console.log(`Found an onging heist file, pushing`);
+            heists.push(file);
+        }
+    }
+    console.log(`Final Found Files`);
+    console.log(heists);
     return heists;
+}
+
+function HeistInvData(){
+    heistinvdata = fs.readFileSync('./heists/usersinventory.json');
+    heistinv = JSON.parse(heistinvdata);
+    return heistinv;
 }
 
 function ClearUsersInventory(user){

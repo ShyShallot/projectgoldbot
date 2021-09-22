@@ -3,11 +3,12 @@ const { Client, User } = require('unb-api'); // define our basic client for the 
 const client = new Client(config.econtoken); // define the rest of the client for economy and verify with our econ token
 const pglibrary = require("../libraryfunctions.js"); // load our custom library functions.
 const fs = require('fs'); // File System for JS 
+const path = require('path');
 module.exports = {
-    name: 'heist',
+    name: 'heistecon',
     description: 'Heist System',
     async execute(user, heist, state){
-        serverID = 631008739830267915;
+        serverID = '631008739830267915';
         switch(state){
             case 0:
                 amount = (CostOfEquipment(user) + MaxPossibleRewardLoss(heist) + 50000 + CostOfDamages(heist)) * 1; 
@@ -22,20 +23,22 @@ module.exports = {
 }
 
 function HeistItemData(){
-    heistequipsdata = fs.readFileSync('items.json');
+    filePath = path.join(__dirname, 'items.json');
+    heistequipsdata = fs.readFileSync(filePath);
     heistequipment = JSON.parse(heistequipsdata);
     return heistequipment;
 }
 
 function HeistInvData(){
-    heistinvdata = fs.readFileSync('usersinventory.json');
+    filePath = path.join(__dirname, 'usersinventory.json');
+    heistinvdata = fs.readFileSync(filePath);
     heistinv = JSON.parse(heistinvdata);
     return heistinv;
 }
 
 
 function HeistLocationData(){
-    heistlocationdata = fs.readFileSync('locations.json');
+    heistlocationdata = fs.readFileSync(`locations.json`);
     heistlocations = JSON.parse(heistlocationdata);
     return heistlocations;
 }
