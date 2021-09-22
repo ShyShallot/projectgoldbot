@@ -14,7 +14,7 @@ module.exports = {
                 ListHeistLocations(message, args, bot);
                 break;
             case 'setup':
-                if(fs.existsSync(`./heists/heist${message.author.id}.json`)){
+                if(IsUserAlreadyInAHeist(message.author.id)){
                     message.channel.send(`<@${message.author.id}>, you already have a heist going, canceling request.`);
                     return;
                 }
@@ -22,21 +22,26 @@ module.exports = {
                 GetLocationFromName(message.author, message);
                 break;
             case 'join':
+                if(IsUserAlreadyInAHeist(message.author.id)){
+                    message.channel.send(`<@${message.author.id}>, you are already in a heist you cannot join another`);
+                    return;
+                }
                 JoinHeist(message.author, message);
                 break;
             case 'split':
-                message.channel.send(`<@${message.author.id}>, choose a split for each user in your heist. Format: 70/25/5. User 1 Gets 70%, User 2 gets 25%, and User 3 gets 5%. Total Split must be less than 100%.`);
-                ChooseSplit(message.author,message);
+                ChooseSplit(message.author, message);
                 break;
             case 'status':
                 if(!fs.existsSync(`./heists/heist${message.author.id}.json`)){
-                    message.channel.send(`<@${message.author.id}>, you do not have a heist going, canceling request.`);
+                    StatusforUserInHeist(message.author, message, bot);
                     return;
-                }
+                } 
                 HeistStatus(message.author, message, bot);
                 break;
             case 'start':
-                //todo
+                if(IsUserAlreadyInArray(message.author.id)){
+                    StartHeist(message.author, message, bot);
+                }
                 break;
             case 'equipment':
                 if(args[1] == "list"){ // second arg
@@ -83,6 +88,34 @@ function UserHesitInfo(file){
     return userheistinfo;
 }
 
+function StatusforUserInHeist(user, message, bot){
+    console.log(`Reading DIR`);
+    fs.readdir('./heists/', (err, files) => {
+        files.forEach(file =>{
+            if(file.startsWith('heist') && file.endsWith('.json')){
+                console.log(file);
+                filedata = UserHesitInfo(`./heists/${file}`);
+                userids = [];
+                for(i=0;i<filedata.users.length;i++){
+                    curUser = filedata.users[i];
+                    userids.push(curUser.id);
+                    if(curUser.host){
+                        host = curUser;
+                    }
+                }
+                if(userids.includes(user.id) && host){
+                    hostNew = host;
+                    hostNew.username = host.name;
+                    HeistStatus(hostNew, message, bot);
+                } else {
+                    message.channel.send(`<@${message.author.id}>, you do not have a heist going, canceling request.`);
+                    return;
+                }
+            }
+        });
+    });
+}
+
 // Main Heist Related Functions
 
 async function GetLocationFromName(user, message){
@@ -111,6 +144,47 @@ async function GetLocationFromName(user, message){
     
 }
 
+function IsUserAlreadyInAHeist(userID){
+    if(fs.existsSync(`./heists/heist${message.author.id}.json`)){
+        return;
+    } else {
+        fs.readdir('./heists/', (err, files) => {
+            files.forEach(file =>{
+                if(file.startsWith('heist') && file.endsWith('.json')){
+                    console.log(file);
+                    filedata = UserHesitInfo(`./heists/${file}`);
+                    userids = [];
+                    for(i=0;i<filedata.users.length;i++){
+                        curUser = filedata.users[i];
+                        if(curUser.id == userID){
+                            return true;
+                        }
+                    }
+                }
+            });
+        });
+    }
+}
+
+async function StartHeist(user, message, bot){
+    file = `./heists/heist${user.id}.json`;
+    userHeist = UserHesitInfo(file);
+    if(userHeist.started){
+        message.channel.send(`<@${user.id}>, The heist has already started started, run ${config.prefix}heist status instead.`);
+        return;
+    }
+    newHeistInfo = {"users":userHeist.users, "location": userHeist.location, "started": true, "timeleft": userHeist.timeleft};
+    await pglibrary.WriteToJson(newHeistInfo, file);
+    server = bot.guilds.cache.get("631008739830267915");
+    console.log(server);
+    server.channels.create(`${user.username}'s Heist`).then(channel =>{
+        let catergory = server.channels.cache.find(c => c.name == "Heists")
+        if(!catergory) throw new Error("Category cannot be found");
+        channel.setParent(catergory.id);
+        channel.send(`<@${user.id}>, you have started the Heist, Time until Heist is done: ${userHeist.timeleft} Hour(s).`);
+    }).catch(console.error);
+}
+
 async function SetupHeist(user, message, location){
     invData = HeistInvData();
     for(i=0;i<invData.users.length;i++){
@@ -132,7 +206,7 @@ async function SetupHeist(user, message, location){
     userinfo = {"name": user.username, "id": user.id, "host": true, "split":100}
     users = [];
     users.push(userinfo);
-    fileinfo = {"users":users, "location": [location], "started": false};
+    fileinfo = {"users":users, "location": [location], "started": false, "timeleft": location.timetocomplete};
     await pglibrary.WriteToJson(fileinfo, newfile);
     message.channel.send(`<@${user.id}>, You have successfuly setup your heist, you can wait for users to join or you can start it.`);
 }
@@ -145,6 +219,10 @@ function JoinHeist(user, message){
     target = message.mentions.users.first().id;
     file = `./heists/heist${target}.json`;
     requestedHeist = UserHesitInfo(file);
+    if(IsUserAlreadyInArray(requestedHeist.users, user.id)){
+        message.channel.send(`<@${user.id}>, you are already apart of this heist.`);
+        return;
+    }
     if(requestedHeist.users.length >= 4){
         message.channel.send(`<@${user.id}>, You cannot join this heist as the max Amount of users in heist has been met.`);
         return;
@@ -159,7 +237,7 @@ function JoinHeist(user, message){
     userinfo = {"name": user.username, "id": user.id, "host": false, "split": 100 / usersInHeist }
     console.log(userinfo);
     requestedHeist.users.push(userinfo);
-    fileinfo = {"users":requestedHeist.users, "location": requestedHeist.location, "started": false};
+    fileinfo = {"users":requestedHeist.users, "location": requestedHeist.location, "started": false, "timeleft": requestedHeist.timeleft};
     pglibrary.WriteToJson(fileinfo, file);
     UpdateUserSplits(target);
     message.channel.send(`<@${user.id}>, you have successfuly joined ${requestedHeist.users.find(user => user.host == true).name}'s heist.`);
@@ -179,7 +257,7 @@ function UpdateUserSplits(userID){
         newusers.push(userinfo);
         console.log(newusers);
     }
-    fileinfo = {"users":newusers, "location": requestedHeist.location, "started": false};
+    fileinfo = {"users":newusers, "location": requestedHeist.location, "started": false, "timeleft": requestedHeist.timeleft};
     pglibrary.WriteToJson(fileinfo, file);
 }
 
@@ -191,6 +269,16 @@ function ChooseSplit(user, message){
         return;
     }
     userheistinfo = UserHesitInfo(file);
+    for(i=0;i<userheistinfo.users.length;i++){
+        curUser = userheistinfo.users[i];
+        if(curUser.id == user.id){
+            if(!curUser.host){
+                message.channel.send(`<@${user.id}>, you are not the host of heist and cannot set the split.`);
+            } else {
+                message.channel.send(`<@${message.author.id}>, choose a split for each user in your heist. Format: 70/25/5. User 1 Gets 70%, User 2 gets 25%, and User 3 gets 5%. Total Split must be less than 100%.`);
+            }
+        }
+    }
     if(userheistinfo.users.length <= 1){
         message.channel.send(`<@${user.id}>, you lack the required amount of users to set a split`);
     }
@@ -240,9 +328,18 @@ function ChooseSplit(user, message){
             newusers.push(newuser);
             console.log(newusers);
         }
-        fileinfo = {"users":newusers, "location": userheistinfo.location, "started": userheistinfo.started};
+        fileinfo = {"users":newusers, "location": userheistinfo.location, "started": userheistinfo.started, "timeleft": userheistinfo.timeleft};
         pglibrary.WriteToJson(fileinfo, file);
         collector.stop();
+        displaySplit = ""
+        splitN.forEach(split =>{
+            displaySplit += `${split}/`
+        })
+        console.log(displaySplit.length);
+        if(displaySplit.endsWith('/')){
+            displaySplit = displaySplit.substring(0, displaySplit.length - 1);
+        }
+        message.channel.send(`<@${user.id}>, you have set the split to ${displaySplit}`);
     });
 }
 
@@ -261,7 +358,8 @@ function HeistStatus(user, message, bot){
     .setDescription(`Current Heist Information.`)
     .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
     .addField(`Heist Location`, userheistinfo.location[0].name)
-    .addField(`Heist Start Status`, `${status}`);
+    .addField(`Heist Start Status`, `${status}`)
+    .addField(`Time Left:`, `${userheistinfo.timeleft} hour(s) left`);
     userheistinfo.users.forEach(user => {
         console.log(user);
         embed.addField(user.name, `Slot: ${userheistinfo.users.indexOf(user) + 1} \n Is Host: ${user.host} \n Reward Cut: ${user.split}%`);
@@ -336,6 +434,7 @@ function ListHeistLocations(message, args, bot){
                 .addField('Required Equipment', `${curlocation.reqs}`)
                 .addField(`Optional Equipment`, `${curlocation.optionalreqs}`)
                 .addField(`Location Availability`, `${locationavail}`)
+                .addField(`Time to Complete`, `Takes ${curlocation.timetocomplete} hour(s) to finish`);
                 message.channel.send({content: `<@${message.author.id}>`, embeds: [embed]});
             }
         }

@@ -9,6 +9,7 @@ const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('
 const pglibrary = require("./libraryfunctions.js");
 const sqlconfig = require('./sql.json');
 const SQL = require('mssql');
+const heist = require('./commands/heist');
 
 bot.commands = new Map(); // New Array for our commands
 bot.on('ready', () => { // when the bot has logged in and is ready
@@ -63,7 +64,7 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     console.log(ecommand);
     AutomatedMessage(message);
     if (message.content.startsWith(config.econprefix)) { // this is to extend UnbelievaBoat's functionality
-        if (ecommand === "coinflip"){
+        if (ecommand === "coinfliptest"){
             bot.commands.get("coinflip").execute(message, args, bot);
         }
         if (ecommand === "raffle"){
@@ -73,7 +74,7 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
             Jackpot(1);
             message.channel.send(`Forcing Raffle Status`)
         }
-        if (ecommand === "stocks") {
+        if (ecommand === "stockstest") {
             bot.commands.get("stocks").execute(message, args, bot)
         }
     }
@@ -124,8 +125,8 @@ async function Economy(){ // Janky as fuck but works
     while (true) {
         await Jackpot(0); // Init Raffle
         await StockMarket();
-        await ClearSQLDB(); // Temp thing till i figure out SQL more
-        await WritetoSQLDB();
+        //await ClearSQLDB(); // Temp thing till i figure out SQL more
+        //await WritetoSQLDB();
         await pglibrary.sleep(5000);
     }
 }
@@ -336,6 +337,64 @@ function GrabStocksinOwnership(stock) { // Modified Max User Stocks function
     }
     console.log(ownedStocks);
     return ownedStocks;
+}
+
+// Heist Related Functions
+
+async function Heists(){
+    date = new Date();
+    hour = date.getHours();
+    heists = HeistFiles();
+    heistBasicRaw = fs.readFileSync('./heists/heist.json');
+    heistBasic = JSON.parse(heistBasicRaw);
+    if(hour == heistBasic.lasthour){
+        return;
+    }
+    for(i=0;i<heists.length;i++){
+        heist = heists[i];
+        heistDataRaw = fs.readFileSync(`./heists/${heist}`);
+        heistData = JSON.parse(heistDataRaw);
+        if(heistData.started){
+            timeleft = heistData.timeleft;
+            timeleft += -1;
+            if(timeleft <= 0) {
+                HeistEnd(heistData);
+            }
+            heistData.timeleft = timeleft;
+            pglibrary.WriteToJson(heistData, `./heists/${hesit}`);
+        }
+    }
+}
+
+function HeistEnd(heist){
+    for(i=0;i<heist.users.length;i++){
+        curUser = heist.users[i];
+        if(curUser.host){
+            server = bot.guilds.cache.get("631008739830267915");
+            username = curUser.name;
+            let channel = server.channels.cache.find(c => c.name == `${username}'s Heist'`);
+            if(channel){
+                //todo
+            }
+        }
+    }
+}
+
+function HeistFiles(){
+    heists = [];
+    fs.readdir('./heists/', (err, files) => {
+        if(err) {
+            console.log(err);
+            return;
+        }
+        files.forEach(file =>{
+            if(file.startsWith('heist') && file.endsWith('.json')){
+                console.log(file);
+                heists.push(file);
+            }
+        });
+    });
+    return heists;
 }
 
 // Database Related Functions
