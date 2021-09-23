@@ -96,8 +96,9 @@ function ClearUsersInventory(user){
     console.log(`Clearing users inventory`);
     for(i=0;i<inventory.users.length;i++){
         curUser = inventory.users[i];
-        curUser.inv = [];
-        pglibrary.WriteToJson(inventory, `usersinventory.json`);
+        inventory.users[i].inv.splice(i,curUser.inv.length);
+        filePath = path.join(__dirname, 'usersinventory.json');
+        pglibrary.WriteToJson(inventory, filePath);
         console.log(`Cleared Uses inventory`);
     }
 }

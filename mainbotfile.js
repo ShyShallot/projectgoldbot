@@ -345,30 +345,26 @@ function GrabStocksinOwnership(stock) { // Modified Max User Stocks function
 
 async function Heists(){
     date = new Date();
-    hour = date.getHours();
     heists = await HeistFiles();
     console.log(heists);
     heistBasicRaw = fs.readFileSync('./heists/heist.json');
     heistBasic = JSON.parse(heistBasicRaw);
     console.log(heistBasic);
-    if(hour == heistBasic.lasthour){
+    if(date.getMinutes() == new Date(heistBasic.lastdate).getMinutes){
         console.log(`Our Current hour is equal to the last hour, stopping`);
         return;
     }
-    heistBasic.lasthour = hour;
+    heistBasic.lastdate = date;
     for(i=0;i<heists.length;i++){
         heist = heists[i];
         console.log(heist);
         heistDataRaw = fs.readFileSync(`./heists/${heist}`);
         heistData = JSON.parse(heistDataRaw);
         if(heistData.started){
-            timeleft = heistData.timeleft;
-            timeleft += -1;
-            if(timeleft <= 0) {
+            if(date.getHours() >= new Date(heistData.shouldend).getHours() && date.getDay() >= new Date(heistData.shouldend).getDay()) {
                 HeistEnd(heistData);
+                continue;
             }
-            heistData.timeleft = timeleft;
-            pglibrary.WriteToJson(heistData, `./heists/${heist}`);
         }
     }
     pglibrary.WriteToJson(heistBasic, `./heists/heist.json`);
@@ -389,11 +385,15 @@ function HeistEnd(heist){
 
     if(chance <= 0.5){
         HeistEndWin(heist);
+        return;
     } else if (chance > 0.5 && chance < 0.6){
         HeistEndDraw(heist);
+        return;
     } else if (chance >= 0.6){
         HeistEndLoss(heist);
+        return;
     }
+    return;
 }
 
 function CheckForOptionalReqs(heist){
@@ -416,8 +416,9 @@ function CheckForOptionalReqs(heist){
     return amountOfOpReq;
 }
 
-function HeistEndWin(heist){
+async function HeistEndWin(heist){
     finalstring = "";
+    var hChannel;
     for(i=0;i<heist.users.length;i++){
         curUser = heist.users[i];
         heistEcon.execute(curUser, heist, 1);
@@ -426,47 +427,53 @@ function HeistEndWin(heist){
             server = bot.guilds.cache.get("631008739830267915");
             username = curUser.name;
             hChannel = server.channels.cache.find(c => c.name == `${username.toLowerCase()}s-heist`);
+            console.log(hChannel);
+            if(!hChannel){
+                console.log(`Could not find that channel`);
+                return;
+            }   
+        }
+    }
+    finalstring += ` the heist has ended and you have succeeded, you will be rewarded with your cut. (This Channel will auto delete in 10 Seconds)`;
+    await hChannel.send(finalstring);
+    await pglibrary.sleep(10000);
+    CleanUpHeistInfo(heist);
+    return;
+}
+
+async function HeistEndLoss(heist){
+    finalstring = "";
+    var hChannel;
+    for(i=0;i<heist.users.length;i++){
+        curUser = heist.users[i];
+        console.log(curUser);
+        finalstring += `<@${curUser.id}>,`;
+        if(curUser.host){
+            server = bot.guilds.cache.get("631008739830267915");
+            console.log(server);
+            username = curUser.name;
+            console.log(username);
+            hChannel = server.channels.cache.find(c => c.name == `${username.toLowerCase()}s-heist`);
             if(!hChannel){
                 console.log(`Could not find that channel`);
                 return;
             }
             console.log(hChannel);
         }
-        if(i=heist.users.length){
-            finalstring += ` the heist has ended and you have succeeded, you will be rewarded with your cut.`;
-        }
-    }
-    hChannel.send(finalstring);
-}
-
-function HeistEndLoss(heist){
-    finalstring = "";
-    for(i=0;i<heist.users.length;i++){
-        curUser = heist.users[i];
         heistEcon.execute(curUser, heist, 0);
-        finalstring += `<@${curUser.id}>,`;
-        if(curUser.host){
-            server = bot.guilds.cache.get("631008739830267915");
-            username = curUser.name;
-            hChannel = server.channels.cache.find(c => c.name == `${username.toLowerCase()}s-heist`);
-            if(!hChannel){
-                console.log(`Could not find that channel`);
-                return;
-            }
-            console.log(hChannel);
-        }
-        if(i=heist.users.length){
-            finalstring += ` the heist has ended and you have failed, costs for equipment, damages and bail will be detucted from you balance.`;
-        }
     }
-    hChannel.send(finalstring);
+    finalstring += ` the heist has ended and you have failed, costs for equipment, damages and bail will be detucted from you balance. (This Channel will auto delete in 10 Seconds)`;
+    await hChannel.send(finalstring);
+    await pglibrary.sleep(10000);
+    CleanUpHeistInfo(heist);
+    return;
 }
 
-function HeistEndDraw(heist){
+async function HeistEndDraw(heist){
     finalstring = "";
+    var hChannel;
     for(i=0;i<heist.users.length;i++){
         curUser = heist.users[i];
-        ClearUsersInventory(curUser);
         finalstring += `<@${curUser.id}>,`;
         if(curUser.host){
             server = bot.guilds.cache.get("631008739830267915");
@@ -478,11 +485,32 @@ function HeistEndDraw(heist){
             }
             console.log(hChannel);
         }
-        if(i=heist.users.length){
-            finalstring += ` the heist has ended but you retreated, you have only lost your items.`;
+        ClearUsersInventory(curUser);
+    }
+    finalstring += ` the heist has ended but you retreated, you have only lost your items. (This Channel will auto delete in 10 Seconds)`;
+    await hChannel.send(finalstring);
+    await pglibrary.sleep(10000);
+    CleanUpHeistInfo(heist);
+    return;
+}
+
+function CleanUpHeistInfo(heist){
+    for(i=0;i<heist.users.length;i++){
+        curUser = heist.users[i];
+        if(curUser.host){
+            server = bot.guilds.cache.get("631008739830267915");
+            username = curUser.name;
+            hChannel = server.channels.cache.find(c => c.name == `${username.toLowerCase()}s-heist`);
+            hChannel.delete();
+            filetodelete = `./heists/heist${curUser.id}.json`;
+            fs.unlinkSync(filetodelete, function(err){
+                if(err){
+                    console.log(`There was an error when trying to delete file, make sure it exists.`);
+                    return;
+                }
+            });
         }
     }
-    hChannel.send(finalstring);
 }
 
 async function HeistFiles(){
@@ -521,9 +549,11 @@ function ClearUsersInventory(user){
     console.log(`Clearing users inventory`);
     for(i=0;i<inventory.users.length;i++){
         curUser = inventory.users[i];
-        curUser.inv = [];
-        pglibrary.WriteToJson(inventory, `usersinventory.json`);
-        console.log(`Cleared Uses inventory`);
+        if(user.id == curUser.id){
+            inventory.users[i].inv.splice(i,curUser.inv.length);
+            pglibrary.WriteToJson(inventory, `./heists/usersinventory.json`);
+            console.log(`Cleared Uses inventory`);
+        }
     }
 }
 

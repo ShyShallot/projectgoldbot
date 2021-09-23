@@ -19,7 +19,7 @@ module.exports = {
                     return;
                 }
                 message.channel.send(`<@${message.author.id}>, respond to select a location to get started.`);
-                GetLocationFromName(message.author, message);
+                GetLocationFromName(message.author, message, bot);
                 break;
             case 'join':
                 if(IsUserAlreadyInAHeist(message.author.id)){
@@ -52,6 +52,10 @@ module.exports = {
                     ListEquipment(message, bot);
                     break;
                 } else if (args[1] == "buy"){
+                    if(IsUserAlreadyInAHeist(message.author.id)){
+                        message.channel.send(`<@${message.author.id}>, you are in a heist, how tf would by equipment?`);
+                        return;
+                    }
                     BuyEquipment(message, bot, args);
                     break;
                 } else {
@@ -99,21 +103,25 @@ function StatusforUserInHeist(user, message, bot){
             if(file.startsWith('heist') && file.endsWith('.json')){
                 console.log(file);
                 filedata = UserHesitInfo(`./heists/${file}`);
-                userids = [];
-                for(i=0;i<filedata.users.length;i++){
-                    curUser = filedata.users[i];
-                    userids.push(curUser.id);
-                    if(curUser.host){
-                        host = curUser;
+                if(filedata.users){
+                    userids = [];
+                    for(i=0;i<filedata.users.length;i++){
+                        curUser = filedata.users[i];
+                        userids.push(curUser.id);
+                        if(curUser.host){
+                            host = curUser;
+                        }
                     }
-                }
-                if(userids.includes(user.id) && host){
-                    hostNew = host;
-                    hostNew.username = host.name;
-                    HeistStatus(hostNew, message, bot);
+                    if(userids.includes(user.id) && host){
+                        hostNew = host;
+                        hostNew.username = host.name;
+                        HeistStatus(hostNew, message, bot);
+                    } else {
+                        message.channel.send(`<@${message.author.id}>, you do not have a heist going, canceling request.`);
+                        return;
+                    }
                 } else {
                     message.channel.send(`<@${message.author.id}>, you do not have a heist going, canceling request.`);
-                    return;
                 }
             }
         });
@@ -122,7 +130,7 @@ function StatusforUserInHeist(user, message, bot){
 
 // Main Heist Related Functions
 
-async function GetLocationFromName(user, message){
+async function GetLocationFromName(user, message, bot){
     collector = message.channel.createMessageCollector(message.channel, {time: 10000});
     heistlocations = HeistLocationData();
     collector.on('collect', m => {
@@ -138,7 +146,7 @@ async function GetLocationFromName(user, message){
             console.log(curLocation);
             if(curLocation.name == m.content){
                 m.channel.send(`<@${m.author.id}>, You have selected ${curLocation.name}.`);
-                SetupHeist(message.author, message, curLocation);
+                SetupHeist(message.author, message, curLocation, bot);
                 collector.stop();
                 return;
             }
@@ -150,7 +158,7 @@ async function GetLocationFromName(user, message){
 
 function IsUserAlreadyInAHeist(userID){
     if(fs.existsSync(`./heists/heist${userID}.json`)){
-        return;
+        return true;
     } else {
         fs.readdir('./heists/', (err, files) => {
             files.forEach(file =>{
@@ -180,17 +188,14 @@ async function StartHeist(user, message, bot){
     }
     server = bot.guilds.cache.get("631008739830267915");
     console.log(server);
-    server.channels.create(`${user.username}'s Heist`).then(channel =>{
-        let catergory = server.channels.cache.find(c => c.name == "Heists")
-        if(!catergory) throw new Error("Category cannot be found");
-        channel.setParent(catergory.id);
-        newHeistInfo = {"users":userHeist.users, "location": userHeist.location, "started": true, "timeleft": userHeist.timeleft};
-        pglibrary.WriteToJson(newHeistInfo, file);
-        channel.send(`<@${user.id}>, you have started the Heist, Time until Heist is done: ${userHeist.timeleft} Hour(s).`);
-    }).catch(console.error);
+    userHeist.started = true
+    pglibrary.WriteToJson(userHeist, file);
+    hChannel = server.channels.cache.find(c => c.name == `${user.username.toLowerCase()}s-heist`);
+    date = new Date();
+    hChannel.send(`<@${user.id}>, you have started the Heist, Time until Heist is done: ${Math.abs(new Date(userheistinfo.shouldend).getHours() - date.getHours())} Hour(s).`);
 }
 
-async function SetupHeist(user, message, location){
+async function SetupHeist(user, message, location, bot){
     invData = HeistInvData();
     for(i=0;i<invData.users.length;i++){
         curUser = invData.users[i];
@@ -211,9 +216,20 @@ async function SetupHeist(user, message, location){
     userinfo = {"name": user.username, "id": user.id, "host": true, "split":100}
     users = [];
     users.push(userinfo);
-    fileinfo = {"users":users, "location": [location], "started": false, "timeleft": location.timetocomplete};
-    await pglibrary.WriteToJson(fileinfo, newfile);
-    message.channel.send(`<@${user.id}>, You have successfuly setup your heist, you can wait for users to join or you can start it.`);
+    date = new Date();
+    hourtoendon = date.getHours() + location.timetocomplete;
+    console.log(hourtoendon);
+    shouldend = new Date(date.setHours(hourtoendon));
+    console.log(shouldend);
+    fileinfo = {"users":users, "location": [location], "started": false, "shouldend": shouldend};
+    pglibrary.WriteToJson(fileinfo, newfile);
+    server = bot.guilds.cache.get("631008739830267915");
+    server.channels.create(`${user.username}'s Heist`).then(channel =>{
+        let catergory = server.channels.cache.find(c => c.name == "Heists")
+        if(!catergory) throw new Error("Category cannot be found");
+        channel.setParent(catergory.id);
+        channel.send(`<@${user.id}>, You have successfuly setup your heist, you can wait for users to join or you can start it.`);
+    }).catch(console.error);
 }
 
 function JoinHeist(user, message){
@@ -237,13 +253,28 @@ function JoinHeist(user, message){
         message.channel.send(`<@${user.id}>, This heist has already started, cancelling request.`);
         return;
     }
+    invData = HeistInvData();
+    for(i=0;i<invData.users.length;i++){
+        curUser = invData.users[i];
+        if(curUser.id == user.id){
+            totalmatching = 0
+            curUser.inv.forEach(item => {
+                if(location.reqs.includes(item)){
+                    totalmatching++;
+                }
+            });
+            if(totalmatching != location.reqs.length){
+                message.channel.send(`<@${user.id}>, You do not have the equipment requirements to join this heist.`);
+                return;
+            }
+        }
+    }
     console.log(requestedHeist);
     usersInHeist = requestedHeist.users.length + 1;
     userinfo = {"name": user.username, "id": user.id, "host": false, "split": 100 / usersInHeist }
     console.log(userinfo);
     requestedHeist.users.push(userinfo);
-    fileinfo = {"users":requestedHeist.users, "location": requestedHeist.location, "started": false, "timeleft": requestedHeist.timeleft};
-    pglibrary.WriteToJson(fileinfo, file);
+    pglibrary.WriteToJson(requestedHeist, file);
     UpdateUserSplits(target);
     message.channel.send(`<@${user.id}>, you have successfuly joined ${requestedHeist.users.find(user => user.host == true).name}'s heist.`);
 }
@@ -257,13 +288,12 @@ function UpdateUserSplits(userID){
         curUser = requestedHeist.users[i];
         console.log(`Updating Split for user ${curUser.name}`);
         console.log(curUser);
-        userinfo = {"name": curUser.name, "id": curUser.id, "host": curUser.host, "split": Math.round(100 / usersInHeist)};
-        console.log(userinfo);
-        newusers.push(userinfo);
+        requestedHeist.users[i].split =  Math.round(100 / usersInHeist);
+        newusers.push(requestedHeist.users[i]);
         console.log(newusers);
     }
-    fileinfo = {"users":newusers, "location": requestedHeist.location, "started": false, "timeleft": requestedHeist.timeleft};
-    pglibrary.WriteToJson(fileinfo, file);
+    requestedHeist.users = newusers;
+    pglibrary.WriteToJson(requestedHeist, file);
 }
 
 function ChooseSplit(user, message){
@@ -328,13 +358,12 @@ function ChooseSplit(user, message){
             console.log(`Current Split in String: ${curSplit}`);
             curSplit = parseInt(curSplit);
             console.log(`Current Split in Int: ${curSplit}`);
-            newuser = {"name": curUser.name, "id": curUser.id, "host": curUser.host, "split": curSplit};
-            console.log(newuser);
-            newusers.push(newuser);
+            userheistinfo.users[i].split = curSplit;
+            newusers.push(userheistinfo.users[i]);
             console.log(newusers);
         }
-        fileinfo = {"users":newusers, "location": userheistinfo.location, "started": userheistinfo.started, "timeleft": userheistinfo.timeleft};
-        pglibrary.WriteToJson(fileinfo, file);
+        userheistinfo.users = newusers;
+        pglibrary.WriteToJson(userheistinfo, file);
         collector.stop();
         displaySplit = ""
         splitN.forEach(split =>{
@@ -356,6 +385,8 @@ function HeistStatus(user, message, bot){
     } else {
         status = "Has Not been Started"
     }
+    date = new Date();
+    console.log(date);
     let embed = new MessageEmbed()
     .setTitle(`Heist Information for ${user.username}`)
     .setAuthor(bot.user.username, bot.user.displayAvatarURL)
@@ -364,7 +395,7 @@ function HeistStatus(user, message, bot){
     .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
     .addField(`Heist Location`, userheistinfo.location[0].name)
     .addField(`Heist Start Status`, `${status}`)
-    .addField(`Time Left:`, `${userheistinfo.timeleft} hour(s) left`);
+    .addField(`Time Left:`, `${Math.abs(new Date(userheistinfo.shouldend).getHours() - date.getHours())} hour(s) left`);
     userheistinfo.users.forEach(user => {
         console.log(user);
         embed.addField(user.name, `Slot: ${userheistinfo.users.indexOf(user) + 1} \n Is Host: ${user.host} \n Reward Cut: ${user.split}%`);
@@ -549,6 +580,13 @@ function BuyEquipment(message, bot, args){
         });
         collector.stop();
     });
+
+    collector.on('end', (collected, reason) => {
+        if(collected.size == 0){
+            message.channel.send(`<@${message.author.id}>, you did not reply in time, cancelling.`);
+            return;
+        }
+    })
 }
 //newuser = {"name": message.author.username, "id": message.author.id}
 function IsUserAlreadyInArray(array, userID){ // check if the user already exists in the given array.
@@ -589,11 +627,7 @@ async function HeistInventoryMain(user, item){
             curUser = heistinventory.users[i];
             if(curUser.id == user.id){
                 console.log(curUser);
-                curUser.inv.push(item)
-                newuser = {"name":user.username,"id":user.id,"inv":curUser.inv};
-                heistinventory.users.splice(i, 1);
-                await pglibrary.sleep(100);
-                heistinventory.users.push(newuser);
+                heistinventory.users[i].inv.push(item);;
                 console.log(heistinventory.users);
             }
         }
@@ -604,9 +638,7 @@ async function HeistInventoryMain(user, item){
         heistinventory.users.push(newuser);
         console.log(newuser);
     }
-    finaljson = {"users":heistinventory.users};
-    console.log(finaljson);
-    pglibrary.WriteToJson(finaljson, './heists/usersinventory.json')
+    pglibrary.WriteToJson(heistinventory, './heists/usersinventory.json')
 }
 
 function DoesUserAlreadyHaveREquip(userID, itemName){
