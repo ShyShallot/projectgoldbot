@@ -357,20 +357,24 @@ async function Heists(){
     heistBasic.lastdate = date;
     for(i=0;i<heists.length;i++){
         heist = heists[i];
+        console.log(`Checking Heist: ${heist}`);
         console.log(heist);
         heistDataRaw = fs.readFileSync(`./heists/${heist}`);
         heistData = JSON.parse(heistDataRaw);
         if(heistData.started){
             if(date.getHours() >= new Date(heistData.shouldend).getHours() && date.getDay() >= new Date(heistData.shouldend).getDay()) {
-                HeistEnd(heistData);
+                console.log(`Ending Heist: ${heist}`);
+                await HeistEnd(heistData);
+                await pglibrary.sleep(1000);
                 continue;
             }
         }
-    }
+    }   
     pglibrary.WriteToJson(heistBasic, `./heists/heist.json`);
+    return;
 }
 
-function HeistEnd(heist){
+async function HeistEnd(heist){
     console.log(`Ending Heist`);
     console.log(heist);
     heistDiff = heist.location[0].difficulty;
@@ -384,16 +388,13 @@ function HeistEnd(heist){
     console.log(`Final Chance: ${chance}, Modifiers: Difficulty: ${heistDiff}, User Multiplier: ${usersInHeistMutli}, Extras Mutliplier: ${usersExtras}`);
 
     if(chance <= 0.5){
-        HeistEndWin(heist);
-        return;
+        await HeistEndWin(heist);
     } else if (chance > 0.5 && chance < 0.6){
-        HeistEndDraw(heist);
-        return;
+        await HeistEndDraw(heist);
     } else if (chance >= 0.6){
-        HeistEndLoss(heist);
-        return;
+        await HeistEndLoss(heist);
     }
-    return;
+    return true;
 }
 
 function CheckForOptionalReqs(heist){
@@ -437,7 +438,7 @@ async function HeistEndWin(heist){
     finalstring += ` the heist has ended and you have succeeded, you will be rewarded with your cut. (This Channel will auto delete in 10 Seconds)`;
     await hChannel.send(finalstring);
     await pglibrary.sleep(10000);
-    CleanUpHeistInfo(heist);
+    await CleanUpHeistInfo(heist);
     return;
 }
 
@@ -465,7 +466,7 @@ async function HeistEndLoss(heist){
     finalstring += ` the heist has ended and you have failed, costs for equipment, damages and bail will be detucted from you balance. (This Channel will auto delete in 10 Seconds)`;
     await hChannel.send(finalstring);
     await pglibrary.sleep(10000);
-    CleanUpHeistInfo(heist);
+    await CleanUpHeistInfo(heist);
     return;
 }
 
@@ -490,11 +491,11 @@ async function HeistEndDraw(heist){
     finalstring += ` the heist has ended but you retreated, you have only lost your items. (This Channel will auto delete in 10 Seconds)`;
     await hChannel.send(finalstring);
     await pglibrary.sleep(10000);
-    CleanUpHeistInfo(heist);
+    await CleanUpHeistInfo(heist);
     return;
 }
 
-function CleanUpHeistInfo(heist){
+async function CleanUpHeistInfo(heist){
     for(i=0;i<heist.users.length;i++){
         curUser = heist.users[i];
         if(curUser.host){
@@ -511,10 +512,11 @@ function CleanUpHeistInfo(heist){
             });
         }
     }
+    return true;
 }
 
 async function HeistFiles(){
-    let heists = []
+    let heists = [];
     heistsF = fs.readdirSync(`./heists`);
     console.log(heistsF);
     if(!heistsF){
