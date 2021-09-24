@@ -98,6 +98,7 @@ function UserHesitInfo(file){
 
 function StatusforUserInHeist(user, message, bot){
     console.log(`Reading DIR`);
+    var host;
     fs.readdir('./heists/', (err, files) => {
         files.forEach(file =>{
             if(file.startsWith('heist') && file.endsWith('.json')){
@@ -112,7 +113,7 @@ function StatusforUserInHeist(user, message, bot){
                             host = curUser;
                         }
                     }
-                    if(userids.includes(user.id) && host){
+                    if(userids.includes(user.id) && host.host){
                         hostNew = host;
                         hostNew.username = host.name;
                         HeistStatus(hostNew, message, bot);
@@ -120,8 +121,6 @@ function StatusforUserInHeist(user, message, bot){
                         message.channel.send(`<@${message.author.id}>, you do not have a heist going, canceling request.`);
                         return;
                     }
-                } else {
-                    message.channel.send(`<@${message.author.id}>, you do not have a heist going, canceling request.`);
                 }
             }
         });
@@ -259,11 +258,11 @@ function JoinHeist(user, message){
         if(curUser.id == user.id){
             totalmatching = 0
             curUser.inv.forEach(item => {
-                if(location.reqs.includes(item)){
+                if(requestedHeist.location[0].reqs.includes(item)){
                     totalmatching++;
                 }
             });
-            if(totalmatching != location.reqs.length){
+            if(totalmatching != requestedHeist.location[0].reqs.length){
                 message.channel.send(`<@${user.id}>, You do not have the equipment requirements to join this heist.`);
                 return;
             }

@@ -362,7 +362,7 @@ async function Heists(){
         heistDataRaw = fs.readFileSync(`./heists/${heist}`);
         heistData = JSON.parse(heistDataRaw);
         if(heistData.started){
-            if(date.getHours() >= new Date(heistData.shouldend).getHours() && date.getDay() >= new Date(heistData.shouldend).getDay()) {
+            if(ShouldHeistEnd(heistData)) {
                 console.log(`Ending Heist: ${heist}`);
                 await HeistEnd(heistData);
                 await pglibrary.sleep(1000);
@@ -372,6 +372,22 @@ async function Heists(){
     }   
     pglibrary.WriteToJson(heistBasic, `./heists/heist.json`);
     return;
+}
+
+function ShouldHeistEnd(heist){
+    heistEndOnDate = new Date(heist.shouldend);
+    dayEnd = heistEndOnDate.getDay();
+    hourEnd = heistEndOnDate.getHours();
+    minuteEnd = heistEndOnDate.getMinutes();
+    date = new Date(); 
+    day = date.getDay();
+    hour = date.getHours();
+    minute = date.getMinutes();
+    if(day >= dayEnd && hour >= hourEnd && minute >= minuteEnd){
+        return true;
+    } else {
+        return false;
+    }
 }
 
 async function HeistEnd(heist){
