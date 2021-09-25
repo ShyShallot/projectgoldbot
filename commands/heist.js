@@ -39,7 +39,14 @@ module.exports = {
                 HeistStatus(message.author, message, bot);
                 break;
             case 'start':
-                if(IsUserAlreadyInArray(message.author.id)){
+                if(fs.existsSync(`./heists/heist${message.author.id}.json`)){
+                    heistFile = fs.readFileSync(`./heists/heist${message.author.id}.json`);
+                    heist = JSON.parse(heistFile);
+                } else {
+                    message.channel.send(`<@${message.author.id}>, you are not in a heist, or are not the owner`);
+                    return;
+                }
+                if(IsUserAlreadyInArray(heist.users, message.author.id)){
                     StartHeist(message.author, message, bot);
                 }
                 break;
@@ -190,8 +197,16 @@ async function StartHeist(user, message, bot){
     userHeist.started = true
     pglibrary.WriteToJson(userHeist, file);
     hChannel = server.channels.cache.find(c => c.name == `${user.username.toLowerCase()}s-heist`);
+    if(typeof hChannel === 'undefined'){
+        console.log(`Could not find channel, stopping heist`);
+        userHeist.started = false;
+        pglibrary.WriteToJson(userHeist, file);
+        return;
+    } else {
+        console.log(`Found Channel`);
+    }
     date = new Date();
-    hChannel.send(`<@${user.id}>, you have started the Heist, Time until Heist is done: ${Math.abs(new Date(userheistinfo.shouldend).getHours() - date.getHours())} Hour(s).`);
+    hChannel.send(`<@${user.id}>, you have started the Heist, Time until Heist is done: ${new Date(userHeist.shouldend).getHours() - date.getHours()} Hour(s).`);
 }
 
 async function SetupHeist(user, message, location, bot){
@@ -560,6 +575,7 @@ function BuyEquipment(message, bot, args){
         requestedItem = FindEquipment(rItem);
         if(typeof requestedItem === 'undefined'){
             m.channel.send(`<@${m.author.id}>, Could not find the Requested item`);
+            collector.stop();
             return;
         }
         console.log(requestedItem);
@@ -568,6 +584,7 @@ function BuyEquipment(message, bot, args){
             if(econuser.cash >= requestedItem.cost){
                 if(DoesUserAlreadyHaveREquip(m.author.id, requestedItem.name)){
                     m.channel.send(`<@${m.author.id}>, You already have (a) ${requestedItem.name}, canceling request.`);
+                    collector.stop();
                     return;
                 }
                 client.editUserBalance(m.guild.id, m.author.id, {cash: -requestedItem.cost, bank:0});
@@ -575,6 +592,8 @@ function BuyEquipment(message, bot, args){
                 message.channel.send(`<@${m.author.id}>, You have bought (a) ${requestedItem.name}.`);
             } else {
                 message.channel.send(`<@${m.author.id}>, You do not have enough cash in hand for that action.`);
+                collector.stop();
+                return;
             }
         });
         collector.stop();

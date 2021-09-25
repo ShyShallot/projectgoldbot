@@ -379,13 +379,17 @@ function ShouldHeistEnd(heist){
     dayEnd = heistEndOnDate.getDay();
     hourEnd = heistEndOnDate.getHours();
     minuteEnd = heistEndOnDate.getMinutes();
+    console.log(heistEndOnDate, dayEnd, hourEnd, minuteEnd);
     date = new Date(); 
     day = date.getDay();
     hour = date.getHours();
     minute = date.getMinutes();
+    console.log(date, day, hour, minute);
     if(day >= dayEnd && hour >= hourEnd && minute >= minuteEnd){
+        console.log(`Heist is allowed to end`);
         return true;
     } else {
+        console.log(`Heist cannot end yet`);
         return false;
     }
 }
@@ -438,7 +442,6 @@ async function HeistEndWin(heist){
     var hChannel;
     for(i=0;i<heist.users.length;i++){
         curUser = heist.users[i];
-        heistEcon.execute(curUser, heist, 1);
         finalstring += `<@${curUser.id}>,`;
         if(curUser.host){
             server = bot.guilds.cache.get("631008739830267915");
@@ -450,6 +453,7 @@ async function HeistEndWin(heist){
                 return;
             }   
         }
+        await heistEcon.execute(curUser, heist, 1);
     }
     finalstring += ` the heist has ended and you have succeeded, you will be rewarded with your cut. (This Channel will auto delete in 10 Seconds)`;
     await hChannel.send(finalstring);
@@ -477,7 +481,7 @@ async function HeistEndLoss(heist){
             }
             console.log(hChannel);
         }
-        heistEcon.execute(curUser, heist, 0);
+        await heistEcon.execute(curUser, heist, 0);
     }
     finalstring += ` the heist has ended and you have failed, costs for equipment, damages and bail will be detucted from you balance. (This Channel will auto delete in 10 Seconds)`;
     await hChannel.send(finalstring);

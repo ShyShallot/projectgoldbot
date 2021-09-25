@@ -11,7 +11,7 @@ module.exports = {
         serverID = '631008739830267915';
         switch(state){
             case 0:
-                amount = (CostOfEquipment(user) + MaxPossibleRewardLoss(heist) + 50000 + CostOfDamages(heist)) * 1; 
+                amount = (CostOfEquipment(user) + MaxPossibleRewardLoss(heist) + 50000 + CostOfDamages(heist)) * -1; 
                 ClearUsersInventory(user);
                 break;
             case 1:
@@ -19,6 +19,7 @@ module.exports = {
                 break;
         }
         client.editUserBalance(serverID, user.id, {cash: amount, bank: 0});
+        return true;
     }
 }
 
