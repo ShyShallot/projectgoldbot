@@ -70,8 +70,16 @@ module.exports = {
                     break;
                 }
                 break;
+            case 'cancel':
+                if(fs.existsSync(`./heists/heist${message.author.id}.json`)){
+                    CancelHeist(message.author, message);
+                    return;
+                } else {
+                    message.channel.send(`<@${message.author.id}>, you are not in a heist to cancel or are not a host`);
+                }
+                break;
             default: 
-                message.channel.send(`<@${message.author.id}>, please provide a valid argument of start/status/list.`);
+                message.channel.send(`<@${message.author.id}>, please provide a valid argument of setup/start/join/status/split/list/equipment.`);
                 break;
         }
     }
@@ -137,7 +145,7 @@ function StatusforUserInHeist(user, message, bot){
 // Main Heist Related Functions
 
 async function GetLocationFromName(user, message, bot){
-    collector = message.channel.createMessageCollector(message.channel, {time: 10000});
+    collector = message.channel.createMessageCollector(message.channel, {time: 5000});
     heistlocations = HeistLocationData();
     collector.on('collect', m => {
         
@@ -159,7 +167,12 @@ async function GetLocationFromName(user, message, bot){
         }
         collector.stop();
     });
-    
+    collector.on('end', (collected, reason) => {
+        if(collected.size == 0){
+            message.channel.send(`<@${message.author.id}>, you did not reply in time, cancelling.`);
+            return;
+        }
+    });
 }
 
 function IsUserAlreadyInAHeist(userID){
@@ -293,6 +306,32 @@ function JoinHeist(user, message){
     message.channel.send(`<@${user.id}>, you have successfuly joined ${requestedHeist.users.find(user => user.host == true).name}'s heist.`);
 }
 
+function CancelHeist(user, message){
+    file = `./heists/heist${user.id}.json`;
+    userHeist = UserHesitInfo(file);
+    if(userHeist.started){
+        message.channel.send(`<@${user.id}>, The heist has already started started, run ${config.prefix}heist status instead.`);
+        return;
+    }
+    server = message.guild;
+    console.log(server);
+    hChannel = server.channels.cache.find(c => c.name == `${user.username.toLowerCase()}s-heist`);
+    if(typeof hChannel === 'undefined'){
+        console.log(`Could not find channel, stopping heist`);
+        return;
+    } else {
+        console.log(`Found Channel`);
+    }
+    hChannel.delete();
+    filetodelete = `./heists/heist${user.id}.json`;
+    fs.unlinkSync(filetodelete, function(err){
+        if(err){
+            console.log(`There was an error when trying to delete file, make sure it exists.`);
+            return;
+        }
+    });
+}
+
 function UpdateUserSplits(userID){
     file = `./heists/heist${userID}.json`;
     requestedHeist = UserHesitInfo(file);
@@ -311,7 +350,7 @@ function UpdateUserSplits(userID){
 }
 
 function ChooseSplit(user, message){
-    collector = message.channel.createMessageCollector(message.channel, {time: 10000});
+    collector = message.channel.createMessageCollector(message.channel, {time: 5000});
     file = `./heists/heist${user.id}.json`;
     if(!fs.existsSync(file)){
         message.channel.send(`<@${user.id}>, you do not have a heist going, cancelling.`);
@@ -560,36 +599,72 @@ function ListUsersInventory(message, user, bot){
 }
 
 function BuyEquipment(message, bot, args){
+    console.log(`User ${message.author.username} is buying equipment`);
     heistequipment = HeistItemData();
-    message.channel.send(`<@${message.author.id}>, Select an item to buy by replying to this message with the item name.`);
-    collector = message.channel.createMessageCollector(message.channel, {time: 10000});
+    message.channel.send(`<@${message.author.id}>, Select an item to buy by replying to this message with the item name, to buy multiple do Item Name 1, Item Name 2, Item Name 3 and so on.`);
+    collector = message.channel.createMessageCollector(message.channel, {time: 5000});
 
     collector.on('collect', m => {
-        
         if (m.author.bot) return;
         if (m.author.id != message.author.id) return;
         if (m.channel.id != message.channel.id) return;
         if(typeof m === 'undefined') return;
         console.log(m.content);
-        rItem = m.content;
-        requestedItem = FindEquipment(rItem);
-        if(typeof requestedItem === 'undefined'){
-            m.channel.send(`<@${m.author.id}>, Could not find the Requested item`);
+        items = m.content.split(',');
+        for(i=0;i<items.length;i++){
+            items[i] = items[i].trim();
+        }
+        console.log(items, `Length: ${items.length}`);
+        requestedItems = FindEquipment(items);
+        console.log(requestedItems);
+        if(typeof requestedItems === 'undefined'){
+            m.channel.send(`<@${m.author.id}>, Could not find the Requested item(s)`);
             collector.stop();
             return;
         }
-        console.log(requestedItem);
+        console.log(requestedItems);
+        requestedItems = RemoveDuplicateItems(m.author.id, requestedItems);
+        console.log(requestedItems);
+        if(requestedItems.length == 0){
+            message.channel.send(`<@${m.author.id}>, You already own all those items. To check your inventory use ${config.prefix}heist equipment inv`);
+            collector.stop();
+            return;
+        }
+        console.log(requestedItems);
         client.getUserBalance(m.guild.id, m.author.id).then(async (econuser) =>{
             console.log(`Checking if user has enough cash`);
-            if(econuser.cash >= requestedItem.cost){
-                if(DoesUserAlreadyHaveREquip(m.author.id, requestedItem.name)){
-                    m.channel.send(`<@${m.author.id}>, You already have (a) ${requestedItem.name}, canceling request.`);
-                    collector.stop();
-                    return;
+            cost = 0;
+            requestedItems.forEach(item => {
+                cost += item.cost;
+            });
+            if(econuser.cash >= cost){
+                client.editUserBalance(m.guild.id, m.author.id, {cash: -cost, bank:0});
+                await HeistInventoryMain(m.author, requestedItems);
+                string = ""
+                for(i=0;i<requestedItems.length;i++){
+                    item = requestedItems[i];
+                    console.log(`Item: ${item.name}`);
+                    if(i == requestedItems.length - 2){ // i starts at 0, so the 2nd to last index would be -2
+                        console.log(`Item is 2nd to Last, adjusting string`);
+                        if(item.name.includes('Drill') || item.name.includes('Medkit')){
+                            string += `${item.name} and a `;
+                        } else {
+                            string += `${item.name} and `;
+                        }
+                        console.log(string);
+                    } else {
+                        console.log(`String is not 2nd to last`);
+                        string += `${item.name}, `;
+                        console.log(string);
+                    }
                 }
-                client.editUserBalance(m.guild.id, m.author.id, {cash: -requestedItem.cost, bank:0});
-                await HeistInventoryMain(m.author, requestedItem.name);
-                message.channel.send(`<@${m.author.id}>, You have bought (a) ${requestedItem.name}.`);
+                if(string.endsWith(', ')){
+                    string = string.substring(0, string.length - 2); 
+                }
+                sPrefix = stringPrefix(string);
+                message.channel.send(`<@${m.author.id}>, You have bought ${sPrefix} ${string} for ${pglibrary.commafy(cost)} points.`);
+                collector.stop();
+                return;
             } else {
                 message.channel.send(`<@${m.author.id}>, You do not have enough cash in hand for that action.`);
                 collector.stop();
@@ -604,9 +679,19 @@ function BuyEquipment(message, bot, args){
             message.channel.send(`<@${message.author.id}>, you did not reply in time, cancelling.`);
             return;
         }
-    })
+    });
 }
-//newuser = {"name": message.author.username, "id": message.author.id}
+
+function stringPrefix(string){
+    stringprefix = "";
+    if(string.startsWith('Tier 1 Drill') || string.startsWith('Tier 1 Medkit')){
+        stringprefix = "a";
+    } else if (!string.startsWith('Medium Dufflebags')){
+        stringprefix = "some";
+    }
+    return stringprefix;
+}
+
 function IsUserAlreadyInArray(array, userID){ // check if the user already exists in the given array.
     console.log(`Checking if ${userID} is in the array`);
     console.log(array);
@@ -626,18 +711,27 @@ function IsUserAlreadyInArray(array, userID){ // check if the user already exist
     }
 }   
 
-function FindEquipment(item){
+function FindEquipment(items){
     heistequipment = HeistItemData();
+    itemsReturn = [];
+    console.log(itemsReturn);
     for (i=0;i<heistequipment.items.length;i++){
         curItem = heistequipment.items[i];
-        if(curItem.name == item){
-            console.log(curItem);
-            return curItem;
+        console.log(curItem);
+        for(l=0;l<items.length;l++){
+            curRItem = items[l];
+            console.log(curRItem);
+            if(curItem.name == curRItem){
+                console.log(`Current Item ${curItem.name} is equal to ${curRItem}`);
+                itemsReturn.push(curItem);
+            }
         }
     }
+    console.log(itemsReturn);
+    return itemsReturn;
 }
 
-async function HeistInventoryMain(user, item){
+async function HeistInventoryMain(user, itemArray){
     heistinventory = HeistInvData();
     if(IsUserAlreadyInArray(heistinventory.users, user.id)){
         console.log(heistinventory.users);
@@ -645,13 +739,17 @@ async function HeistInventoryMain(user, item){
             curUser = heistinventory.users[i];
             if(curUser.id == user.id){
                 console.log(curUser);
-                heistinventory.users[i].inv.push(item);;
+                itemArray.forEach(item =>{
+                    heistinventory.users[i].inv.push(item.name);
+                })
                 console.log(heistinventory.users);
             }
         }
     } else {
         invA = [];
-        invA.push(item);
+        itemArray.forEach(item =>{
+            invA.push(item.name);
+        })
         newuser = {"name":user.username,"id":user.id, "inv":invA};
         heistinventory.users.push(newuser);
         console.log(newuser);
@@ -659,23 +757,39 @@ async function HeistInventoryMain(user, item){
     pglibrary.WriteToJson(heistinventory, './heists/usersinventory.json')
 }
 
-function DoesUserAlreadyHaveREquip(userID, itemName){
+function RemoveDuplicateItems(userID, itemArray){
+    console.log(`Removing Duplicates from ${itemArray}`);
+    console.log(`Checking for Dupes for User ${userID}`);
     heistinventory = HeistInvData();
+    newItems = [];
     if(heistinventory.users.length == 0) {
         return false;
     }
+    if(!IsUserAlreadyInArray(heistinventory.users, userID)){
+        return itemArray;
+    }
     for(i=0;i<heistinventory.users.length;i++){
         curUser = heistinventory.users[i];
+        console.log(`Current User to check for dupes: ${curUser.name}`);
+        console.log(curUser);
         if(curUser.id == userID){
             if(curUser.inv.length == 0) {
-                return false;
+                console.log(`Users Inventory is empty`);
+                return itemArray;
             } else {
-                if(curUser.inv.includes(itemName)){
-                    return true;
-                } else {
-                    return false;
+                console.log(`Users inventory is not empty`);
+                for(l=0;l<itemArray.length;l++){
+                    item = itemArray[l];
+                    console.log(`Current Item to check for ${item.name}`);
+                    if(curUser.inv.includes(item.name)){
+                        console.log(`Users inventory already contains ${item.name}`);
+                    } else {
+                        newItems.push(item);
+                        console.log(newItems);
+                    }
                 }
             }
         }
     }
+    return newItems;
 }

@@ -7,19 +7,35 @@ const path = require('path');
 module.exports = {
     name: 'heistecon',
     description: 'Heist System',
-    async execute(user, heist, state){
+    async execute(heist, state){
         serverID = '631008739830267915';
         switch(state){
             case 0:
-                amount = (CostOfEquipment(user) + MaxPossibleRewardLoss(heist) + 50000 + CostOfDamages(heist)) * -1; 
-                ClearUsersInventory(user);
+                Loss(heist);
                 break;
             case 1:
-                amount = CalculateCut(user, heist);
+                Gain(heist);
                 break;
         }
-        client.editUserBalance(serverID, user.id, {cash: amount, bank: 0});
+        
         return true;
+    }
+}
+
+function Loss(heist){
+    for(i=0;i<heist.users.length;i++){
+        curUser = heist.users[i];
+        amount = (CostOfEquipment(curUser) + MaxPossibleRewardLoss(heist) + 50000 + CostOfDamages(heist)); 
+        ClearUsersInventory(user);
+        client.editUserBalance(serverID, user.id, {cash: -amount, bank: 0});
+    }
+}
+
+function Gain(heist){
+    for(i=0;i<heist.users.length;i++){
+        curUser = heist.users[i];
+        amount = CalculateCut(curUser, heist);
+        client.editUserBalance(serverID, curUser.id, {cash: amount, bank: 0});
     }
 }
 
@@ -39,13 +55,14 @@ function HeistInvData(){
 
 
 function HeistLocationData(){
-    heistlocationdata = fs.readFileSync(`locations.json`);
+    filePath = path.join(__dirname, 'locations.json');
+    heistlocationdata = fs.readFileSync(filePath);
     heistlocations = JSON.parse(heistlocationdata);
     return heistlocations;
 }
 
 
-function UserHesitInfo(file){
+function UserHeistInfo(file){
     userheistinforaw = fs.readFileSync(file);
     userheistinfo = JSON.parse(userheistinforaw);
     return userheistinfo;

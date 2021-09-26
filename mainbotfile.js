@@ -440,6 +440,7 @@ function CheckForOptionalReqs(heist){
 async function HeistEndWin(heist){
     finalstring = "";
     var hChannel;
+    heistEcon.execute(heist, 1);
     for(i=0;i<heist.users.length;i++){
         curUser = heist.users[i];
         finalstring += `<@${curUser.id}>,`;
@@ -453,7 +454,6 @@ async function HeistEndWin(heist){
                 return;
             }   
         }
-        await heistEcon.execute(curUser, heist, 1);
     }
     finalstring += ` the heist has ended and you have succeeded, you will be rewarded with your cut. (This Channel will auto delete in 10 Seconds)`;
     await hChannel.send(finalstring);
@@ -465,6 +465,7 @@ async function HeistEndWin(heist){
 async function HeistEndLoss(heist){
     finalstring = "";
     var hChannel;
+    heistEcon.execute(heist, 0);
     for(i=0;i<heist.users.length;i++){
         curUser = heist.users[i];
         console.log(curUser);
@@ -481,7 +482,7 @@ async function HeistEndLoss(heist){
             }
             console.log(hChannel);
         }
-        await heistEcon.execute(curUser, heist, 0);
+        await pglibrary.sleep(1000);
     }
     finalstring += ` the heist has ended and you have failed, costs for equipment, damages and bail will be detucted from you balance. (This Channel will auto delete in 10 Seconds)`;
     await hChannel.send(finalstring);
