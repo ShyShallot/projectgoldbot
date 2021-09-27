@@ -222,7 +222,24 @@ async function StartHeist(user, message, bot){
     hChannel.send(`<@${user.id}>, you have started the Heist, Time until Heist is done: ${new Date(userHeist.shouldend).getHours() - date.getHours()} Hour(s).`);
 }
 
+function ToggleLocation(heist){
+    locationData = HeistLocationData();
+    for(i=0;i<locationData.locations.length;i++){
+        curLocation = locationData.locations[i];
+        if(curLocation.name == heist.location[0].name){
+            if(curLocation.available == 1){
+                locationData.locations[i].madeunavailable = new Date();
+                locationData.locations[i].available = 0;
+            }
+        }
+    }
+    pglibrary.WriteToJson(locationData, `./heists/locations.json`);
+}
+
 async function SetupHeist(user, message, location, bot){
+    if(location.available == 0){
+        message.channel.send(`<@${message.author.id}>, that location is unavailable for a heist, please wait.`);
+    }
     invData = HeistInvData();
     for(i=0;i<invData.users.length;i++){
         curUser = invData.users[i];
@@ -257,6 +274,7 @@ async function SetupHeist(user, message, location, bot){
         channel.setParent(catergory.id);
         channel.send(`<@${user.id}>, You have successfuly setup your heist, you can wait for users to join or you can start it.`);
     }).catch(console.error);
+    ToggleLocation(fileinfo);
 }
 
 function JoinHeist(user, message){
@@ -721,7 +739,7 @@ function FindEquipment(items){
         for(l=0;l<items.length;l++){
             curRItem = items[l];
             console.log(curRItem);
-            if(curItem.name == curRItem){
+            if(curItem.name.toLowerCase() == curRItem.toLowerCase()){
                 console.log(`Current Item ${curItem.name} is equal to ${curRItem}`);
                 itemsReturn.push(curItem);
             }

@@ -370,6 +370,8 @@ async function Heists(){
             }
         }
     }   
+    console.log(`Toggaling Heist Locations`);
+    HeistLocationToggle();
     pglibrary.WriteToJson(heistBasic, `./heists/heist.json`);
     return;
 }
@@ -567,6 +569,12 @@ function HeistInvData(){
     return heistinv;
 }
 
+function HeistLocationData(){
+    heistlocdata = fs.readFileSync('./heists/locations.json');
+    heistloc = JSON.parse(heistlocdata);
+    return heistloc;
+}
+
 function ClearUsersInventory(user){
     inventory = HeistInvData();
     console.log(`Clearing users inventory`);
@@ -578,6 +586,39 @@ function ClearUsersInventory(user){
             console.log(`Cleared Uses inventory`);
         }
     }
+}
+
+function HeistLocationToggle(){
+    locations = HeistLocationData();
+    console.log(locations);
+    date = new Date();
+    day = date.getDay();
+    console.log(`Current Date: ${date}, Day: ${day}.`);
+    for(i=0;i<locations.locations.length;i++){
+        location = locations.locations[i];
+        console.log(location);
+        if(typeof location.madeunavailable === 'undefined'){
+            console.log(`Location Date is empty, setting to current date`);
+            locations.locations[i].madeunavailable = date;
+            pglibrary.WriteToJson(locations, './heists/locations.json');
+            continue;
+        }
+        locationDate = new Date(location.madeunavailable);
+        locationDay = locationDate.getDay();
+        console.log(`Location ${location.name}'s Date: ${locationDate}, Day: ${locationDay}`);
+        if(day > locationDay){
+            console.log(`Day is greater than the location date`);
+            if(location.available == 0){
+                console.log(`Location is disabled`);
+                locations.locations[i].available = 1;
+            } else {
+                console.log(`Location is available`);
+                locations.locations[i].available = 0;
+                locations.locations[i].madeunavailable = date;
+            }
+        }
+    }
+    pglibrary.WriteToJson(locations, './heists/locations.json');
 }
 
 // Database Related Functions
@@ -594,23 +635,27 @@ async function ClearSQLDB(){
             "encrypt": true
         }
     }
-    var dbConn = new SQL.ConnectionPool(SQLconfig);
-    dbConn.connect().then(function() {
-        var transaction = new SQL.Transaction(dbConn);
-        transaction.begin().then(function (){
-            var request = new SQL.Request(transaction);
-            request.query('DELETE FROM StockInfo', function(err, result){
-                if(err) {
-                    console.log(err);
-                }
-                transaction.commit().then(function (recordSet){
-                    console.log(`Cleared Stock Info Table`);
-                    console.log(recordSet);
-                    dbConn.close();
+    try {
+        var dbConn = new SQL.ConnectionPool(SQLconfig);
+        dbConn.connect().then(function() {
+            var transaction = new SQL.Transaction(dbConn);
+            transaction.begin().then(function (){
+                var request = new SQL.Request(transaction);
+                request.query('DELETE FROM StockInfo', function(err, result){
+                    if(err) {
+                        console.log(err);
+                    }
+                    transaction.commit().then(function (recordSet){
+                        console.log(`Cleared Stock Info Table`);
+                        console.log(recordSet);
+                        dbConn.close();
+                    });
                 });
             });
         });
-    });
+    } catch (err){
+        console.error(err);
+    }
 }
 
 async function WritetoSQLDB() {
@@ -638,23 +683,27 @@ async function WritetoSQLDB() {
         table.rows.add(stock.name, stock.price);
     });
     console.log(table);
-    var dbConn = new SQL.ConnectionPool(SQLconfig);
-    dbConn.connect().then(function() {
-        var transaction = new SQL.Transaction(dbConn);
-        transaction.begin().then(function (){
-            var request = new SQL.Request(transaction);
-            request.bulk(table, (err, result) => {
-                if(err) {
-                    console.log(err);
-                }
-                if(result){
-                    console.log(result);
-                }
-                transaction.commit().then(function (recordSet){
-                    console.log(recordSet);
-                    dbConn.close();
+    try {
+        var dbConn = new SQL.ConnectionPool(SQLconfig);
+        dbConn.connect().then(function() {
+            var transaction = new SQL.Transaction(dbConn);
+            transaction.begin().then(function (){
+                var request = new SQL.Request(transaction);
+                request.bulk(table, (err, result) => {
+                    if(err) {
+                        console.log(err);
+                    }
+                    if(result){
+                        console.log(result);
+                    }
+                    transaction.commit().then(function (recordSet){
+                        console.log(recordSet);
+                        dbConn.close();
+                    });
                 });
             });
         });
-    });
+    } catch (err){
+        console.error(err);
+    }
 } // https://docs.microsoft.com/en-us/sql/connect/node-js/step-3-proof-of-concept-connecting-to-sql-using-node-js?view=sql-server-ver15
