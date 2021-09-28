@@ -377,17 +377,7 @@ async function Heists(){
 }
 
 function ShouldHeistEnd(heist){
-    heistEndOnDate = new Date(heist.shouldend);
-    dayEnd = heistEndOnDate.getDay();
-    hourEnd = heistEndOnDate.getHours();
-    minuteEnd = heistEndOnDate.getMinutes();
-    console.log(heistEndOnDate, dayEnd, hourEnd, minuteEnd);
-    date = new Date(); 
-    day = date.getDay();
-    hour = date.getHours();
-    minute = date.getMinutes();
-    console.log(date, day, hour, minute);
-    if(day >= dayEnd && hour >= hourEnd && minute >= minuteEnd){
+    if(Date.now() > heist.shouldend){
         console.log(`Heist is allowed to end`);
         return true;
     } else {
@@ -399,6 +389,17 @@ function ShouldHeistEnd(heist){
 async function HeistEnd(heist){
     console.log(`Ending Heist`);
     console.log(heist);
+    cooldownData = CoolDownData();
+    console.log(cooldownData);
+    for(i=0;i<heist.users.length;i++){
+        curUser = heist.users[i];
+        console.log(`Current User:`, curUser);
+        userdata = {"id": curUser.id, "cooldown": Date.now() + 432000000};
+        console.log(`User Data: ${userdata}`);
+        cooldownData.users.push(userdata);
+        console.log(cooldownData);
+    }
+    pglibrary.WriteToJson(cooldownData, `./heists/usersoncooldown.json`);
     heistDiff = heist.location[0].difficulty;
     usersInHeistMutli = 1 + heist.users.length /10;
     if(heist.users.length == 1){
@@ -417,6 +418,11 @@ async function HeistEnd(heist){
         await HeistEndLoss(heist);
     }
     return true;
+}
+
+function CoolDownData(){
+    cooldownRaw = fs.readFileSync(`./heists/usersoncooldown.json`);
+    return JSON.parse(cooldownRaw);
 }
 
 function CheckForOptionalReqs(heist){
@@ -611,6 +617,7 @@ function HeistLocationToggle(){
             if(location.available == 0){
                 console.log(`Location is disabled`);
                 locations.locations[i].available = 1;
+                locations.locations[i].madeunavailable = date;
             } else {
                 console.log(`Location is available`);
                 locations.locations[i].available = 0;

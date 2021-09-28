@@ -26,7 +26,7 @@ function Loss(heist){
     for(i=0;i<heist.users.length;i++){
         curUser = heist.users[i];
         amount = (CostOfEquipment(curUser) + MaxPossibleRewardLoss(heist) + 50000 + CostOfDamages(heist)); 
-        ClearUsersInventory(user);
+        ClearUsersInventory(curUser);
         client.editUserBalance(serverID, user.id, {cash: -amount, bank: 0});
     }
 }
@@ -114,9 +114,11 @@ function ClearUsersInventory(user){
     console.log(`Clearing users inventory`);
     for(i=0;i<inventory.users.length;i++){
         curUser = inventory.users[i];
-        inventory.users[i].inv.splice(i,curUser.inv.length);
-        filePath = path.join(__dirname, 'usersinventory.json');
-        pglibrary.WriteToJson(inventory, filePath);
-        console.log(`Cleared Uses inventory`);
+        if(user.id == curUser.id){
+            inventory.users[i].inv.splice(i,curUser.inv.length);
+            filePath = path.join(__dirname, 'usersinventory.json');
+            pglibrary.WriteToJson(inventory, filePath);
+            console.log(`Cleared User ${user.name}'s inventory`);
+        }
     }
 }

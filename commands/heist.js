@@ -14,6 +14,10 @@ module.exports = {
                 ListHeistLocations(message, args, bot);
                 break;
             case 'setup':
+                if(IsUserOnCooldown(message.author.id)){
+                    message.channel.send(`<@${message.author.id}>, you are on cooldown, you cant start a heist.`);
+                    return;
+                }
                 if(IsUserAlreadyInAHeist(message.author.id)){
                     message.channel.send(`<@${message.author.id}>, you already have a heist going, canceling request.`);
                     return;
@@ -22,6 +26,10 @@ module.exports = {
                 GetLocationFromName(message.author, message, bot);
                 break;
             case 'join':
+                if(IsUserOnCooldown(message.author.id)){
+                    message.channel.send(`<@${message.author.id}>, you are on cooldown, you cant start a heist.`);
+                    return;
+                }
                 if(IsUserAlreadyInAHeist(message.author.id)){
                     message.channel.send(`<@${message.author.id}>, you are already in a heist you cannot join another`);
                     return;
@@ -105,10 +113,39 @@ function HeistInvData(){
     return heistinv;
 }
 
+function CoolDownData(){
+    cooldownRaw = fs.readFileSync(`./heists/usersoncooldown.json`);
+    return JSON.parse(cooldownRaw);
+}
+
 function UserHesitInfo(file){
     userheistinforaw = fs.readFileSync(file);
     userheistinfo = JSON.parse(userheistinforaw);
     return userheistinfo;
+}
+
+function IsUserOnCooldown(userID){
+    cooldownData = CoolDownData();
+    if(cooldownData.users.length <= 0){
+        return false;
+    }
+    for(i=0;i<cooldownData.users.length;i++){
+        curUser = cooldownData.users[i];
+        if(curUser.id == userID){
+            if(Date.now() > curUser.cooldown){
+                cooldownData.users.splice(i, 1);
+                pglibrary.WriteToJson(cooldownData, `./heists/usersoncooldown.json`);
+                return false;
+            } else if(Date.now() < curUser.cooldown && i == cooldownData.users.length){
+                return true;
+            }
+        } else {
+            if(i == cooldownData.users.length){
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 function StatusforUserInHeist(user, message, bot){
@@ -158,9 +195,13 @@ async function GetLocationFromName(user, message, bot){
         for (i=0;i<heistlocations.locations.length;i++){
             curLocation = heistlocations.locations[i];
             console.log(curLocation);
-            if(curLocation.name == m.content){
+            if(curLocation.name.toLowerCase() == m.content.toLowerCase()){
                 m.channel.send(`<@${m.author.id}>, You have selected ${curLocation.name}.`);
                 SetupHeist(message.author, message, curLocation, bot);
+                collector.stop();
+                return;
+            } else if(i=heistlocations.locations.length){
+                m.channel.send(`<@${m.author.id}>, could not find that location`);
                 collector.stop();
                 return;
             }
@@ -219,7 +260,7 @@ async function StartHeist(user, message, bot){
         console.log(`Found Channel`);
     }
     date = new Date();
-    hChannel.send(`<@${user.id}>, you have started the Heist, Time until Heist is done: ${new Date(userHeist.shouldend).getHours() - date.getHours()} Hour(s).`);
+    hChannel.send(`<@${user.id}>, you have started the Heist, Time until Heist is done: ${Math.floor((userheistinfo.shouldend / (1000 * 60 * 60)) % 24)} Hour(s).`);
 }
 
 function ToggleLocation(heist){
@@ -239,6 +280,7 @@ function ToggleLocation(heist){
 async function SetupHeist(user, message, location, bot){
     if(location.available == 0){
         message.channel.send(`<@${message.author.id}>, that location is unavailable for a heist, please wait.`);
+        return;
     }
     invData = HeistInvData();
     for(i=0;i<invData.users.length;i++){
@@ -260,12 +302,9 @@ async function SetupHeist(user, message, location, bot){
     userinfo = {"name": user.username, "id": user.id, "host": true, "split":100}
     users = [];
     users.push(userinfo);
-    date = new Date();
-    hourtoendon = date.getHours() + location.timetocomplete;
-    console.log(hourtoendon);
-    shouldend = new Date(date.setHours(hourtoendon));
-    console.log(shouldend);
-    fileinfo = {"users":users, "location": [location], "started": false, "shouldend": shouldend};
+    timetoEndOn = Date.now() + Math.floor(3600000 * location.timetocomplete);
+    console.log(timetoEndOn);
+    fileinfo = {"users":users, "location": [location], "started": false, "shouldend": timetoEndOn};
     pglibrary.WriteToJson(fileinfo, newfile);
     server = bot.guilds.cache.get("631008739830267915");
     server.channels.create(`${user.username}'s Heist`).then(channel =>{
@@ -466,7 +505,7 @@ function HeistStatus(user, message, bot){
     .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
     .addField(`Heist Location`, userheistinfo.location[0].name)
     .addField(`Heist Start Status`, `${status}`)
-    .addField(`Time Left:`, `${Math.abs(new Date(userheistinfo.shouldend).getHours() - date.getHours())} hour(s) left`);
+    .addField(`Time Left:`, `${Math.floor((userheistinfo.shouldend / (1000 * 60 * 60)) % 24)} hour(s) left`);
     userheistinfo.users.forEach(user => {
         console.log(user);
         embed.addField(user.name, `Slot: ${userheistinfo.users.indexOf(user) + 1} \n Is Host: ${user.host} \n Reward Cut: ${user.split}%`);
@@ -510,7 +549,12 @@ function ListHeistLocations(message, args, bot){
         .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
         heistlocations.locations.forEach(location => {
             console.log(location);
-            embed.addField(location.name, `Run the List Command with the name of the location for more info`);
+            if(location.available == 1){
+                locationavail = "Available for Heist"
+            } else {
+                locationavail = "Not Available for Heist"
+            }
+            embed.addField(location.name, `Availability: ${locationavail}, Run the List Command with the name of the location for more info`);
         });
         message.channel.send({content: `<@${message.author.id}>`, embeds: [embed]});
     } else {
@@ -521,7 +565,7 @@ function ListHeistLocations(message, args, bot){
         console.log(args[1]);
         for (i = 0, l = heistlocations.locations.length; i < l; i++){
             curlocation = heistlocations.locations[i];
-            if(curlocation.name == args[1]) {
+            if(curlocation.name.toLowerCase() == args[1].toLowerCase()) {
                 if(curlocation.available == 1){
                     locationavail = "Available for Heist"
                 } else {
