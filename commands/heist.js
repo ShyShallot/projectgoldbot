@@ -200,10 +200,6 @@ async function GetLocationFromName(user, message, bot){
                 SetupHeist(message.author, message, curLocation, bot);
                 collector.stop();
                 return;
-            } else if(i=heistlocations.locations.length){
-                m.channel.send(`<@${m.author.id}>, could not find that location`);
-                collector.stop();
-                return;
             }
         }
         collector.stop();
