@@ -594,8 +594,9 @@ function ClearUsersInventory(user){
     }
 }
 
-function HeistLocationToggle(){
+async function HeistLocationToggle(){
     locations = HeistLocationData();
+    heists = await HeistFiles();
     console.log(locations);
     date = new Date();
     day = date.getDay();
@@ -603,6 +604,17 @@ function HeistLocationToggle(){
     for(i=0;i<locations.locations.length;i++){
         location = locations.locations[i];
         console.log(location);
+        skip = 0;
+        heists.forEach(heist => {
+            console.log(`Checking Heist: ${heist}`);
+            console.log(heist);
+            heistDataRaw = fs.readFileSync(`./heists/${heist}`);
+            heistData = JSON.parse(heistDataRaw);
+            if(heistData.location[0].name == location.name){
+                console.log(`${location.name} has a heist on going, skipping toggle`);
+                skip = 1;
+            }
+        })   
         if(typeof location.madeunavailable === 'undefined'){
             console.log(`Location Date is empty, setting to current date`);
             locations.locations[i].madeunavailable = date;
@@ -612,7 +624,7 @@ function HeistLocationToggle(){
         locationDate = new Date(location.madeunavailable);
         locationDay = locationDate.getDay();
         console.log(`Location ${location.name}'s Date: ${locationDate}, Day: ${locationDay}`);
-        if(day > locationDay){
+        if(day > locationDay && skip == 0){
             console.log(`Day is greater than the location date`);
             if(location.available == 0){
                 console.log(`Location is disabled`);
