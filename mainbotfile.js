@@ -377,7 +377,9 @@ async function Heists(){
 }
 
 function ShouldHeistEnd(heist){
-    if(Date.now() > heist.shouldend){
+    date = new Date();
+    heistDate = new Date(heist.shouldend);
+    if(date.getDay() >= heistDate.getDay() && date.getUTCHours() >= heistDate.getUTCHours()){
         console.log(`Heist is allowed to end`);
         return true;
     } else {

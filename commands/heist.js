@@ -244,7 +244,13 @@ async function StartHeist(user, message, bot){
     }
     server = bot.guilds.cache.get("631008739830267915");
     console.log(server);
-    userHeist.started = true
+    userHeist.started = true;
+    date = new Date();
+    console.log(`Current Date: ${date}`);
+    console.log(`Heist Ending Time: ${userHeist.location[0].timetocomplete}`);
+    timetoEndOn = pglibrary.addHours(date, userHeist.location[0].timetocomplete);
+    console.log(`Time to End on : ${timetoEndOn}`);
+    userHeist.shouldend = timetoEndOn;
     pglibrary.WriteToJson(userHeist, file);
     hChannel = server.channels.cache.find(c => c.name == `${user.username.toLowerCase()}s-heist`);
     if(typeof hChannel === 'undefined'){
@@ -255,8 +261,7 @@ async function StartHeist(user, message, bot){
     } else {
         console.log(`Found Channel`);
     }
-    date = new Date();
-    hChannel.send(`<@${user.id}>, you have started the Heist, Time until Heist is done: ${Math.floor((userheistinfo.shouldend / (1000 * 60 * 60)) % 24)} Hour(s).`);
+    hChannel.send(`<@${user.id}>, you have started the Heist, Time until Heist is done: ${new Date(timetoEndOn).getUTCHours()} Hour(s).`);
 }
 
 function ToggleLocation(heist){
@@ -298,7 +303,8 @@ async function SetupHeist(user, message, location, bot){
     userinfo = {"name": user.username, "id": user.id, "host": true, "split":100}
     users = [];
     users.push(userinfo);
-    timetoEndOn = Date.now() + Math.floor(3600000 * location.timetocomplete);
+    date = new Date();
+    timetoEndOn = pglibrary.addHours(date, location.timetocomplete);
     console.log(timetoEndOn);
     fileinfo = {"users":users, "location": [location], "started": false, "shouldend": timetoEndOn};
     pglibrary.WriteToJson(fileinfo, newfile);
@@ -500,8 +506,16 @@ function HeistStatus(user, message, bot){
     .setDescription(`Current Heist Information.`)
     .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
     .addField(`Heist Location`, userheistinfo.location[0].name)
-    .addField(`Heist Start Status`, `${status}`)
-    .addField(`Time Left:`, `${Math.floor((userheistinfo.shouldend / (1000 * 60 * 60)) % 24)} hour(s) left`);
+    .addField(`Heist Start Status`, `${status}`);
+    if(userheistinfo.started){
+        embed.addField(`Time Left:`, `${new Date(userheistinfo.shouldend).getUTCHours()} hour(s) left`);
+    } else {
+        console.log(`time for heist to complete: ${userheistinfo.location[0].timetocomplete}`);
+        timetoEndOn = pglibrary.addHours(date, userheistinfo.location[0].timetocomplete)
+        console.log(timetoEndOn);
+        embed.addField(`Time Left:`, `${new Date(timetoEndOn).getUTCHours()} hour(s) left`);
+    }
+    
     userheistinfo.users.forEach(user => {
         console.log(user);
         embed.addField(user.name, `Slot: ${userheistinfo.users.indexOf(user) + 1} \n Is Host: ${user.host} \n Reward Cut: ${user.split}%`);
