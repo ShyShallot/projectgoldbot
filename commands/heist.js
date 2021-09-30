@@ -659,6 +659,9 @@ function ListUsersInventory(message, user, bot){
             .setColor(`#87a9ff`)
             .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
             .addField(`Your Inventory`, `1`);
+            if(curUser.inv.length <= 0){
+                embed.fields[0].value = `You'r inventory is currently empty.`;
+            }
             curUser.inv.forEach(item => {
                 if(embed.fields[0].value.startsWith('1')){
                     embed.fields[0].value = ``;
