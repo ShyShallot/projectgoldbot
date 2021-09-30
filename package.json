@@ -9,6 +9,7 @@
     "discord-api-types": "^0.22.0",
     "discord.js": "^13.1.0",
     "mssql": "^6.3.2",
+    "mysql": "^2.18.1",
     "sql.js": "^1.6.1",
     "unb-api": "^1.2.3"
   },

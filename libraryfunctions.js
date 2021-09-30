@@ -32,6 +32,22 @@ function WriteToJson(rawdata, location) {
         return true;
     });
 }
+/**
+ * 
+ * @param {number} num Number to commafy
+ * @returns {String} returns a string of the commafied number
+ */
+
+function commafy( num ) { // taken from https://stackoverflow.com/a/6786040
+    var str = num.toString().split('.');
+    if (str[0].length >= 3) {
+        str[0] = str[0].replace(/(\d)(?=(\d{3})+$)/g, '$1,');
+    }
+    if (str[1] && str[1].length >= 3) {
+        str[1] = str[1].replace(/(\d{3})/g, '$1 ');
+    }
+    return str.join('.');
+}
 
 /**
  * 
@@ -41,5 +57,32 @@ function WriteToJson(rawdata, location) {
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+/**
+ * 
+ * @param {number} milliseconds 
+ * @returns {number} day, hour, minute, or seconds
+ */
+function convertMS( milliseconds ) { // from: https://gist.github.com/Erichain/6d2c2bf16fe01edfcffa
+    var day, hour, minute, seconds;
+    seconds = Math.floor(milliseconds / 1000);
+    minute = Math.floor(seconds / 60);
+    seconds = seconds % 60;
+    hour = Math.floor(minute / 60);
+    minute = minute % 60;
+    day = Math.floor(hour / 24);
+    hour = hour % 24;
+    return {
+        day: day,
+        hour: hour,
+        minute: minute,
+        seconds: seconds
+    };
+}
 
-module.exports = {numDigits, getRandomInt, WriteToJson, sleep};
+function addHours(date, hours) {
+    const newDate = new Date(date);
+    newDate.setHours(newDate.getHours() + hours);
+    return newDate;
+  }
+
+module.exports = {numDigits, getRandomInt, WriteToJson, sleep, commafy, convertMS, addHours};

@@ -9,6 +9,8 @@ const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('
 const pglibrary = require("./libraryfunctions.js");
 const sqlconfig = require('./sql.json');
 const SQL = require('mssql');
+const { channel } = require('diagnostics_channel');
+const heistEcon = require('./heists/heistecon.js');
 
 bot.commands = new Map(); // New Array for our commands
 bot.on('ready', () => { // when the bot has logged in and is ready
@@ -100,6 +102,9 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     if (command === "sui" && message.member.roles.cache.find(role => role.name === modRole)) {
         bot.commands.get("sui").execute(message,args,bot);
     }
+    if (command === "heist"){
+        bot.commands.get("heist").execute(message,args,bot);
+    }
 });
 bot.login(config.token);
 
@@ -119,6 +124,7 @@ function AutomatedMessage(message) { // this is to keep annoying as people from 
 
 async function Economy(){ // Janky as fuck but works
     while (true) {
+        await Heists();
         await Jackpot(0); // Init Raffle
         await StockMarket();
         await ClearSQLDB(); // Temp thing till i figure out SQL more
@@ -335,6 +341,307 @@ function GrabStocksinOwnership(stock) { // Modified Max User Stocks function
     return ownedStocks;
 }
 
+// Heist Related Functions
+
+async function Heists(){
+    date = new Date();
+    heists = await HeistFiles();
+    console.log(heists);
+    heistBasicRaw = fs.readFileSync('./heists/heist.json');
+    heistBasic = JSON.parse(heistBasicRaw);
+    console.log(heistBasic);
+    if(date.getMinutes() == new Date(heistBasic.lastdate).getMinutes){
+        console.log(`Our Current hour is equal to the last hour, stopping`);
+        return;
+    }
+    heistBasic.lastdate = date;
+    for(i=0;i<heists.length;i++){
+        heist = heists[i];
+        console.log(`Checking Heist: ${heist}`);
+        console.log(heist);
+        heistDataRaw = fs.readFileSync(`./heists/${heist}`);
+        heistData = JSON.parse(heistDataRaw);
+        if(heistData.started){
+            if(ShouldHeistEnd(heistData)) {
+                console.log(`Ending Heist: ${heist}`);
+                await HeistEnd(heistData);
+                await pglibrary.sleep(1000);
+                continue;
+            }
+        }
+    }   
+    console.log(`Toggaling Heist Locations`);
+    HeistLocationToggle();
+    pglibrary.WriteToJson(heistBasic, `./heists/heist.json`);
+    return;
+}
+
+function ShouldHeistEnd(heist){
+    date = new Date();
+    heistDate = new Date(heist.shouldend);
+    if(date.getDay() >= heistDate.getDay() && date.getUTCHours() >= heistDate.getUTCHours()){
+        console.log(`Heist is allowed to end`);
+        return true;
+    } else {
+        console.log(`Heist cannot end yet`);
+        return false;
+    }
+}
+
+async function HeistEnd(heist){
+    console.log(`Ending Heist`);
+    console.log(heist);
+    cooldownData = CoolDownData();
+    console.log(cooldownData);
+    for(i=0;i<heist.users.length;i++){
+        curUser = heist.users[i];
+        console.log(`Current User:`, curUser);
+        userdata = {"id": curUser.id, "cooldown": Date.now() + 432000000};
+        console.log(`User Data: ${userdata}`);
+        cooldownData.users.push(userdata);
+        console.log(cooldownData);
+    }
+    pglibrary.WriteToJson(cooldownData, `./heists/usersoncooldown.json`);
+    heistDiff = heist.location[0].difficulty;
+    usersInHeistMutli = 1 + heist.users.length /10;
+    if(heist.users.length == 1){
+        usersInHeistMutli = 1;
+    }
+    diffMulti = 1 + heistDiff/10;
+    usersExtras = CheckForOptionalReqs(heist) / 10;
+    chance = Math.random() * diffMulti * usersInHeistMutli - usersExtras;
+    console.log(`Final Chance: ${chance}, Modifiers: Difficulty: ${heistDiff}, User Multiplier: ${usersInHeistMutli}, Extras Mutliplier: ${usersExtras}`);
+
+    if(chance <= 0.5){
+        await HeistEndWin(heist);
+    } else if (chance > 0.5 && chance < 0.6){
+        await HeistEndDraw(heist);
+    } else if (chance >= 0.6){
+        await HeistEndLoss(heist);
+    }
+    return true;
+}
+
+function CoolDownData(){
+    cooldownRaw = fs.readFileSync(`./heists/usersoncooldown.json`);
+    return JSON.parse(cooldownRaw);
+}
+
+function CheckForOptionalReqs(heist){
+    invRaw = fs.readFileSync(`./heists/usersinventory.json`);
+    inv = JSON.parse(invRaw);
+    amountOfOpReq = 0;
+    for(i=0;i<heist.users.length;i++){
+        curUser = heist.users[i];
+        for(l=0;l<inv.users.length;l++){
+            curUserInv = inv.users[l];
+            if(curUserInv.id == curUser){
+                curUserInv.inv.forEach(item =>{
+                    if(heist.location[0].optionalreqs.includes(item)){
+                        amountOfOpReq++;
+                    }
+                })
+            }
+        }
+    }
+    return amountOfOpReq;
+}
+
+async function HeistEndWin(heist){
+    finalstring = "";
+    var hChannel;
+    heistEcon.execute(heist, 1);
+    for(i=0;i<heist.users.length;i++){
+        curUser = heist.users[i];
+        finalstring += `<@${curUser.id}>,`;
+        if(curUser.host){
+            server = bot.guilds.cache.get("631008739830267915");
+            username = curUser.name;
+            hChannel = server.channels.cache.find(c => c.name == `${username.toLowerCase()}s-heist`);
+            console.log(hChannel);
+            if(!hChannel){
+                console.log(`Could not find that channel`);
+                return;
+            }   
+        }
+    }
+    finalstring += ` the heist has ended and you have succeeded, you will be rewarded with your cut. (This Channel will auto delete in 10 Seconds)`;
+    await hChannel.send(finalstring);
+    await pglibrary.sleep(10000);
+    await CleanUpHeistInfo(heist);
+    return;
+}
+
+async function HeistEndLoss(heist){
+    finalstring = "";
+    var hChannel;
+    heistEcon.execute(heist, 0);
+    for(i=0;i<heist.users.length;i++){
+        curUser = heist.users[i];
+        console.log(curUser);
+        finalstring += `<@${curUser.id}>,`;
+        if(curUser.host){
+            server = bot.guilds.cache.get("631008739830267915");
+            console.log(server);
+            username = curUser.name;
+            console.log(username);
+            hChannel = server.channels.cache.find(c => c.name == `${username.toLowerCase()}s-heist`);
+            if(!hChannel){
+                console.log(`Could not find that channel`);
+                return;
+            }
+            console.log(hChannel);
+        }
+        await pglibrary.sleep(1000);
+    }
+    finalstring += ` the heist has ended and you have failed, costs for equipment, damages and bail will be detucted from you balance. (This Channel will auto delete in 10 Seconds)`;
+    await hChannel.send(finalstring);
+    await pglibrary.sleep(10000);
+    await CleanUpHeistInfo(heist);
+    return;
+}
+
+async function HeistEndDraw(heist){
+    finalstring = "";
+    var hChannel;
+    for(i=0;i<heist.users.length;i++){
+        curUser = heist.users[i];
+        finalstring += `<@${curUser.id}>,`;
+        if(curUser.host){
+            server = bot.guilds.cache.get("631008739830267915");
+            username = curUser.name;
+            hChannel = server.channels.cache.find(c => c.name == `${username.toLowerCase()}s-heist`);
+            if(!hChannel){
+                console.log(`Could not find that channel`);
+                return;
+            }
+            console.log(hChannel);
+        }
+        ClearUsersInventory(curUser);
+    }
+    finalstring += ` the heist has ended but you retreated, you have only lost your items. (This Channel will auto delete in 10 Seconds)`;
+    await hChannel.send(finalstring);
+    await pglibrary.sleep(10000);
+    await CleanUpHeistInfo(heist);
+    return;
+}
+
+async function CleanUpHeistInfo(heist){
+    for(i=0;i<heist.users.length;i++){
+        curUser = heist.users[i];
+        if(curUser.host){
+            server = bot.guilds.cache.get("631008739830267915");
+            username = curUser.name;
+            hChannel = server.channels.cache.find(c => c.name == `${username.toLowerCase()}s-heist`);
+            hChannel.delete();
+            filetodelete = `./heists/heist${curUser.id}.json`;
+            fs.unlinkSync(filetodelete, function(err){
+                if(err){
+                    console.log(`There was an error when trying to delete file, make sure it exists.`);
+                    return;
+                }
+            });
+        }
+    }
+    return true;
+}
+
+async function HeistFiles(){
+    let heists = [];
+    heistsF = fs.readdirSync(`./heists`);
+    console.log(heistsF);
+    if(!heistsF){
+        console.log(`Reading DIR Failed`);
+        return;
+    }
+    for(i=0;i<heistsF.length;i++){
+        file = heistsF[i];
+        console.log(`File Found: ${file}`);
+        if(file == 'heist.json'){
+            continue;
+        }
+        if(file.startsWith('heist') && file.endsWith('.json')){
+            console.log(file);
+            console.log(`Found an onging heist file, pushing`);
+            heists.push(file);
+        }
+    }
+    console.log(`Final Found Files`);
+    console.log(heists);
+    return heists;
+}
+
+function HeistInvData(){
+    heistinvdata = fs.readFileSync('./heists/usersinventory.json');
+    heistinv = JSON.parse(heistinvdata);
+    return heistinv;
+}
+
+function HeistLocationData(){
+    heistlocdata = fs.readFileSync('./heists/locations.json');
+    heistloc = JSON.parse(heistlocdata);
+    return heistloc;
+}
+
+function ClearUsersInventory(user){
+    inventory = HeistInvData();
+    console.log(`Clearing users inventory`);
+    for(i=0;i<inventory.users.length;i++){
+        curUser = inventory.users[i];
+        if(user.id == curUser.id){
+            inventory.users[i].inv.splice(i,curUser.inv.length);
+            pglibrary.WriteToJson(inventory, `./heists/usersinventory.json`);
+            console.log(`Cleared Uses inventory`);
+        }
+    }
+}
+
+async function HeistLocationToggle(){
+    locations = HeistLocationData();
+    heists = await HeistFiles();
+    console.log(locations);
+    date = new Date();
+    day = date.getDay();
+    console.log(`Current Date: ${date}, Day: ${day}.`);
+    for(i=0;i<locations.locations.length;i++){
+        location = locations.locations[i];
+        console.log(location);
+        skip = 0;
+        heists.forEach(heist => {
+            console.log(`Checking Heist: ${heist}`);
+            console.log(heist);
+            heistDataRaw = fs.readFileSync(`./heists/${heist}`);
+            heistData = JSON.parse(heistDataRaw);
+            if(heistData.location[0].name == location.name){
+                console.log(`${location.name} has a heist on going, skipping toggle`);
+                skip = 1;
+            }
+        })   
+        if(typeof location.madeunavailable === 'undefined'){
+            console.log(`Location Date is empty, setting to current date`);
+            locations.locations[i].madeunavailable = date;
+            pglibrary.WriteToJson(locations, './heists/locations.json');
+            continue;
+        }
+        locationDate = new Date(location.madeunavailable);
+        locationDay = locationDate.getDay();
+        console.log(`Location ${location.name}'s Date: ${locationDate}, Day: ${locationDay}`);
+        if(day > locationDay && skip == 0){
+            console.log(`Day is greater than the location date`);
+            if(location.available == 0){
+                console.log(`Location is disabled`);
+                locations.locations[i].available = 1;
+                locations.locations[i].madeunavailable = date;
+            } else {
+                console.log(`Location is available`);
+                locations.locations[i].available = 0;
+                locations.locations[i].madeunavailable = date;
+            }
+        }
+    }
+    pglibrary.WriteToJson(locations, './heists/locations.json');
+}
+
 // Database Related Functions
 
 async function ClearSQLDB(){
@@ -349,23 +656,27 @@ async function ClearSQLDB(){
             "encrypt": true
         }
     }
-    var dbConn = new SQL.ConnectionPool(SQLconfig);
-    dbConn.connect().then(function() {
-        var transaction = new SQL.Transaction(dbConn);
-        transaction.begin().then(function (){
-            var request = new SQL.Request(transaction);
-            request.query('DELETE FROM StockInfo', function(err, result){
-                if(err) {
-                    console.log(err);
-                }
-                transaction.commit().then(function (recordSet){
-                    console.log(`Cleared Stock Info Table`);
-                    console.log(recordSet);
-                    dbConn.close();
+    try {
+        var dbConn = new SQL.ConnectionPool(SQLconfig);
+        dbConn.connect().then(function() {
+            var transaction = new SQL.Transaction(dbConn);
+            transaction.begin().then(function (){
+                var request = new SQL.Request(transaction);
+                request.query('DELETE FROM StockInfo', function(err, result){
+                    if(err) {
+                        console.log(err);
+                    }
+                    transaction.commit().then(function (recordSet){
+                        console.log(`Cleared Stock Info Table`);
+                        console.log(recordSet);
+                        dbConn.close();
+                    });
                 });
             });
         });
-    });
+    } catch (err){
+        console.error(err);
+    }
 }
 
 async function WritetoSQLDB() {
@@ -393,23 +704,27 @@ async function WritetoSQLDB() {
         table.rows.add(stock.name, stock.price);
     });
     console.log(table);
-    var dbConn = new SQL.ConnectionPool(SQLconfig);
-    dbConn.connect().then(function() {
-        var transaction = new SQL.Transaction(dbConn);
-        transaction.begin().then(function (){
-            var request = new SQL.Request(transaction);
-            request.bulk(table, (err, result) => {
-                if(err) {
-                    console.log(err);
-                }
-                if(result){
-                    console.log(result);
-                }
-                transaction.commit().then(function (recordSet){
-                    console.log(recordSet);
-                    dbConn.close();
+    try {
+        var dbConn = new SQL.ConnectionPool(SQLconfig);
+        dbConn.connect().then(function() {
+            var transaction = new SQL.Transaction(dbConn);
+            transaction.begin().then(function (){
+                var request = new SQL.Request(transaction);
+                request.bulk(table, (err, result) => {
+                    if(err) {
+                        console.log(err);
+                    }
+                    if(result){
+                        console.log(result);
+                    }
+                    transaction.commit().then(function (recordSet){
+                        console.log(recordSet);
+                        dbConn.close();
+                    });
                 });
             });
         });
-    });
+    } catch (err){
+        console.error(err);
+    }
 } // https://docs.microsoft.com/en-us/sql/connect/node-js/step-3-proof-of-concept-connecting-to-sql-using-node-js?view=sql-server-ver15

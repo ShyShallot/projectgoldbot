@@ -240,6 +240,7 @@ function UserHasEnoughStocks(userID, stock, amount) { // stock should only be a 
     };
 }
 
+
 function ListStock(bot, args, message){
     stockfile = fs.readFileSync(`./stockmarket.json`, 'utf-8');
     stockdata = JSON.parse(stockfile);
