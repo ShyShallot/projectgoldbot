@@ -27,7 +27,7 @@ function Loss(heist){
         curUser = heist.users[i];
         amount = (CostOfEquipment(curUser) + MaxPossibleRewardLoss(heist) + 50000 + CostOfDamages(heist)); 
         ClearUsersInventory(curUser);
-        client.editUserBalance(serverID, user.id, {cash: -amount, bank: 0});
+        client.editUserBalance(serverID, curUser.id, {cash: -amount, bank: 0});
     }
 }
 
