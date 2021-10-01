@@ -9,8 +9,6 @@ const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('
 const pglibrary = require("./libraryfunctions.js");
 const sqlconfig = require('./sql.json');
 const SQL = require('mssql');
-const { channel } = require('diagnostics_channel');
-const heistEcon = require('./heists/heistecon.js');
 
 bot.commands = new Map(); // New Array for our commands
 bot.on('ready', () => { // when the bot has logged in and is ready
@@ -102,14 +100,11 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     if (command === "sui" && message.member.roles.cache.find(role => role.name === modRole)) {
         bot.commands.get("sui").execute(message,args,bot);
     }
-    if (command === "heist"){
-        bot.commands.get("heist").execute(message,args,bot);
-    }
 });
 bot.login(config.token);
 
 function AutomatedMessage(message) { // this is to keep annoying as people from asking annoying questions you can remove this or use it as a base for automoding 
-    let modRole = "PG Member";
+    let modRole = config.modrole;
     const automessge = require(`./automatedmessagestatus.json`);
     if (automessge.state == "1"){
         if (!message.member.roles.cache.some(role => role.name === modRole)){
@@ -124,7 +119,6 @@ function AutomatedMessage(message) { // this is to keep annoying as people from 
 
 async function Economy(){ // Janky as fuck but works
     while (true) {
-        await Heists();
         await Jackpot(0); // Init Raffle
         await StockMarket();
         await ClearSQLDB(); // Temp thing till i figure out SQL more
@@ -341,6 +335,8 @@ function GrabStocksinOwnership(stock) { // Modified Max User Stocks function
     return ownedStocks;
 }
 
+<<<<<<< Updated upstream
+=======
 // Heist Related Functions
 
 async function Heists(){
@@ -393,10 +389,11 @@ async function HeistEnd(heist){
     console.log(heist);
     cooldownData = CoolDownData();
     console.log(cooldownData);
+    date = new Date();
     for(i=0;i<heist.users.length;i++){
         curUser = heist.users[i];
         console.log(`Current User:`, curUser);
-        userdata = {"id": curUser.id, "cooldown": Date.now() + 432000000};
+        userdata = {"id": curUser.id, "cooldown": date};
         console.log(`User Data: ${userdata}`);
         cooldownData.users.push(userdata);
         console.log(cooldownData);
@@ -642,6 +639,7 @@ async function HeistLocationToggle(){
     pglibrary.WriteToJson(locations, './heists/locations.json');
 }
 
+>>>>>>> Stashed changes
 // Database Related Functions
 
 async function ClearSQLDB(){
@@ -656,27 +654,23 @@ async function ClearSQLDB(){
             "encrypt": true
         }
     }
-    try {
-        var dbConn = new SQL.ConnectionPool(SQLconfig);
-        dbConn.connect().then(function() {
-            var transaction = new SQL.Transaction(dbConn);
-            transaction.begin().then(function (){
-                var request = new SQL.Request(transaction);
-                request.query('DELETE FROM StockInfo', function(err, result){
-                    if(err) {
-                        console.log(err);
-                    }
-                    transaction.commit().then(function (recordSet){
-                        console.log(`Cleared Stock Info Table`);
-                        console.log(recordSet);
-                        dbConn.close();
-                    });
+    var dbConn = new SQL.ConnectionPool(SQLconfig);
+    dbConn.connect().then(function() {
+        var transaction = new SQL.Transaction(dbConn);
+        transaction.begin().then(function (){
+            var request = new SQL.Request(transaction);
+            request.query('DELETE FROM StockInfo', function(err, result){
+                if(err) {
+                    console.log(err);
+                }
+                transaction.commit().then(function (recordSet){
+                    console.log(`Cleared Stock Info Table`);
+                    console.log(recordSet);
+                    dbConn.close();
                 });
             });
         });
-    } catch (err){
-        console.error(err);
-    }
+    });
 }
 
 async function WritetoSQLDB() {
@@ -704,27 +698,23 @@ async function WritetoSQLDB() {
         table.rows.add(stock.name, stock.price);
     });
     console.log(table);
-    try {
-        var dbConn = new SQL.ConnectionPool(SQLconfig);
-        dbConn.connect().then(function() {
-            var transaction = new SQL.Transaction(dbConn);
-            transaction.begin().then(function (){
-                var request = new SQL.Request(transaction);
-                request.bulk(table, (err, result) => {
-                    if(err) {
-                        console.log(err);
-                    }
-                    if(result){
-                        console.log(result);
-                    }
-                    transaction.commit().then(function (recordSet){
-                        console.log(recordSet);
-                        dbConn.close();
-                    });
+    var dbConn = new SQL.ConnectionPool(SQLconfig);
+    dbConn.connect().then(function() {
+        var transaction = new SQL.Transaction(dbConn);
+        transaction.begin().then(function (){
+            var request = new SQL.Request(transaction);
+            request.bulk(table, (err, result) => {
+                if(err) {
+                    console.log(err);
+                }
+                if(result){
+                    console.log(result);
+                }
+                transaction.commit().then(function (recordSet){
+                    console.log(recordSet);
+                    dbConn.close();
                 });
             });
         });
-    } catch (err){
-        console.error(err);
-    }
+    });
 } // https://docs.microsoft.com/en-us/sql/connect/node-js/step-3-proof-of-concept-connecting-to-sql-using-node-js?view=sql-server-ver15

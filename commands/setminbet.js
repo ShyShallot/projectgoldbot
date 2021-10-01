@@ -16,8 +16,8 @@ module.exports = {
                 console.log(minbet);
                 console.log("Current Min Bet " + data.mincoinbet);
                 console.log("Min Bet from message " + minbet);
-                finalconfig = {"token": data.token, "ownerID": data.ownerID, "prefix": data.prefix, "econprefix": data.econtoken, "econtoken": data.econtoken, "mincoinbet": minbet};
-                pglibrary.WriteToJson(finalconfig, './config.json');
+                data.mincoinbet = minbet;
+                pglibrary.WriteToJson(data, './config.json');
             } else {
                 message.channel.send(`<@${message.author.id}>, ${args[0]} is not a valid number`);
             }
