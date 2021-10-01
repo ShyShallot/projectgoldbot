@@ -9,6 +9,8 @@ const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('
 const pglibrary = require("./libraryfunctions.js");
 const sqlconfig = require('./sql.json');
 const SQL = require('mssql');
+const { channel } = require('diagnostics_channel');
+const heistEcon = require('./heists/heistecon.js');
 
 bot.commands = new Map(); // New Array for our commands
 bot.on('ready', () => { // when the bot has logged in and is ready
@@ -100,6 +102,9 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     if (command === "sui" && message.member.roles.cache.find(role => role.name === modRole)) {
         bot.commands.get("sui").execute(message,args,bot);
     }
+    if (command === "heist"){
+        bot.commands.get("heist").execute(message,args,bot);
+    }
 });
 bot.login(config.token);
 
@@ -119,6 +124,7 @@ function AutomatedMessage(message) { // this is to keep annoying as people from 
 
 async function Economy(){ // Janky as fuck but works
     while (true) {
+        await Heists();
         await Jackpot(0); // Init Raffle
         await StockMarket();
         await ClearSQLDB(); // Temp thing till i figure out SQL more
@@ -335,8 +341,6 @@ function GrabStocksinOwnership(stock) { // Modified Max User Stocks function
     return ownedStocks;
 }
 
-<<<<<<< Updated upstream
-=======
 // Heist Related Functions
 
 async function Heists(){
@@ -639,7 +643,6 @@ async function HeistLocationToggle(){
     pglibrary.WriteToJson(locations, './heists/locations.json');
 }
 
->>>>>>> Stashed changes
 // Database Related Functions
 
 async function ClearSQLDB(){
