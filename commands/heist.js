@@ -140,7 +140,7 @@ function IsUserOnCooldown(userID){
     }
     if(cooldownData.users.some(u => u.id == userID)){
         date = new Date();
-        cooldownDate = new Date(curUser.cooldown);
+        cooldownDate = new Date(u.cooldown);
         if(Date.parse(date) > Date.parse(cooldownDate)){
             cooldownData.users.splice(i, 1);
             pglibrary.WriteToJson(cooldownData, `./heists/usersoncooldown.json`);
