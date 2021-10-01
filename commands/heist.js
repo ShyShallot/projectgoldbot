@@ -518,7 +518,7 @@ function HeistStatus(user, message, bot){
     .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
     .addField(`Heist Location`, userheistinfo.location[0].name)
     .addField(`Heist Start Status`, `${status}`)
-    .addField(`Max Return per user`, `${userheistinfo.location[0].maxreward}`);
+    .addField(`Max Return per user`, `$${pglibrary.commafy(userheistinfo.location[0].maxreward)} points.`);
     if(userheistinfo.started){
         embed.addField(`Time Left:`, `${new Date(userheistinfo.shouldend).getUTCHours()} hour(s) left`);
     } else {
