@@ -576,7 +576,7 @@ function ListHeistLocations(message, args, bot){
             } else {
                 locationavail = "Not Available for Heist"
             }
-            embed.addField(location.name, `Availability: ${locationavail}, Run the List Command with the name of the location for more info`);
+            embed.addField(location.name, `Availability: ${locationavail}, \n Run the List Command with the name of the location for more info`);
         });
         message.channel.send({content: `<@${message.author.id}>`, embeds: [embed]});
     } else {
