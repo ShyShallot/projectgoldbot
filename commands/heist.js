@@ -517,7 +517,8 @@ function HeistStatus(user, message, bot){
     .setDescription(`Current Heist Information.`)
     .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
     .addField(`Heist Location`, userheistinfo.location[0].name)
-    .addField(`Heist Start Status`, `${status}`);
+    .addField(`Heist Start Status`, `${status}`)
+    .addField(`Max Return per user`, `${userheistinfo.location[0].maxreward}`);
     if(userheistinfo.started){
         embed.addField(`Time Left:`, `${new Date(userheistinfo.shouldend).getUTCHours()} hour(s) left`);
     } else {
@@ -615,7 +616,7 @@ function ListHeistLocations(message, args, bot){
                 .addField(`Name`, `${curlocation.name}`)
                 .addField(`Description`, `${curlocation.description}`)
                 .addField(`Location Difficulty`, `${diffDisplay}`)
-                .addField(`Max Possible Reward Outcome`, `$${pglibrary.commafy(curlocation.maxreward)}`)
+                .addField(`Max Possible Reward Outcome Per User`, `$${pglibrary.commafy(curlocation.maxreward)}`)
                 .addField('Required Equipment', `${curlocation.reqs}`)
                 .addField(`Optional Equipment`, `${curlocation.optionalreqs}`)
                 .addField(`Location Availability`, `${locationavail}`)
@@ -699,8 +700,11 @@ function ListUsersInventory(message, user, bot){
                 embed.fields[0].value += `${item} \n`;
             });
             message.channel.send({content: `<@${message.author.id}>`, embeds: [embed]});
+            return;
         }
     }
+    message.channel.send(`<@${message.author.id}>, that users inventory is empty`);
+    return;
 }
 
 function BuyEquipment(message, bot, args){

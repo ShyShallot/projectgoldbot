@@ -34,7 +34,7 @@ function Loss(heist){
 function Gain(heist){
     for(i=0;i<heist.users.length;i++){
         curUser = heist.users[i];
-        amount = CalculateCut(curUser, heist);
+        amount = heist.location[0].maxreward;
         client.editUserBalance(serverID, curUser.id, {cash: amount, bank: 0});
     }
 }
@@ -66,14 +66,6 @@ function UserHeistInfo(file){
     userheistinforaw = fs.readFileSync(file);
     userheistinfo = JSON.parse(userheistinforaw);
     return userheistinfo;
-}
-
-
-function CalculateCut(user, heist){
-    usersCut = user.split;
-    maxpossiblereward = heist.location[0].maxreward;
-    cut = (maxpossiblereward/100)*usersCut;
-    return cut;
 }
 
 function CostOfEquipment(user){
