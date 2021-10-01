@@ -814,7 +814,7 @@ function GiveEquipment(message){
             return;
         }
         console.log(requestedItems);
-        requestedItems = RemoveDuplicateItems(m.author.id, requestedItems);
+        requestedItems = RemoveDuplicateItems(target.id, requestedItems);
         console.log(requestedItems);
         if(requestedItems.length == 0){
             message.channel.send(`<@${m.author.id}>, that user already owns those items.. To check yours or others inventory use ${config.prefix}heist inv`);
