@@ -138,25 +138,19 @@ function IsUserOnCooldown(userID){
     if(cooldownData.users.length <= 0){
         return false;
     }
-    for(i=0;i<cooldownData.users.length;i++){
-        curUser = cooldownData.users[i];
-        if(curUser.id == userID){
-            date = new Date();
-            cooldownDate = new Date(curUser.cooldown);
-            if(Date.parse(date) > Date.parse(cooldownDate)){
-                cooldownData.users.splice(i, 1);
-                pglibrary.WriteToJson(cooldownData, `./heists/usersoncooldown.json`);
-                return false;
-            } else if(Date.now() < curUser.cooldown && i == cooldownData.users.length){
-                return true;
-            }
+    if(cooldownData.users.some(u => u.id == userID)){
+        date = new Date();
+        cooldownDate = new Date(curUser.cooldown);
+        if(Date.parse(date) > Date.parse(cooldownDate)){
+            cooldownData.users.splice(i, 1);
+            pglibrary.WriteToJson(cooldownData, `./heists/usersoncooldown.json`);
+            return false;
         } else {
-            if(i == cooldownData.users.length){
-                return false;
-            }
+            return true;
         }
+    } else {
+        return false;
     }
-    return true;
 }
 
 function StatusforUserInHeist(user, message, bot){
