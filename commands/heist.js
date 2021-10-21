@@ -4,6 +4,7 @@ const { Client, User } = require('unb-api'); // define our basic client for the 
 const client = new Client(config.econtoken); // define the rest of the client for economy and verify with our econ token
 const pglibrary = require("../libraryfunctions.js"); // load our custom library functions.
 const fs = require('fs'); // File System for JS 
+const heisttimers = require('../heists/heisttimers');
 module.exports = {
     name: 'heist',
     description: 'Heist System',
@@ -139,16 +140,7 @@ function IsUserOnCooldown(userID){
         return false;
     }
     if(cooldownData.users.some(u => u.id == userID)){
-        user = (cooldownData.users.some(u => u.id == userID)) // lazy fix for now
-        date = new Date();
-        cooldownDate = new Date(user.cooldown);
-        if(Date.parse(date) > Date.parse(cooldownDate)){
-            cooldownData.users.splice(i, 1);
-            pglibrary.WriteToJson(cooldownData, `./heists/usersoncooldown.json`);
-            return false;
-        } else {
-            return true;
-        }
+        return true;
     } else {
         return false;
     }
@@ -202,6 +194,10 @@ async function GetLocationFromName(user, message, bot){
             curLocation = heistlocations.locations[i];
             console.log(curLocation);
             if(curLocation.name.toLowerCase() == m.content.toLowerCase()){
+                if(curLocation.available == 0){
+                    m.channel.send(`<@${m.author.id}>, That location is not available for a heist.`);
+                    return;
+                }
                 m.channel.send(`<@${m.author.id}>, You have selected ${curLocation.name}.`);
                 SetupHeist(message.author, message, curLocation, bot);
                 collector.stop();
@@ -252,11 +248,7 @@ async function StartHeist(user, message, bot){
     console.log(server);
     userHeist.started = true;
     date = new Date();
-    console.log(`Current Date: ${date}`);
-    console.log(`Heist Ending Time: ${userHeist.location[0].timetocomplete}`);
-    timetoEndOn = pglibrary.addHours(date, userHeist.location[0].timetocomplete);
-    console.log(`Time to End on : ${timetoEndOn}`);
-    userHeist.shouldend = timetoEndOn;
+    userHeist.hourStarted = date.getHours;
     pglibrary.WriteToJson(userHeist, file);
     hChannel = server.channels.cache.find(c => c.name == `${user.username.toLowerCase()}s-heist`);
     if(typeof hChannel === 'undefined'){
@@ -267,8 +259,10 @@ async function StartHeist(user, message, bot){
     } else {
         console.log(`Found Channel`);
     }
-    hChannel.send(`<@${user.id}>, you have started the Heist, Time until Heist is done: ${new Date(timetoEndOn).getUTCHours()} Hour(s).`);
+    heisttimers.execute(userHeist, bot);
+    hChannel.send(`<@${user.id}>, you have started the Heist, Time until Heist is done: ${userHeist.location[0].timetocomplete} Hour(s).`);
 }
+
 
 function ToggleLocation(heist){
     locationData = HeistLocationData();
@@ -310,11 +304,9 @@ async function SetupHeist(user, message, location, bot){
     users = [];
     users.push(userinfo);
     date = new Date();
-    timetoEndOn = pglibrary.addHours(date, location.timetocomplete);
-    console.log(timetoEndOn);
-    fileinfo = {"users":users, "location": [location], "started": false, "shouldend": timetoEndOn};
+    fileinfo = {"users":users, "location": [location], "started": false, "serverid": message.guild.id, "hourstarted": 0};
     pglibrary.WriteToJson(fileinfo, newfile);
-    server = bot.guilds.cache.get(message.guild);
+    server = message.guild;
     server.channels.create(`${user.username}'s Heist`).then(channel =>{
         let catergory = server.channels.cache.find(c => c.name == "Heists")
         if(!catergory) throw new Error("Category cannot be found");
@@ -515,12 +507,9 @@ function HeistStatus(user, message, bot){
     .addField(`Heist Start Status`, `${status}`)
     .addField(`Max Return per user`, `$${pglibrary.commafy(userheistinfo.location[0].maxreward)} points.`);
     if(userheistinfo.started){
-        embed.addField(`Time Left:`, `${new Date(userheistinfo.shouldend).getUTCHours()} hour(s) left`);
+        embed.addField(`Time Left:`, `${new Date().getHours - userheistinfo.hourStarted} hour(s) left`);
     } else {
-        console.log(`time for heist to complete: ${userheistinfo.location[0].timetocomplete}`);
-        timetoEndOn = pglibrary.addHours(date, userheistinfo.location[0].timetocomplete)
-        console.log(timetoEndOn);
-        embed.addField(`Time Left:`, `${new Date(timetoEndOn).getUTCHours()} hour(s) left`);
+        embed.addField(`Time Left:`, `${userheistinfo.location[0].timetocomplete} hour(s) left`);
     }
     
     userheistinfo.users.forEach(user => {

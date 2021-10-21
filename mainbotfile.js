@@ -9,8 +9,6 @@ const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('
 const pglibrary = require("./libraryfunctions.js");
 const sqlconfig = require('./sql.json');
 const SQL = require('mssql');
-const { channel } = require('diagnostics_channel');
-const heistEcon = require('./heists/heistecon.js');
 
 bot.commands = new Map(); // New Array for our commands
 bot.on('ready', () => { // when the bot has logged in and is ready
@@ -202,12 +200,7 @@ async function StockMarket() {
     console.log("Starting Stock Market");
     var stockmarket = GrabStockMarketData();
     console.log(stockmarket);
-    date = new Date();
-    day = date.getDay();
-    hour = date.getHours();
-    console.log(`Current Day: ${day}`);
-    console.log(`Current Hour: ${hour}`);
-    if (CanStockMarketUpdate()) {
+    if (stockmarket.stockmarketactive == 1) {
         console.log(`Updating Stock Market`);
         var finalstocks = [];
         for (var i = 0, l = stockmarket.stocks.length; i < l; i++) {
@@ -228,8 +221,13 @@ async function StockMarket() {
         }
         console.log(`Logging final stock array`);
         console.log(finalstocks);
-        finaljsonfile = {"stocks": finalstocks, "stockmarketactive": stockmarket.stockmarketactive, "maxownedstocks": stockmarket.maxownedstocks, "lastupdatehour":hour,"updateinterval":stockmarket.updateinterval}
-        pglibrary.WriteToJson(finaljsonfile, './stockmarket.json');
+        stockmarket.stockmarketactive = 0;
+        stockmarket.stocks = finalstocks; 
+        pglibrary.WriteToJson(stockmarket, './stockmarket.json');
+        setTimeout(() => {
+            stockmarket.stockmarketactive = 1;
+            pglibrary.WriteToJson(stockmarket, './stockmarket.json');
+        })
     }
 }
 
@@ -237,29 +235,6 @@ function GrabStockMarketData(){
     stockmarket = fs.readFileSync(`stockmarket.json`, 'utf-8');
     data = JSON.parse(stockmarket);
     return data;
-}
-
-function CanStockMarketUpdate(){
-    console.log(`Checking if Stock Market can update`);
-    var stockmarket = GrabStockMarketData();
-    date = new Date();
-    hour = date.getHours();
-    console.log(`Checking Hour: ${hour}`);
-    nexthour = stockmarket.lastupdatehour + stockmarket.updateinterval; // predict the next hour to update based off the last updated hour plus our updateinterval
-    console.log(`Next Hour to Update on: ${nexthour}`);
-    if (nexthour > 23) { // then check if our nexthour is going to be over the max possible hour we are then going to compensate for that.
-        console.log(`Next hour would overflow`);
-        nexthour = nexthour - 23 - 1; // calculate the compensated nexthour then subtract 1 to account for getHours going from 0-23 instead of 1-24
-        console.log(`Updated Next Hour: ${nexthour}`);
-    }
-    if (nexthour < 0) {
-        console.log(`Next Hour went under 0, setting it to 0`);
-        nexthour = 0;
-    }
-    if (nexthour == hour && stockmarket.stockmarketactive == 1) {
-        console.log(`Stock Market can Update`);
-        return true;
-    }
 }
 
 async function CalculateStockPrice(stock) {
@@ -344,208 +319,11 @@ function GrabStocksinOwnership(stock) { // Modified Max User Stocks function
 // Heist Related Functions
 
 async function Heists(){
-    date = new Date();
-    heists = await HeistFiles();
-    console.log(heists);
-    heistBasicRaw = fs.readFileSync('./heists/heist.json');
-    heistBasic = JSON.parse(heistBasicRaw);
-    console.log(heistBasic);
-    if(date.getMinutes() == new Date(heistBasic.lastdate).getMinutes){
-        console.log(`Our Current hour is equal to the last hour, stopping`);
-        return;
-    }
-    heistBasic.lastdate = date;
-    for(i=0;i<heists.length;i++){
-        heist = heists[i];
-        console.log(`Checking Heist: ${heist}`);
-        console.log(heist);
-        heistDataRaw = fs.readFileSync(`./heists/${heist}`);
-        heistData = JSON.parse(heistDataRaw);
-        if(heistData.started){
-            if(ShouldHeistEnd(heistData)) {
-                console.log(`Ending Heist: ${heist}`);
-                await HeistEnd(heistData);
-                await pglibrary.sleep(1000);
-                continue;
-            }
-        }
-    }   
     console.log(`Toggaling Heist Locations`);
     HeistLocationToggle();
-    pglibrary.WriteToJson(heistBasic, `./heists/heist.json`);
     return;
 }
 
-function ShouldHeistEnd(heist){
-    date = new Date();
-    heistDate = new Date(heist.shouldend);
-    if(date.getDay() >= heistDate.getDay() && date.getUTCHours() >= heistDate.getUTCHours()){
-        console.log(`Heist is allowed to end`);
-        return true;
-    } else {
-        console.log(`Heist cannot end yet`);
-        return false;
-    }
-}
-
-async function HeistEnd(heist){
-    console.log(`Ending Heist`);
-    console.log(heist);
-    cooldownData = CoolDownData();
-    console.log(cooldownData);
-    date = new Date();
-    for(i=0;i<heist.users.length;i++){
-        curUser = heist.users[i];
-        console.log(`Current User:`, curUser);
-        userdata = {"id": curUser.id, "cooldown": date};
-        console.log(`User Data: ${userdata}`);
-        cooldownData.users.push(userdata);
-        console.log(cooldownData);
-    }
-    pglibrary.WriteToJson(cooldownData, `./heists/usersoncooldown.json`);
-    heistDiff = heist.location[0].difficulty;
-    usersInHeistMutli = 1 + heist.users.length /10;
-    if(heist.users.length == 1){
-        usersInHeistMutli = 1;
-    }
-    diffMulti = 1 + heistDiff/10;
-    usersExtras = CheckForOptionalReqs(heist) / 10;
-    chance = Math.random() * diffMulti * usersInHeistMutli - usersExtras;
-    console.log(`Final Chance: ${chance}, Modifiers: Difficulty: ${heistDiff}, User Multiplier: ${usersInHeistMutli}, Extras Mutliplier: ${usersExtras}`);
-
-    if(chance <= 0.5){
-        await HeistEndWin(heist);
-    } else if (chance > 0.5 && chance < 0.6){
-        await HeistEndDraw(heist);
-    } else if (chance >= 0.6){
-        await HeistEndLoss(heist);
-    }
-    return true;
-}
-
-function CoolDownData(){
-    cooldownRaw = fs.readFileSync(`./heists/usersoncooldown.json`);
-    return JSON.parse(cooldownRaw);
-}
-
-function CheckForOptionalReqs(heist){
-    invRaw = fs.readFileSync(`./heists/usersinventory.json`);
-    inv = JSON.parse(invRaw);
-    amountOfOpReq = 0;
-    for(i=0;i<heist.users.length;i++){
-        curUser = heist.users[i];
-        for(l=0;l<inv.users.length;l++){
-            curUserInv = inv.users[l];
-            if(curUserInv.id == curUser){
-                curUserInv.inv.forEach(item =>{
-                    if(heist.location[0].optionalreqs.includes(item)){
-                        amountOfOpReq++;
-                    }
-                })
-            }
-        }
-    }
-    return amountOfOpReq;
-}
-
-async function HeistEndWin(heist){
-    finalstring = "";
-    var hChannel;
-    heistEcon.execute(heist, 1);
-    for(i=0;i<heist.users.length;i++){
-        curUser = heist.users[i];
-        finalstring += `<@${curUser.id}>,`;
-        if(curUser.host){
-            server = bot.guilds.cache.get("631008739830267915");
-            username = curUser.name;
-            hChannel = server.channels.cache.find(c => c.name == `${username.toLowerCase()}s-heist`);
-            console.log(hChannel);
-            if(!hChannel){
-                console.log(`Could not find that channel`);
-                return;
-            }   
-        }
-    }
-    finalstring += ` the heist has ended and you have succeeded, you will be rewarded with your cut. (This Channel will auto delete in 10 Seconds)`;
-    await hChannel.send(finalstring);
-    await pglibrary.sleep(10000);
-    await CleanUpHeistInfo(heist);
-    return;
-}
-
-async function HeistEndLoss(heist){
-    finalstring = "";
-    var hChannel;
-    heistEcon.execute(heist, 0);
-    for(i=0;i<heist.users.length;i++){
-        curUser = heist.users[i];
-        console.log(curUser);
-        finalstring += `<@${curUser.id}>,`;
-        if(curUser.host){
-            server = bot.guilds.cache.get("631008739830267915");
-            console.log(server);
-            username = curUser.name;
-            console.log(username);
-            hChannel = server.channels.cache.find(c => c.name == `${username.toLowerCase()}s-heist`);
-            if(!hChannel){
-                console.log(`Could not find that channel`);
-                return;
-            }
-            console.log(hChannel);
-        }
-        await pglibrary.sleep(1000);
-    }
-    finalstring += ` the heist has ended and you have failed, costs for equipment, damages and bail will be detucted from you balance. (This Channel will auto delete in 10 Seconds)`;
-    await hChannel.send(finalstring);
-    await pglibrary.sleep(10000);
-    await CleanUpHeistInfo(heist);
-    return;
-}
-
-async function HeistEndDraw(heist){
-    finalstring = "";
-    var hChannel;
-    for(i=0;i<heist.users.length;i++){
-        curUser = heist.users[i];
-        finalstring += `<@${curUser.id}>,`;
-        if(curUser.host){
-            server = bot.guilds.cache.get("631008739830267915");
-            username = curUser.name;
-            hChannel = server.channels.cache.find(c => c.name == `${username.toLowerCase()}s-heist`);
-            if(!hChannel){
-                console.log(`Could not find that channel`);
-                return;
-            }
-            console.log(hChannel);
-        }
-        ClearUsersInventory(curUser);
-    }
-    finalstring += ` the heist has ended but you retreated, you have only lost your items. (This Channel will auto delete in 10 Seconds)`;
-    await hChannel.send(finalstring);
-    await pglibrary.sleep(10000);
-    await CleanUpHeistInfo(heist);
-    return;
-}
-
-async function CleanUpHeistInfo(heist){
-    for(i=0;i<heist.users.length;i++){
-        curUser = heist.users[i];
-        if(curUser.host){
-            server = bot.guilds.cache.get("631008739830267915");
-            username = curUser.name;
-            hChannel = server.channels.cache.find(c => c.name == `${username.toLowerCase()}s-heist`);
-            hChannel.delete();
-            filetodelete = `./heists/heist${curUser.id}.json`;
-            fs.unlinkSync(filetodelete, function(err){
-                if(err){
-                    console.log(`There was an error when trying to delete file, make sure it exists.`);
-                    return;
-                }
-            });
-        }
-    }
-    return true;
-}
 
 async function HeistFiles(){
     let heists = [];
@@ -582,19 +360,6 @@ function HeistLocationData(){
     heistlocdata = fs.readFileSync('./heists/locations.json');
     heistloc = JSON.parse(heistlocdata);
     return heistloc;
-}
-
-function ClearUsersInventory(user){
-    inventory = HeistInvData();
-    console.log(`Clearing users inventory`);
-    for(i=0;i<inventory.users.length;i++){
-        curUser = inventory.users[i];
-        if(user.id == curUser.id){
-            inventory.users[i].inv.splice(i,curUser.inv.length);
-            pglibrary.WriteToJson(inventory, `./heists/usersinventory.json`);
-            console.log(`Cleared Uses inventory`);
-        }
-    }
 }
 
 async function HeistLocationToggle(){
@@ -653,6 +418,7 @@ async function ClearSQLDB(){
         password: sqlconfig.password,
         database: sqlconfig.database,
         port: 1433,
+        trustServerCertificate: true,
         options: {
             "encrypt": true
         }
@@ -686,6 +452,7 @@ async function WritetoSQLDB() {
         password: sqlconfig.password,
         database: sqlconfig.database,
         port: 1433,
+        trustServerCertificate: true,
         options: {
             "encrypt": true
         }
