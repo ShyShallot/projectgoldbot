@@ -227,7 +227,7 @@ async function StockMarket() {
         setTimeout(() => {
             stockmarket.stockmarketactive = 1;
             pglibrary.WriteToJson(stockmarket, './stockmarket.json');
-        })
+        }, stockmarket.updateinterval * 3600000);
     }
 }
 
