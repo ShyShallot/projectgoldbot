@@ -10,7 +10,7 @@ module.exports = {
             return;
           } else{
             let messagecontent = message.content.substring(message.content.indexOf(" ") + 1, message.content.length);
-           bot.user.setPresence({status: 'online', game:{name: messagecontent, type: 0}});
+            bot.user.setActivity(messagecontent, {type: 'PLAYING'}); // Set our game status
            fs.writeFile("./game.json", JSON.stringify(messagecontent), 'utf8', function(err){
              if(err){
                return console.log(err);

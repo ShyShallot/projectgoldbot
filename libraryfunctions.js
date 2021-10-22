@@ -1,4 +1,6 @@
 const fs = require('fs'); // File System for JS
+const config = require('./config.json');
+const {MessageEmbed, Message} = require('discord.js');
 /**
  * Gets the digit length of any positive or negative number
  * @param {number} x Any Number 
@@ -83,6 +85,22 @@ function addHours(date, hours) {
     const newDate = new Date(date);
     newDate.setHours(newDate.getHours() + hours);
     return newDate;
-  }
+}
 
-module.exports = {numDigits, getRandomInt, WriteToJson, sleep, commafy, convertMS, addHours};
+function ChannelLog(content, reason, bot){
+    logchannel = bot.channels.cache.get(config.logchannel);
+    if(!logchannel){
+        console.log(`INVALID LOG CHANNEL CANCELING!`);
+        return;
+    }
+    date = new Date();
+    logEmbed = new MessageEmbed()
+    .setTitle(reason)
+    .setDescription(content)
+    .setTimestamp()
+    .setAuthor(`${bot.user.username}`, `${bot.user.avatarURL()}`)
+    .setColor(0x00AE86);
+    logchannel.send({embeds: [logEmbed]});
+}
+
+module.exports = {numDigits, getRandomInt, WriteToJson, sleep, commafy, convertMS, addHours, ChannelLog};

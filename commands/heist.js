@@ -35,7 +35,7 @@ module.exports = {
                     message.channel.send(`<@${message.author.id}>, you are already in a heist you cannot join another`);
                     return;
                 }
-                JoinHeist(message.author, message);
+                JoinHeist(message.author, message, bot);
                 break;
             case 'split':
                 ChooseSplit(message.author, message);
@@ -259,6 +259,7 @@ async function StartHeist(user, message, bot){
     } else {
         console.log(`Found Channel`);
     }
+    pglibrary.ChannelLog(`${user.username} has started a heist.`, 'User Command', bot);
     heisttimers.execute(userHeist, bot);
     hChannel.send(`<@${user.id}>, you have started the Heist, Time until Heist is done: ${userHeist.location[0].timetocomplete} Hour(s).`);
 }
@@ -314,9 +315,10 @@ async function SetupHeist(user, message, location, bot){
         channel.send(`<@${user.id}>, You have successfuly setup your heist, you can wait for users to join or you can start it.`);
     }).catch(console.error);
     ToggleLocation(fileinfo);
+    pglibrary.ChannelLog(`${user.username} has setup a heist at ${location.name}.`, 'User Command', bot);
 }
 
-function JoinHeist(user, message){
+function JoinHeist(user, message, bot){
     if(!message.mentions.users.first()){
         message.channel.send(`<@${user.id}>, please provide a valid user mention.`);
         return;
@@ -361,6 +363,7 @@ function JoinHeist(user, message){
     pglibrary.WriteToJson(requestedHeist, file);
     UpdateUserSplits(target);
     message.channel.send(`<@${user.id}>, you have successfuly joined ${requestedHeist.users.find(user => user.host == true).name}'s heist.`);
+    pglibrary.ChannelLog(`${user.username} has joined ${requestedHeist.users.find(user => user.host == true).name} heist.`, 'User Command', bot);
 }
 
 function CancelHeist(user, message){
