@@ -103,6 +103,9 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     if (command === "heist"){
         bot.commands.get("heist").execute(message,args,bot);
     }
+    if (command === "setlc"){
+        bot.commands.get("logchannelset").execute(message, args, bot);
+    }
 });
 bot.login(config.token);
 
@@ -112,7 +115,6 @@ function AutomatedMessage(message) { // this is to keep annoying as people from 
     if (automessge.state == "1"){
         if (!message.member.roles.cache.some(role => role.name === modRole)){
             const args = message.content.split(/ +/g);
-            console.log(args.includes('beta'));
             if (args.includes('beta') && args.includes('release') && args.includes('when')){
                 message.channel.send(`<@${message.author.id}>, please note that either you cant read or are blind, there are plenty of resources saying that the mod is currently not released. With a currently unplanned release date.`)
             }
@@ -143,6 +145,7 @@ async function Jackpot(forced) { // Changed to a raffle but am too lazy to updat
             console.log(hour, day);
             console.log(`Raffle Not Active Might Start One`);
             if ((forced == 1) && jackpotData.raffleactive == 0 || hour >= 12 && jackpotData.raffleactive == 0) { // the Jackpot function was forced and their is no raffle active OR its 12pm and their is no raffle active
+                pglibrary.ChannelLog(`Starting Jackpot`, 'Automated Function', bot);
                 console.log(`Starting Jackpot`);
                 await bot.commands.get("jackpot").execute(null, null, bot, 1); // run jackpot.js with a state of 1
                 //await sleep(20000); // wait 20 seconds
@@ -154,6 +157,7 @@ async function Jackpot(forced) { // Changed to a raffle but am too lazy to updat
             console.log(`Raffle Currently Active`);
             console.log(hour, day);
             if ((forced == 1) && jackpotData.raffleactive == 1 || hour >= 22 && jackpotData.raffleactive == 1) { // the Jackpot function was forced and their is a raffle active OR its 10pm and their is a raffle active
+                pglibrary.ChannelLog(`Stopping Jackpot`, 'Automated Function', bot);
                 console.log('Stop Jackpot');
                 await bot.commands.get("jackpot").execute(null, null, bot, 0); // run jackpot.js with a state of 0, telling it to stop
                 //await sleep(20000);
@@ -201,6 +205,7 @@ async function StockMarket() {
     var stockmarket = GrabStockMarketData();
     console.log(stockmarket);
     if (stockmarket.stockmarketactive == 1) {
+        pglibrary.ChannelLog(`Updating Stock Market`, 'Automated Function', bot);
         console.log(`Updating Stock Market`);
         var finalstocks = [];
         for (var i = 0, l = stockmarket.stocks.length; i < l; i++) {
@@ -263,13 +268,13 @@ async function CalculateStockPrice(stock) {
     }
     newstockprice = stock.price + incrementamount * ownerfactor * pglibrary.getRandomInt(2);
     console.log(`Final Stock Price: ${newstockprice}`);
-    if (newstockprice >= 1000000 / ownerfactor) {
+    if (newstockprice >= 1000000) {
         console.log(`Stock hit is market cap`);
-        newstockprice = 1000000 / ownerfactor;
+        newstockprice = 1000000;
     }
     if (newstockprice < 0) {
         await StockCrash(stock);
-        return stock.price;
+        return 2000;
     }
     console.log(newstockprice);
     return newstockprice;
@@ -395,10 +400,12 @@ async function HeistLocationToggle(){
         if(day > locationDay && skip == 0){
             console.log(`Day is greater than the location date`);
             if(location.available == 0){
+                pglibrary.ChannelLog(`Heist Location ${locations.locations[i].name} is now disabled.`, 'Automated Function', bot);
                 console.log(`Location is disabled`);
                 locations.locations[i].available = 1;
                 locations.locations[i].madeunavailable = date;
             } else {
+                pglibrary.ChannelLog(`Heist Location ${locations.locations[i].name} is now enabled.`, 'Automated Function', bot);
                 console.log(`Location is available`);
                 locations.locations[i].available = 0;
                 locations.locations[i].madeunavailable = date;
