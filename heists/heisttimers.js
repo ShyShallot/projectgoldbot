@@ -46,19 +46,20 @@ async function EndHeist(heist, bot){
         cooldownData.users.push(userdata);
         console.log(cooldownData);
         pglibrary.WriteToJson(cooldownData, `./heists/usersoncooldown.json`);
-        setTimeout((curUser) => {
-            cooldownData = CoolDownData();
-            for(i=0;i<cooldownData.users.length;i++){
-                if(cooldownData.users[i].id == curUser.id){
-                    cooldownData.users.splice(i, 1);
-                    pglibrary.WriteToJson(cooldownData, `./heists/usersoncooldown.json`);
-                }
-            }
-        },43200000);
+        setTimeout(() => ClearCooldown(curUser),43200000);
     }
     return;
 }
 
+function ClearCooldown(user){
+    cooldownData = CoolDownData();
+    for(i=0;i<cooldownData.users.length;i++){
+        if(cooldownData.users[i].id == user.id){
+            cooldownData.users.splice(i, 1);
+            pglibrary.WriteToJson(cooldownData, `./heists/usersoncooldown.json`);
+        }
+    }
+}
 
 async function HeistEndWin(heist, bot){
     finalstring = "";
