@@ -1,22 +1,24 @@
-const { Client, Intents, MessageEmbed, MessageAttachment } = require('discord.js'); // Setup our basic stuff
-const bot = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MEMBERS] }); // If events are not triggering check intents list and add it to this one search it to find it
+// This bot was made by ShyShallot for the Project Gold Discord Server: https://discord.gg/cKfrEX7
+// Find the github for the discord bot here: https://github.com/ShyShallot/projectgoldbot
+const { Client, Intents, MessageEmbed, MessageAttachment } = require('discord.js'); // Each thing in the Curly Brackets are special things we want to use
+const bot = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MEMBERS] }); // this handles events the bot checks for and receives from the API
 const config = require('./config.json'); // basic load of config file
 const game = require('./game.json'); // Game Status
 const welcome = require('./welcomemessages.json'); // Welcome Messages 
 const fs = require('fs'); // File System for JS
 const talkedRecently = new Set(); // unused for cooldown
-const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js')); // read our commands folder 
+const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js')); // read our commands folder for every command file
 const pglibrary = require("./libraryfunctions.js");
 const sqlconfig = require('./sql.json');
 const SQL = require('mssql');
 
 bot.commands = new Map(); // New Array for our commands
-bot.on('ready', () => { // when the bot has logged in and is ready
+bot.on('ready', () => { // Runs everything inside when the bot has successfully logged in and is active
     console.log('PG Bot Ready');
     console.log(`Current Game: ${game}`);
     bot.user.setActivity(game, {type: 'PLAYING'}); // Set our game status
-    for (const file of commandFiles) { 
-      const command = require(`./commands/${file}`);
+    for (const file of commandFiles) { // for every file in our commandFiles Mapping
+      const command = require(`./commands/${file}`); // load the data of the file into memory 
       bot.commands.set(command.name, command); // add our commands to our array
     }
     Economy() // handle our encomy functions for stuff that has to calculate every so often
@@ -58,23 +60,26 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     const command = args.shift().toLowerCase(); 
     const eargs = message.content.slice(config.econprefix.length).split(/ +/g);
     const ecommand = eargs.shift().toLowerCase();
-    let modRole = "PG Member"; // check for a mod role, set this to the name of your servers admin role
     console.log(command);
     console.log(ecommand);
     AutomatedMessage(message);
     if (message.content.startsWith(config.econprefix)) { // this is to extend UnbelievaBoat's functionality
-        if (ecommand === "coinflip"){
-            bot.commands.get("coinflip").execute(message, args, bot);
-        }
-        if (ecommand === "raffle"){
-            bot.commands.get("jackpot").execute(message, args, bot, 0);
-        }
-        if (ecommand === "forceraffle" && message.member.roles.cache.find(role => role.name === modRole)){ // mod only command
-            Jackpot(1);
-            message.channel.send(`Forcing Raffle Status`)
-        }
-        if (ecommand === "stocks") {
-            bot.commands.get("stocks").execute(message, args, bot)
+        switch (ecommand){
+            case 'cf':
+            case 'coinflip':
+                bot.commands.get("coinflip").execute(message, args, bot);
+                break;
+            case 'raffle':
+                bot.commands.get("jackpot").execute(message, args, bot, 0);
+                break;
+            case 'forceraffle':
+                if(message.member.roles.cache.find(role => role.name === config.modrole)){
+                    Jackpot(1);
+                    message.channel.send(`Forcing Raffle Status`);
+                }
+                break;
+            case 'stocks':
+                bot.commands.get("stocks").execute(message, args, bot);
         }
     }
     if (!message.content.startsWith(config.prefix) || message.author.bot){ // if the message doesn't start with our prefix don't bother
@@ -85,35 +90,39 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     //  bot.commands.get("name").execute(message, args, bot)
     //}
 
-    //if (command === "stafflist") {
-    //    bot.commands.get("stafflist").execute(message, args, bot);
-    //}
-    if (command === "toggleauto" && message.member.roles.cache.find(role => role.name === modRole)){
-        bot.commands.get("automsgT").execute(message, args, bot);
-    }
-    if (command === "setgame"){
-        bot.commands.get("setgame").execute(message, args, bot);
-    }
-    if (command === "setminbet" && message.member.roles.cache.find(role => role.name === modRole)){
-        bot.commands.get("setminbet").execute(message, args, bot);
-    }
-    if (command === "sui" && message.member.roles.cache.find(role => role.name === modRole)) {
-        bot.commands.get("sui").execute(message,args,bot);
-    }
-    if (command === "heist"){
-        bot.commands.get("heist").execute(message,args,bot);
-    }
-    if (command === "setlc"){
-        bot.commands.get("logchannelset").execute(message, args, bot);
+    switch (command){
+        case 'toggleauto':
+            if(message.member.roles.cache.find(role => role.name === config.modrole)){
+                bot.commands.get("automsgT").execute(message, args, bot);
+            }
+            break;
+        case 'setgame':
+            bot.commands.get("setgame").execute(message, args, bot);
+            break;
+        case 'setminbet':
+            if(message.member.roles.cache.find(role => role.name === config.modrole)){
+                bot.commands.get("setminbet").execute(message, args, bot);
+            }
+            break;
+        case 'sui':
+            if(message.member.roles.cache.find(role => role.name === config.modrole)){
+                bot.commands.get("sui").execute(message,args,bot);
+            }
+            break;
+        case 'heist':
+            bot.commands.get("heist").execute(message,args,bot);
+            break;
+        case 'setlc':
+            bot.commands.get("logchannelset").execute(message, args, bot);
+            break;
     }
 });
 bot.login(config.token);
 
 function AutomatedMessage(message) { // this is to keep annoying as people from asking annoying questions you can remove this or use it as a base for automoding 
-    let modRole = config.modrole;
     const automessge = require(`./automatedmessagestatus.json`);
     if (automessge.state == "1"){
-        if (!message.member.roles.cache.some(role => role.name === modRole)){
+        if (!message.member.roles.cache.some(role => role.name === config.modrole)){
             const args = message.content.split(/ +/g);
             if (args.includes('beta') && args.includes('release') && args.includes('when')){
                 message.channel.send(`<@${message.author.id}>, please note that either you cant read or are blind, there are plenty of resources saying that the mod is currently not released. With a currently unplanned release date.`)

@@ -10,7 +10,8 @@ module.exports = {
     description: 'Heist System',
     async execute(message, args, bot){
         console.log(args);
-        switch (args[0]){ // first arg
+        switch (args[0]){ // check the first argument of the command 
+            case 'l':
             case 'list':
                 ListHeistLocations(message, args, bot);
                 break;
@@ -26,6 +27,7 @@ module.exports = {
                 message.channel.send(`<@${message.author.id}>, respond to select a location to get started.`);
                 GetLocationFromName(message.author, message, bot);
                 break;
+            case 'j':
             case 'join':
                 if(IsUserOnCooldown(message.author.id)){
                     message.channel.send(`<@${message.author.id}>, you are on cooldown, you cant start a heist.`);
@@ -78,7 +80,7 @@ module.exports = {
                 break;
             case 'give':
                 modRole = config.modrole;
-                if(message.member.roles.cache.find(role => role.name === modRole)){
+                if(message.member.roles.cache.find(role => role.name === modRole)){ // check if the user has mod
                     GiveEquipment(message);
                 } else {    
                     message.channel.send(`<@${message.author.id}>, you do not have sufficient perms for this command`);
@@ -249,6 +251,7 @@ async function StartHeist(user, message, bot){
     userHeist.started = true;
     date = new Date();
     userHeist.hourStarted = date.getHours;
+    console.log(userHeist);
     pglibrary.WriteToJson(userHeist, file);
     hChannel = server.channels.cache.find(c => c.name == `${user.username.toLowerCase()}s-heist`);
     if(typeof hChannel === 'undefined'){
