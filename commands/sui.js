@@ -7,7 +7,8 @@ const fs = require('fs'); // File System for JS
 // this file handles buying, selling and price check of stocks
 module.exports = {
     name: 'sui',
-    description: 'hell', 
+    description: 'Set the Update Interval of the Stock Update',
+    args: 'A Number between 1-23', 
     execute(message, args, bot){
         if(args[0]){
             argN = parseInt(args[0]);
@@ -15,8 +16,8 @@ module.exports = {
                 if(argN >= 1 && argN < 23) {
                     stockfile = fs.readFileSync(`./stockmarket.json`, 'utf-8');
                     stockdata = JSON.parse(stockfile);
-                    finaljsonfile = {"stocks": stockdata.stocks, "stockmarketactive": stockdata.stockmarketactive, "maxownedstocks": stockdata.maxownedstocks, "lastupdatehour":stockdata.lastupdatehour,"updateinterval":argN};
-                    pglibrary.WriteToJson(finaljsonfile, './stockmarket.json');
+                    stockdata.updateinterval = argN;
+                    pglibrary.WriteToJson(stockdata, './stockmarket.json');
                     message.channel.send(`<@${message.author.id}>, successfuly set the Stock Market Update Interval to ${argN}.`);
                     return;
                 } else {

@@ -3,7 +3,8 @@ const Discord = require('discord.js');
 const fs = require('fs');
 module.exports = {
     name: 'setgame',
-    description: 'owner only',
+    description: 'Set the Bots Current Game, Owner Only',
+    args: 'Game Name',
     execute(message, args, bot){
         if(message.author.id != config.ownerID){
             message.channel.send("You don't have perms to do that")

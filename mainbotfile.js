@@ -115,6 +115,8 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
         case 'setlc':
             bot.commands.get("logchannelset").execute(message, args, bot);
             break;
+        case 'help':
+            bot.commands.get("help").execute(message, args, bot, bot.commands);
     }
 });
 bot.login(config.token);

@@ -4,7 +4,8 @@ const fs = require('fs');
 const pglibrary = require("../libraryfunctions.js"); // load our custom library functions.
 module.exports = {
     name: 'logchannelset',
-    description: 'owner only',
+    description: 'Set the Log Channel of the bot, Mod Only',
+    args: 'ID Of the Log Channel',
     execute(message, args, bot){
         modRole = config.modrole;
         console.log(args);

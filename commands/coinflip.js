@@ -6,6 +6,7 @@ const client = new Client(config.econtoken);
 module.exports = {
     name: 'coinflip',
     description: 'flip a coin',
+    args: 'Heads/Tails | Bet Amount',
     execute(message, args, bot){
         var userID = message.author.id; // grab the user id from the message containing the command
         var serverID = message.guild.id; // grab the server id from the message sent

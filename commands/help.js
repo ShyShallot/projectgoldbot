@@ -1,14 +1,38 @@
-const Discord = require('discord.js');
+const {MessageEmbed} = require('discord.js'); // required for Rich Message Embeds
 const config = require('../config.json');
 module.exports = {
     name: 'help',
     description: 'prints help',
-    execute(message, args, bot){
-     var helpembed = new Discord.RichEmbed()
-     .setTitle("Project Gold Help Menu")
-     .setColor(0xFF4500)
-     .addField("Server Info:", "Rules: \n 1. No Harassment, Racism, etc.. \n 2. Offensive Memes must be marked as spoiler (Jokes about 9/11, Holocaust, etc) and must be posted in <#635509826650243073>  \n 3. Respect staff  \n 4. No Asking for ranks/ roles \n 5. No NSFW (Porn, Gore, Hentai, Sexually Suggesting Content) \n 6. Staff have final decision \n 7. Spam / Copypastas are ONLY allowed in #spam \n 8. No Movie or Show Spoilers only after 4 month of being out")
-     .addField("Bot Info: ", " My Prefix: " + config.prefix + ", \n User Commands: help, avatar, userid, rate, hrlinks \n Owner Commands: setgame")
-     message.channel.send(helpembed)
+    args: '[Command Name]',
+    execute(message, args, bot, commands){
+        console.log(args);
+        if(args[0]){
+            for(const command of commands){
+                console.log(command);
+                if(args[0] == command[1].name){
+                    var helpembed = new MessageEmbed()
+                    .setColor(0xFF4500)
+                    .addField(`Command info for **${command[1].name}**`, `About this command: **${command[1].description}**. Arguments: **${command[1].args}**`);
+                    message.channel.send({embeds: [helpembed]});
+                    return;
+                }
+            }
+        }
+        console.log(commands);
+        var helpembed = new MessageEmbed()
+        .setTitle("Project Gold Help Menu")
+        .setAuthor(`${bot.user.username}`, `${bot.user.avatarURL()}`)
+        .setColor(0xFF4500)
+        .addField("Bot Info: ", `My Prefix: **${config.prefix}**, My Economy Prefix: **${config.econprefix}**. You can find my source code at: https://github.com/ShyShallot/projectgoldbot`)
+        .addField("Commands", "1");
+        for (const command of commands) { // for every file in our commandFiles Mapping
+            console.log(command);
+            if(helpembed.fields[1].value.startsWith('1')){
+                helpembed.fields[1].value = `${command[1].name}, `;
+            } else {
+                helpembed.fields[1].value += `${command[1].name}, `;
+            }
+        }
+        message.channel.send({embeds: [helpembed]});
     }
 }

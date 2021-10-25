@@ -9,7 +9,8 @@ const pglibrary = require("../libraryfunctions.js");
 // This was a jackpot command but was changed to a raffle, this file handles the starting, ending and current raffle functions
 module.exports = {
     name: 'jackpot',
-    description: 'raffle command',
+    description: 'Join the Public Raffle',
+    args: 'No Arguments',
     execute(message, args, bot, jackpotState){
         if (!message && jackpotState == 1) { // hacky solution for starting the jackpot from our mainbotfile.js
             StartJackpot(bot);

@@ -7,7 +7,8 @@ const fs = require('fs'); // File System for JS
 // this file handles buying, selling and price check of stocks
 module.exports = {
     name: 'stocks',
-    description: 'hell', 
+    description: 'Buy and Sell stocks as they go up and down', 
+    args: '1st Args: Buy | Sell, 2nd Args: Stock Name, 3rd Args: Amount to Buy/Sell',
     execute(message, args, bot){
         if (args[0] == "buy") { // basic arg test to decide which function to  run
             console.log(args);
