@@ -240,17 +240,24 @@ async function StockMarket() {
         stockmarket.stockmarketactive = 0;
         stockmarket.stocks = finalstocks; 
         pglibrary.WriteToJson(stockmarket, './stockmarket.json');
-        setTimeout(() => {
-            stockmarket.stockmarketactive = 1;
-            pglibrary.WriteToJson(stockmarket, './stockmarket.json');
-        }, stockmarket.updateinterval * 3600000);
-    }
+        setTimeout(EnableStockMarket, stockmarket.updateinterval * 3600000);
+    }   
 }
 
 function GrabStockMarketData(){
     stockmarket = fs.readFileSync(`stockmarket.json`, 'utf-8');
     data = JSON.parse(stockmarket);
     return data;
+}
+
+function EnableStockMarket(){
+    var stockmarket = GrabStockMarketData();
+    if(stockmarket.stockmarketactive == 1){
+        return;
+    }
+    console.log(`Stock Market ready to update`);
+    stockmarket.stockmarketactive = 1;
+    pglibrary.WriteToJson(stockmarket, './stockmarket.json');
 }
 
 async function CalculateStockPrice(stock) {

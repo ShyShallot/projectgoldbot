@@ -9,38 +9,9 @@ module.exports = {
     name: 'heistecon',
     description: 'Heist System',
     async execute(heist, bot){
-        date = new Date();
-        timerRaw = fs.readFileSync('./heists/timers.json');
-        timer = JSON.parse(timerRaw);
-        var heistTimer = {
-            progress: date.now(),
-            start: function(heist, bot){
-                if(typeof this.timeoutID === 'number'){
-                    this.cancel;
-                }
-                this.timeoutID = setTimeout(() => EndHeist(heist, bot), heist.location[0].timetocomplete * 3600000);
-                newtimer = {'id': this.timeoutID, 'time': this.progress};
-                timer.push(newtimer);
-                pglibrary.WriteToJson(timer, './heists/timers.json');
-            },
-            cancel: function(){
-                clearTimeout(this.timeoutID);
-            },
-            update: function(bot){
-                date = new Date();
-                timerRaw = fs.readFileSync('./heists/timers.json');
-                timer = JSON.parse(timerRaw);
-                this.progress = date.now(); 
-                for(i=0;i<timer.length;i++){
-                    curTimer = timer[i];
-                    if(curTimer.id == this.timeoutID){
-                        timer[i].time = date.now();
-                        pglibrary.WriteToJson(timer, './heists/timers.json');
-                    }
-                }
-                pglibrary.ChannelLog(`Update Timer ${this.timeoutID}`, 'Automated Function', bot)
-            }
-        }
+        setTimeout(() => {
+            EndHeist(heist, bot);
+        }, 3600000 * heist.location[0].timetocomplete);
         
     }
 }
