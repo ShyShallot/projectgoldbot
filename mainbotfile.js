@@ -53,6 +53,9 @@ bot.on('guildMemberRemove', member => { // When someone leaves the server
 
 bot.on('error', console.error); // prevent bot from crashing and log error to console
 bot.on('messageCreate', (message) =>{ // when someone sends a message
+    if(message){
+        return;
+    }
     if (message.author.bot){ // if the message is sent by a bot don't even bother
         return;
     }
@@ -138,8 +141,8 @@ async function Economy(){ // Janky as fuck but works
         await Heists();
         await Jackpot(0); // Init Raffle
         await StockMarket();
-        await ClearSQLDB(); // Temp thing till i figure out SQL more
-        await WritetoSQLDB();
+        //await ClearSQLDB(); // Temp thing till i figure out SQL more
+        //await WritetoSQLDB();
         await pglibrary.sleep(5000);
     }
 }
@@ -240,7 +243,11 @@ async function StockMarket() {
         stockmarket.stockmarketactive = 0;
         stockmarket.stocks = finalstocks; 
         pglibrary.WriteToJson(stockmarket, './stockmarket.json');
-        setTimeout(EnableStockMarket, stockmarket.updateinterval * 3600000);
+        console.log(`Setting Up timer for reenable`);
+        let stockTimeout = setTimeout(EnableStockMarket, 3600000);
+        console.log(stockTimeout);
+        pglibrary.sleep(100);
+        console.log(`End of StockMarket func`);
     }   
 }
 
