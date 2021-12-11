@@ -241,7 +241,7 @@ async function StockMarket() {
         stockmarket.stocks = finalstocks; 
         pglibrary.WriteToJson(stockmarket, './stockmarket.json');
         console.log(`Setting Up timer for reenable`);
-        let stockTimeout = setTimeout(EnableStockMarket, 3600000);
+        let stockTimeout = setTimeout(EnableStockMarket, 3600000 * stockmarket.updateinterval);
         console.log(stockTimeout);
         pglibrary.sleep(100);
         console.log(`End of StockMarket func`);
