@@ -9,6 +9,7 @@ module.exports = {
     name: 'stocks',
     description: 'Buy and Sell stocks as they go up and down', 
     args: '1st Args: Buy | Sell, 2nd Args: Stock Name, 3rd Args: Amount to Buy/Sell',
+    active: true,
     execute(message, args, bot){
         if (args[0] == "buy") { // basic arg test to decide which function to  run
             console.log(args);
@@ -17,6 +18,8 @@ module.exports = {
             SellStock(message.author, args, message);
         } else if (args[0] == "list") { // will be become useless with the launch of the MsSQL db.
             ListStock(bot, args, message);
+        } else if (typeof args[0] === 'undefined'){
+          ListStock(bot, args, message);  
         } else {
             message.channel.send(`<@${message.author.id}>, please provide valid arguments of buy/sell/list.`); // message sent if we dont accept any argument given
         }

@@ -28,9 +28,13 @@ module.exports = {
         for (const command of commands) { // for every file in our commandFiles Mapping
             console.log(command);
             if(helpembed.fields[1].value.startsWith('1')){
-                helpembed.fields[1].value = `${command[1].name}, `;
+                if(command[1].active){
+                    helpembed.fields[1].value = `${command[1].name}, `;
+                }
             } else {
-                helpembed.fields[1].value += `${command[1].name}, `;
+                if(command[1].active){
+                    helpembed.fields[1].value += `${command[1].name}, `;
+                }
             }
         }
         message.channel.send({embeds: [helpembed]});

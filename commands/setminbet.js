@@ -7,6 +7,7 @@ module.exports = {
     name: 'setminbet',
     description: 'set the minimum bet',
     args: 'A number of any value',
+    active: true,
     execute(message, args, bot){
         if (args[0]){
             if(!isNaN(args[0])){

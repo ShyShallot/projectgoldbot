@@ -117,6 +117,10 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
             break;
         case 'help':
             bot.commands.get("help").execute(message, args, bot, bot.commands);
+            break;
+        case 'uptime':
+            bot.commands.get("uptime").execute(message, args, bot);
+            break;
     }
 });
 bot.login(config.token);

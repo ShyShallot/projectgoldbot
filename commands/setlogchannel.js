@@ -6,6 +6,7 @@ module.exports = {
     name: 'logchannelset',
     description: 'Set the Log Channel of the bot, Mod Only',
     args: 'ID Of the Log Channel',
+    active: true,
     execute(message, args, bot){
         modRole = config.modrole;
         console.log(args);

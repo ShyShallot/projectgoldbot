@@ -5,6 +5,7 @@ module.exports = {
     name: 'setgame',
     description: 'Set the Bots Current Game, Owner Only',
     args: 'Game Name',
+    active: true,
     execute(message, args, bot){
         if(message.author.id != config.ownerID){
             message.channel.send("You don't have perms to do that")
