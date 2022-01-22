@@ -7,15 +7,14 @@ module.exports = {
     execute(message, args, bot, commands){
         console.log(args);
         if(args[0]){
-            for(const command of commands){
-                console.log(command);
-                if(args[0] == command[1].name){
-                    var helpembed = new MessageEmbed()
-                    .setColor(0xFF4500)
-                    .addField(`Command info for **${command[1].name}**`, `About this command: **${command[1].description}**. Arguments: **${command[1].args}**`);
-                    message.channel.send({embeds: [helpembed]});
-                    return;
-                }
+            command = commands.get(args[0]);
+            console.log(command);
+            if(command){
+                var helpembed = new MessageEmbed()
+                .setColor(0xFF4500)
+                .addField(`Command info for ${command.name}`, `About this command: **${command.description}**. Arguments: **${command.args}**`);
+                message.channel.send({embeds: [helpembed]});
+                return;
             }
         }
         console.log(commands);
