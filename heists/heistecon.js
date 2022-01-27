@@ -55,7 +55,7 @@ function HeistInvData(){
 
 function CalculateCut(user, heist){
     usersCut = user.split;
-    maxpossiblereward = heist.location[0].maxreward;
+    maxpossiblereward = heist.location.maxreward;
     cut = ((maxpossiblereward*heist.users.length)/100)*usersCut;
     return cut;
 }
@@ -97,13 +97,13 @@ function CostOfEquipment(user){
 }
 
 function MaxPossibleRewardLoss(heist){
-    possibleReward = heist.location[0].maxreward;
+    possibleReward = heist.location.maxreward;
 
     return possibleReward / heist.users.length;
 }
 
 function CostOfDamages(heist){
-    locationDiff = heist.location[0].difficulty;
+    locationDiff = heist.location.difficulty;
     return 5000 * locationDiff * heist.users.length;
 }
 

@@ -11,7 +11,7 @@ module.exports = {
     async execute(heist, bot){
         setTimeout(() => {
             EndHeist(heist, bot);
-        }, 3600000 * heist.location[0].timetocomplete);
+        }, 3600000 * heist.location.timetocomplete);
         
     }
 }
@@ -19,7 +19,7 @@ module.exports = {
 async function EndHeist(heist, bot){
     console.log(`Ending Heist`);
     console.log(heist);
-    heistDiff = heist.location[0].difficulty;
+    heistDiff = heist.location.difficulty;
     usersInHeistMutli = 1 + heist.users.length /10;
     if(heist.users.length == 1){
         usersInHeistMutli = 1;
@@ -156,7 +156,7 @@ function CheckForOptionalReqs(heist){
             curUserInv = inv.users[l];
             if(curUserInv.id == curUser){
                 curUserInv.inv.forEach(item =>{
-                    if(heist.location[0].optionalreqs.includes(item)){
+                    if(heist.location.optionalreqs.includes(item)){
                         amountOfOpReq++;
                     }
                 })

@@ -5,6 +5,7 @@ const client = new Client(config.econtoken); // define the rest of the client fo
 const pglibrary = require("../libraryfunctions.js"); // load our custom library functions.
 const fs = require('fs'); // File System for JS 
 const heisttimers = require('../heists/heisttimers');
+const { channel } = require('diagnostics_channel');
 module.exports = {
     name: 'heist',
     description: 'Setup and Start or Join Heists to earn large amounts of money',
@@ -255,7 +256,7 @@ async function StartHeist(user, message, bot){
     userHeist.hourStarted = date.getHours;
     console.log(userHeist);
     pglibrary.WriteToJson(userHeist, file);
-    hChannel = server.channels.cache.find(c => c.name == `${user.username.toLowerCase()}s-heist`);
+    hChannel = server.channels.cache.find(c => c.id === userHeist.channelid);
     if(typeof hChannel === 'undefined'){
         console.log(`Could not find channel, stopping heist`);
         userHeist.started = false;
@@ -266,21 +267,18 @@ async function StartHeist(user, message, bot){
     }
     pglibrary.ChannelLog(`${user.username} has started a heist.`, 'User Command', bot);
     heisttimers.execute(userHeist, bot);
-    hChannel.send(`<@${user.id}>, you have started the Heist, Time until Heist is done: ${userHeist.location[0].timetocomplete} Hour(s).`);
+    hChannel.send(`<@${user.id}>, you have started the Heist, Time until Heist is done: ${userHeist.location.timetocomplete} Hour(s).`);
 }
 
 
-function ToggleLocation(heist){
+async function ToggleLocation(locationName){
     locationData = HeistLocationData();
-    for(i=0;i<locationData.locations.length;i++){
-        curLocation = locationData.locations[i];
-        if(curLocation.name == heist.location[0].name){
-            if(curLocation.available == 1){
-                locationData.locations[i].madeunavailable = new Date();
-                locationData.locations[i].available = 0;
-            }
+    for(let i=0; i < locationData.locations.length; i++){
+        if(locationData.locations[i].name == locationName){
+            locationData.locations[i].available = 0;
         }
     }
+    await pglibrary.sleep(1);
     pglibrary.WriteToJson(locationData, `./heists/locations.json`);
 }
 
@@ -309,18 +307,28 @@ async function SetupHeist(user, message, location, bot){
     userinfo = {"name": user.username, "id": user.id, "host": true, "split":100}
     users = [];
     users.push(userinfo);
-    date = new Date();
-    fileinfo = {"users":users, "location": [location], "started": false, "serverid": message.guild.id, "hourstarted": 0};
+    channelid = await createHeistChannel(message, user);
+    console.log(channelid);
+    fileinfo = {"users":users, "location": location, "started": false, "serverid": message.guild.id, "channelid": channelid};
     pglibrary.WriteToJson(fileinfo, newfile);
+    console.log(location);
+    ToggleLocation(location.name);
+    pglibrary.ChannelLog(`${user.username} has setup a heist at ${location.name}.`, 'User Command', bot);
+}
+
+async function createHeistChannel(message, user){
     server = message.guild;
-    server.channels.create(`${user.username}'s Heist`).then(channel =>{
+    let channelid;
+    await server.channels.create(`${user.username}'s Heist`).then(channel =>{
+        console.log(channel);
         let catergory = server.channels.cache.find(c => c.name == "Heists")
         if(!catergory) throw new Error("Category cannot be found");
         channel.setParent(catergory.id);
         channel.send(`<@${user.id}>, You have successfuly setup your heist, you can wait for users to join or you can start it.`);
+        channelid = parseInt(channel.id);
+        console.log(channelid);
     }).catch(console.error);
-    ToggleLocation(fileinfo);
-    pglibrary.ChannelLog(`${user.username} has setup a heist at ${location.name}.`, 'User Command', bot);
+    return channelid;
 }
 
 function JoinHeist(user, message, bot){
@@ -350,11 +358,11 @@ function JoinHeist(user, message, bot){
         if(curUser.id == user.id){
             totalmatching = 0
             curUser.inv.forEach(item => {
-                if(requestedHeist.location[0].reqs.includes(item)){
+                if(requestedHeist.location.reqs.includes(item)){
                     totalmatching++;
                 }
             });
-            if(totalmatching != requestedHeist.location[0].reqs.length){
+            if(totalmatching != requestedHeist.location.reqs.length){
                 message.channel.send(`<@${user.id}>, You do not have the equipment requirements to join this heist.`);
                 return;
             }
@@ -380,7 +388,7 @@ function CancelHeist(user, message){
     }
     server = message.guild;
     console.log(server);
-    hChannel = server.channels.cache.find(c => c.name == `${user.username.toLowerCase()}s-heist`);
+    hChannel = server.channels.cache.find(c => c.id == userHeist.channelid);
     if(typeof hChannel === 'undefined'){
         console.log(`Could not find channel, stopping heist`);
         return;
@@ -388,8 +396,7 @@ function CancelHeist(user, message){
         console.log(`Found Channel`);
     }
     hChannel.delete();
-    filetodelete = `./heists/heist${user.id}.json`;
-    fs.unlinkSync(filetodelete, function(err){
+    fs.unlinkSync(file, function(err){
         if(err){
             console.log(`There was an error when trying to delete file, make sure it exists.`);
             return;
@@ -511,13 +518,13 @@ function HeistStatus(user, message, bot){
     .setColor(`#87a9ff`)
     .setDescription(`Current Heist Information.`)
     .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
-    .addField(`Heist Location`, userheistinfo.location[0].name)
+    .addField(`Heist Location`, userheistinfo.location.name)
     .addField(`Heist Start Status`, `${status}`)
-    .addField(`Max Return per user`, `$${pglibrary.commafy(userheistinfo.location[0].maxreward)} points.`);
+    .addField(`Max Return per user`, `$${pglibrary.commafy(userheistinfo.location.maxreward)} points.`);
     if(userheistinfo.started){
         embed.addField(`Time Left:`, `${new Date().getHours - userheistinfo.hourStarted} hour(s) left`);
     } else {
-        embed.addField(`Time Left:`, `${userheistinfo.location[0].timetocomplete} hour(s) left`);
+        embed.addField(`Time Left:`, `${userheistinfo.location.timetocomplete} hour(s) left`);
     }
     
     userheistinfo.users.forEach(user => {

@@ -126,15 +126,10 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
 bot.login(config.token);
 
 function AutomatedMessage(message) { // this is to keep annoying as people from asking annoying questions you can remove this or use it as a base for automoding 
-    const automessge = require(`./automatedmessagestatus.json`);
-    if (automessge.state == "1"){
-        if (!message.member.roles.cache.some(role => role.name === config.modrole)){
-            const args = message.content.split(/ +/g);
-            if (args.includes('beta') && args.includes('release') && args.includes('when')){
-                message.channel.send(`<@${message.author.id}>, please note that either you cant read or are blind, there are plenty of resources saying that the mod is currently not released. With a currently unplanned release date.`)
-            }
-        }
-    }
+    //const automessge = require(`./automatedmessagestatus.json`);
+    //if (automessge.state == "1"){
+        
+    //}
 }
 
 async function Economy(){ // Janky as fuck but works
@@ -142,8 +137,10 @@ async function Economy(){ // Janky as fuck but works
         await Heists();
         await Jackpot(0); // Init Raffle
         await StockMarket();
-        await ClearSQLDB(); // Temp thing till i figure out SQL more
-        await WritetoSQLDB();
+        if(config.sql == 1){
+            await ClearSQLDB(); // Temp thing till i figure out SQL more
+            await WritetoSQLDB();
+        }
         await pglibrary.sleep(5000);
     }
 }
@@ -409,7 +406,7 @@ async function HeistLocationToggle(){
             console.log(heist);
             heistDataRaw = fs.readFileSync(`./heists/${heist}`);
             heistData = JSON.parse(heistDataRaw);
-            if(heistData.location[0].name == location.name){
+            if(heistData.location.name == location.name){
                 console.log(`${location.name} has a heist on going, skipping toggle`);
                 skip = 1;
             }
