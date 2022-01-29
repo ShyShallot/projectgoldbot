@@ -3,7 +3,6 @@
 const { Client, Intents, MessageEmbed, MessageAttachment } = require('discord.js'); // Each thing in the Curly Brackets are special things we want to use
 const bot = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MEMBERS] }); // this handles events the bot checks for and receives from the API
 const config = require('./config.json'); // basic load of config file
-const game = require('./game.json'); // Game Status
 const fs = require('fs'); // File System for JS
 const talkedRecently = new Set(); // unused for cooldown
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js')); // read our commands folder for every command file
@@ -14,8 +13,8 @@ const SQL = require('mssql');
 bot.commands = new Map(); // New Array for our commands
 bot.on('ready', () => { // Runs everything inside when the bot has successfully logged in and is active
     console.log('PG Bot Ready');
-    console.log(`Current Game: ${game}`);
-    bot.user.setActivity(game, {type: 'PLAYING'}); // Set our game status
+    console.log(`Current Game: ${config.game}`);
+    bot.user.setActivity(config.game, {type: 'PLAYING'}); // Set our game status
     for (const file of commandFiles) { // for every file in our commandFiles Mapping
       const command = require(`./commands/${file}`); // load the data of the file into memory 
       bot.commands.set(command.name, command); // add our commands to our array
