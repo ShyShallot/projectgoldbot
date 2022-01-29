@@ -6,7 +6,7 @@ const fs = require('fs'); // File System for JS
 const path = require('path');
 const heistEcon = require('./heistecon');
 module.exports = {
-    name: 'heistecon',
+    name: 'heist timers',
     description: 'Heist System',
     async execute(heist, bot){
         setTimeout(() => {
@@ -15,7 +15,7 @@ module.exports = {
         
     }
 }
-
+// This Handles the main functionality for managing a heist ending
 async function EndHeist(heist, bot){
     console.log(`Ending Heist`);
     console.log(heist);
@@ -49,7 +49,7 @@ async function EndHeist(heist, bot){
         cooldownData.users.push(userdata);
         console.log(cooldownData);
         pglibrary.WriteToJson(cooldownData, `./heists/usersoncooldown.json`);
-        setTimeout(() => ClearCooldown(curUser),43200000);
+        setTimeout(() => ClearCooldown(curUser),43200000); // after 12 hours clear the user from the cooldown file
     }
     return;
 }
@@ -66,7 +66,6 @@ function ClearCooldown(user){
 
 async function HeistEndWin(heist, bot){
     finalstring = "";
-    var hChannel;
     heistEcon.execute(heist, 1);
     for(i=0;i<heist.users.length;i++){
         curUser = heist.users[i];
@@ -74,7 +73,7 @@ async function HeistEndWin(heist, bot){
         if(curUser.host){
             server = bot.guilds.cache.get(heist.serverid);
             username = curUser.name;
-            hChannel = server.channels.cache.find(c => c.name == `${username.toLowerCase()}s-heist`);
+            hChannel = server.channels.cache.find(c => c.id == heist.channelid);
             console.log(hChannel);
             if(!hChannel){
                 console.log(`Could not find that channel`);
@@ -82,7 +81,7 @@ async function HeistEndWin(heist, bot){
             }   
         }
     }
-    finalstring += ` the heist has ended and you have succeeded, you will be rewarded with your cut. (This Channel will auto delete in 10 Seconds)`;
+    finalstring += ` the heist has ended and you have succeeded, you will be rewarded with your cut. (This Channel will auto delete in 20 Seconds)`;
     await hChannel.send(finalstring);
     setTimeout(() => CleanUpHeistInfo(heist, bot), 20000);
     return;
@@ -90,7 +89,6 @@ async function HeistEndWin(heist, bot){
 
 async function HeistEndLoss(heist, bot){
     finalstring = "";
-    var hChannel;
     heistEcon.execute(heist, 0);
     for(i=0;i<heist.users.length;i++){
         curUser = heist.users[i];
@@ -101,7 +99,7 @@ async function HeistEndLoss(heist, bot){
             console.log(server);
             username = curUser.name;
             console.log(username);
-            hChannel = server.channels.cache.find(c => c.name == `${username.toLowerCase()}s-heist`);
+            hChannel = server.channels.cache.find(c => c.id == heist.channelid);
             if(!hChannel){
                 console.log(`Could not find that channel`);
                 return;
@@ -110,7 +108,7 @@ async function HeistEndLoss(heist, bot){
         }
         await pglibrary.sleep(1000);
     }
-    finalstring += ` the heist has ended and you have failed, costs for equipment, damages and bail will be detucted from you balance. (This Channel will auto delete in 10 Seconds)`;
+    finalstring += ` the heist has ended and you have failed, costs for equipment, damages and bail will be detucted from you balance. (This Channel will auto delete in 20 Seconds)`;
     await hChannel.send(finalstring);
     setTimeout(() => CleanUpHeistInfo(heist, bot), 20000);
     return;
@@ -118,14 +116,13 @@ async function HeistEndLoss(heist, bot){
 
 async function HeistEndDraw(heist, bot){
     finalstring = "";
-    var hChannel;
     for(i=0;i<heist.users.length;i++){
         curUser = heist.users[i];
         finalstring += `<@${curUser.id}>,`;
         if(curUser.host){
             server = bot.guilds.cache.get(heist.serverid);
             username = curUser.name;
-            hChannel = server.channels.cache.find(c => c.name == `${username.toLowerCase()}s-heist`);
+            hChannel = server.channels.cache.find(c => c.id == heist.channelid);
             if(!hChannel){
                 console.log(`Could not find that channel`);
                 return;
@@ -134,7 +131,7 @@ async function HeistEndDraw(heist, bot){
         }
         ClearUsersInventory(curUser);
     }
-    finalstring += ` the heist has ended but you retreated, you have only lost your items. (This Channel will auto delete in 10 Seconds)`;
+    finalstring += ` the heist has ended but you retreated, you have only lost your items. (This Channel will auto delete in 20 Seconds)`;
     await hChannel.send(finalstring);
     setTimeout(() => CleanUpHeistInfo(heist, bot), 20000);
     return;
@@ -172,7 +169,7 @@ async function CleanUpHeistInfo(heist, bot){
         if(curUser.host){
             server = bot.guilds.cache.get(heist.serverid);
             username = curUser.name;
-            hChannel = server.channels.cache.find(c => c.name == `${username.toLowerCase()}s-heist`);
+            hChannel = server.channels.cache.find(c => c.id == heist.channelid);
             hChannel.delete();
             filetodelete = `./heists/heist${curUser.id}.json`;
             fs.unlinkSync(filetodelete, function(err){

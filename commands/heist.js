@@ -209,9 +209,12 @@ async function GetLocationFromName(user, message, bot){
                 return;
             }
         }
-        collector.stop();
+        collector.stop("Could Not Find Location");
     });
     collector.on('end', (collected, reason) => {
+        if(reason){
+            message.channel.send(` <@${message.author.id}>, ${reason}`);
+        }
         if(collected.size == 0){
             message.channel.send(`<@${message.author.id}>, you did not reply in time, cancelling.`);
             return;

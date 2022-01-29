@@ -1,1 +1,4 @@
-{"token":"DISCORD GIVEN TOKEN HERE","ownerID":"SERVER OWNER ID","prefix":"SET PREFIX", "econprefix":"SAME AS YOUR ECON BOTS PREFIX", "econtoken": "TOKEN FROM UNBELIABLABOAT API","mincoinbet":"CUSTOM MIN BET FOR MINIGAMES"}
+{"token":"DISCORD GIVEN TOKEN HERE","ownerID":"SERVER OWNER ID","serverid":"Enter your Server's id here","prefix":"SET PREFIX","econprefix":"SAME AS YOUR ECON BOTS PREFIX - OPTIONAL","econtoken":"TOKEN FROM UNBELIABLABOAT API - OPTIONAL","mincoinbet":"MINIMUM Point Bet for Econ Games","modrole":"Name of your Mod Role","logchannel":"Channel ID of your Log Channel", "sql":0-1 Used to Disable or Enable MSSQL Features, "game":"Game Status for Bot","newUserMessages":{
+    "Welcome":"Message to send when someone joins, DOES NOT affect Embed",
+    "Leave": "Same as above but for when someone leaves"
+}}

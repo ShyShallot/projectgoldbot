@@ -4,7 +4,6 @@ const { Client, Intents, MessageEmbed, MessageAttachment } = require('discord.js
 const bot = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MEMBERS] }); // this handles events the bot checks for and receives from the API
 const config = require('./config.json'); // basic load of config file
 const game = require('./game.json'); // Game Status
-const welcome = require('./welcomemessages.json'); // Welcome Messages 
 const fs = require('fs'); // File System for JS
 const talkedRecently = new Set(); // unused for cooldown
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js')); // read our commands folder for every command file
@@ -34,7 +33,7 @@ bot.on('guildMemberAdd', member => { // When a someone joins the server
         .setColor(0x00AE86)
         .setDescription("Welcome to the Project Gold Discord Server, Please Read <#631010878568923136> before continuing for server links and rules.")
         .setThumbnail("https://i.imgur.com/7s7AuxI.png")
-    bot.channels.cache.get(`631012458232021025`).send({content: welcome.Welcome, embeds: [welcomeEmbed] });
+    bot.channels.cache.get(config.serverid).send({content: config.newUserMessages.Welcome, embeds: [welcomeEmbed] });
 });
 
 bot.on('guildMemberRemove', member => { // When someone leaves the server
@@ -46,7 +45,7 @@ bot.on('guildMemberRemove', member => { // When someone leaves the server
         .setColor(0x00AE86)
         .setDescription("We wish the best, thanks for stopping by :).")
         .setThumbnail("https://i.imgur.com/7s7AuxI.png")
-    bot.channels.cache.get(`631012458232021025`).send({content: `${name} ${welcome.Leave}`, embeds: [welcomeEmbed] });
+    bot.channels.cache.get(config.serverid).send({content: `${name} ${config.newUserMessages.Leave}`, embeds: [welcomeEmbed] });
 });
 
 
@@ -120,6 +119,16 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
             break;
         case 'uptime':
             bot.commands.get("uptime").execute(message, args, bot);
+            break;
+        case 'usrmsgs':
+            if(message.member.roles.cache.find(role => role.name === config.modrole)){
+                bot.commands.get("Join and Leave Messages").execute(message,args,bot);
+            }
+            break;
+        case 'logsize':
+            if(message.member.roles.cache.find(role => role.name === config.modrole)){
+                bot.commands.get("logsize").execute(message,args,bot);
+            }
             break;
     }
 });
