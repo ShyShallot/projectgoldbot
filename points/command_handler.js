@@ -3,6 +3,8 @@ const fs = require('fs'); // File System for JS
 const pglibrary = require("../libraryfunctions.js");
 const points_manager = require('./manager');
 const {MessageEmbed, Message} = require('discord.js');
+const item_handler = require('../item_handler');
+const { createItem } = require('./item_handler');
 module.exports = {
     commandHandler(command,bot,args,message){
         points_manager.dir = "./points/"
@@ -35,6 +37,9 @@ module.exports = {
             case 'wtd':
             case 'withdraw':
                 withdrawCash(message,args);
+                break;
+            case 'create-item':
+                createItem(message,args);
                 break;
         }
     }
@@ -185,4 +190,9 @@ function withdrawCash(message,args){
     } else {
         message.channel.send(`<@${message.author.id}>, Please provide a valid argument`);
     }
+}
+
+function createItem(message,args){
+    newItem = item_handler.createItem(message,args);
+    message.channel.send()
 }

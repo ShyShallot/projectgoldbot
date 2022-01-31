@@ -45,6 +45,7 @@ var item_handler = module.exports = {
             }
             dB.push(item);
             this.saveDB(dB);
+            return item;
         }
     },
     deleteItem(message,args){
