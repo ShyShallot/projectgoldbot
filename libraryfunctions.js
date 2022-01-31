@@ -18,6 +18,10 @@ function getRandomInt(max) {
     return Math.floor(Math.random() * max);
 }
 
+function percentage(number, percent){
+    return (percent / 100)*number;
+}
+
 /**
  * Writes JS Object data to a JSON File
  * @param {Object} rawdata An Array Object
@@ -103,4 +107,4 @@ function ChannelLog(content, reason, bot){
     logchannel.send({embeds: [logEmbed]});
 }
 
-module.exports = {numDigits, getRandomInt, WriteToJson, sleep, commafy, convertMS, addHours, ChannelLog};
+module.exports = {numDigits, getRandomInt, WriteToJson, sleep, commafy, convertMS, addHours, ChannelLog, percentage};

@@ -1,9 +1,8 @@
 const {MessageEmbed} = require('discord.js'); // required for Rich Message Embeds
 const config = require('../config.json'); // basic config file read
-const { Client } = require('unb-api'); // define our basic client for the UNB-API
-const client = new Client(config.econtoken); // define the rest of the client for economy and verify with our econ token
 const pglibrary = require("../libraryfunctions.js"); // load our custom library functions.
 const fs = require('fs'); // File System for JS 
+const points_manager = require('../points/manager');
 // this file handles buying, selling and price check of stocks
 module.exports = {
     name: 'stocks',
@@ -11,11 +10,9 @@ module.exports = {
     args: '1st Args: Buy | Sell, 2nd Args: Stock Name, 3rd Args: Amount to Buy/Sell',
     active: true,
     execute(message, args, bot){
-        if (args[0] == "buy") { // basic arg test to decide which function to  run
-            console.log(args);
-            BuyStock(message.author, args, message);
-        } else if (args[0] == "sell") {
-            SellStock(message.author, args, message);
+        console.log(args);
+        if (args[0] == "buy" || args[0] == "sell") { // basic arg test to decide which function to  run
+            StockHandler(message,args)
         } else if (args[0] == "list") { // will be become useless with the launch of the MsSQL db.
             ListStock(bot, args, message);
         } else if (typeof args[0] === 'undefined'){
@@ -26,7 +23,7 @@ module.exports = {
     }
 }
 
-function BuyStock(user, args, message) {
+function StockHandler(message, args) {
     console.log(`Buying Stock(s)`);
     stockfile = fs.readFileSync(`./stockmarket.json`, 'utf-8'); // pause everthing and read the contents of stockmarket.json to a var
     stockdata = JSON.parse(stockfile); // parse the data into a JS array
@@ -34,92 +31,56 @@ function BuyStock(user, args, message) {
     stock = FindStock(args[1]); // get the stock data based off the name of the argument.
     console.log(`Found Stock`);
     console.log(stock);
+    user = message.author;
     if (typeof stock !== `undefined`) { // check if the stock var has something valid defined to it
         if (args[2]) { // if we have a 3rd argument
             args[2] = parseInt(args[2]); // turn the 3rd argument into a int
             if (typeof args[2] === `number` && args[2] > 0) { // check if our 3rd argument is a number and is above 0.
-                if (MaxUserStocks(user.id)) { // check if the user has the maximum amount of stocks.
-                    message.channel.send(`<@${user.id}>, you own the max amount stocks, purchase did not go through`);
-                    return; // stop all function if they do.
-                }
-                if (GrabUserInfo(user.id, stock)) { // check if user exists as a owner for the given stock
-                    curUser = GrabUserInfo(user.id, stock); // GrabUserInfo returns valid define it to a var
-                    if (args[2] + curUser.amount > stockdata.maxownedstocks) { // if the requested amount plus the amount they already have is greater than the limit.
-                        message.channel.send(`<@${user.id}>, The entered amount of stocks (${args[2]}) along with your currently owned stocks (${curUser.amount}) will go over the allowed amount of owned stocks which is ${stockdata.maxownedstocks}.`);
-                        return; 
+                if(args[0] == "buy"){
+                    if (MaxUserStocks(user.id)) { // check if the user has the maximum amount of stocks.
+                        message.channel.send(`<@${user.id}>, you own the max amount stocks, purchase did not go through`);
+                        return; // stop all function if they do.
                     }
-                } else if (args[2] > stockdata.maxownedstocks) { // check if the requested amount is greater than the max amount.
-                    message.channel.send(`<@${user.id}>, you cannot buy over the max allowed amount of stocks which is ${stockdata.maxownedstocks}.`);
-                    return;
-                }
-                client.getUserBalance(message.guild.id, user.id).then(econuser => { // get the users balance.
-                    if (stock.price * args[2] <= econuser.cash) { // check if the user has enough money for the amount of stocks they want to buy.
+                    if (GrabUserInfo(user.id, stock)) { // check if user exists as a owner for the given stock
+                        curUser = GrabUserInfo(user.id, stock); // GrabUserInfo returns valid define it to a var
+                        if (args[2] + curUser.amount > stockdata.maxownedstocks) { // if the requested amount plus the amount they already have is greater than the limit.
+                            message.channel.send(`<@${user.id}>, The entered amount of stocks (${args[2]}) along with your currently owned stocks (${curUser.amount}) will go over the allowed amount of owned stocks which is ${stockdata.maxownedstocks}.`);
+                            return; 
+                        }
+                    } else if (args[2] > stockdata.maxownedstocks) { // check if the requested amount is greater than the max amount.
+                        message.channel.send(`<@${user.id}>, you cannot buy over the max allowed amount of stocks which is ${stockdata.maxownedstocks}.`);
+                        return;
+                    }
+                    [cash,bank] = points_manager.getUserBalance(user.id);
+                    if (stock.price * args[2] <= cash) { // check if the user has enough money for the amount of stocks they want to buy.
                         var stockprice = stock.price; // define the stock price to a var to prevent some wacky issues.
                         console.log(stockprice);
                         var finalprice = stockprice * args[2]; // calculate the final price and define it to a var.
                         console.log(finalprice);
                         if (stockprice <= 500) { 
-                            console.log(`Stock is under are required amount`);
+                            console.log(`Stock is under the required amount`);
                             message.channel.send(`<@${user.id}>, stock ${stock.name} is under the minimum buy allowed cost. Stock Price: ${stock.price}.`);
                             return;
-                        } else if (stockprice > 0) {
-                            client.editUserBalance(message.guild.id, user.id, {cash: -finalprice, bank: 0});
+                        } else if (stockprice >= 500) {
+                            points_manager.giveUserPoints(user.id, stockprice*-1,'cash');
                         } 
                         WriteToStocks(user, stock, args[2]); // run our function to add the user and the requested amount of stock to our stockmarket.json.
                         message.channel.send(`<@${message.author.id}>, you have bought ${args[2]} of ${stock.name} for ${stock.price * args[2]} points.`);
                     } else {
                         message.channel.send(`<@${message.author.id}>, you don't have enough money for that action.`);
                     }
-                })
-            } else {
-                message.channel.send(`<@${user.id}>, the 3rd Argument provided is not a number`);
-            }
-        } else {
-            message.channel.send(`<@${user.id}>, No 3rd Argument was provided`);
-        }
-    } else {
-        message.channel.send(`<@${user.id}>, Could not find the requested stock.`)
-    }
-}
-
-function SellStock(user, args, message) { // this function runs similar to our BuyStocks but does some minor math stuff to remove the amount of stocks.
-    console.log(`Selling Stock(s)`);
-    stockfile = fs.readFileSync(`./stockmarket.json`, 'utf-8');
-    stockdata = JSON.parse(stockfile);
-    console.log(stockdata);
-    stock = FindStock(args[1]);
-    console.log(`Found Stock`);
-    console.log(stock);
-    if (typeof stock !== `undefined`) {
-        if (args[2]) {
-            args[2] = parseInt(args[2]);
-            if (typeof args[2] === `number` && args[2] > 0) {
-                if (args[2] < 0) {
-                    args[2] = Math.abs(args[2]);
-                }
-                negativeAmount = args[2] * - 1;
-                console.log(args[2]);
-                console.log(negativeAmount)
-                client.getUserBalance(message.guild.id, user.id).then(econuser => {
-                    console.log(UserHasEnoughStocks(user.id, stock, args[2]));
-                    if (UserHasEnoughStocks(user.id, stock, args[2])) { // run our function to check if the user has enough stocks to sell in the first place.
-                        console.log(`User has enough stocks continuing`);
-                        var stockprice = stock.price;
-                        console.log(stockprice);
-                        var finalprice = stockprice * args[2];
-                        console.log(finalprice);
-                        if (stockprice <= 0 ) {
-                            console.log(`Points to give is 0, continuing`);
-                        } else {
-                            client.editUserBalance(message.guild.id, user.id, {cash: finalprice, bank: 0});
+                } else{ // since we already check our first argument we dont need an if else
+                    negativeAmount = args[2]*-1;
+                    if(UserHasEnoughStocks(user.id,stock,args[2])){
+                        let stockprice = stock.price;
+                        let finalprice = stock.price*args[2];
+                        if(stockprice > 0){
+                            points_manager.giveUserPoints(user.id,finalprice,'cash');
                         }
-                        WriteToStocks(user, stock, negativeAmount);
+                        WriteToStocks(user,stock,negativeAmount);
                         message.channel.send(`<@${message.author.id}>, you have sold ${args[2]} of ${stock.name} for ${stock.price * args[2]} points.`);
-                    } else {
-                        console.log(`User doesn't have enough stocks to sell.`);
-                        message.channel.send(`<@${message.author.id}>, you don't have enough stocks for that action.`);
                     }
-                })
+                }
             } else {
                 message.channel.send(`<@${user.id}>, the 3rd Argument provided is not a number`);
             }

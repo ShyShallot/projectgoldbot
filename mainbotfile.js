@@ -9,6 +9,8 @@ const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('
 const pglibrary = require("./libraryfunctions.js");
 const sqlconfig = require('./sql.json');
 const SQL = require('mssql');
+const points_manager = require('./points/manager');
+const points_commands = require('./points/command_handler');
 
 bot.commands = new Map(); // New Array for our commands
 bot.on('ready', () => { // Runs everything inside when the bot has successfully logged in and is active
@@ -19,6 +21,8 @@ bot.on('ready', () => { // Runs everything inside when the bot has successfully 
       const command = require(`./commands/${file}`); // load the data of the file into memory 
       bot.commands.set(command.name, command); // add our commands to our array
     }
+    points_manager.setBot(bot);
+    points_manager.firstSetup();
     Economy() // handle our encomy functions for stuff that has to calculate every so often
 });
 
@@ -33,6 +37,7 @@ bot.on('guildMemberAdd', member => { // When a someone joins the server
         .setDescription("Welcome to the Project Gold Discord Server, Please Read <#631010878568923136> before continuing for server links and rules.")
         .setThumbnail("https://i.imgur.com/7s7AuxI.png")
     bot.channels.cache.get(config.serverid).send({content: config.newUserMessages.Welcome, embeds: [welcomeEmbed] });
+    points_manager.addUser(member.user);
 });
 
 bot.on('guildMemberRemove', member => { // When someone leaves the server
@@ -45,6 +50,7 @@ bot.on('guildMemberRemove', member => { // When someone leaves the server
         .setDescription("We wish the best, thanks for stopping by :).")
         .setThumbnail("https://i.imgur.com/7s7AuxI.png")
     bot.channels.cache.get(config.serverid).send({content: `${name} ${config.newUserMessages.Leave}`, embeds: [welcomeEmbed] });
+    points_manager.removeUser(member.user.id);
 });
 
 
@@ -54,32 +60,11 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     if (message.author.bot){ // if the message is sent by a bot don't even bother
         return;
     }
+    points_manager.messagePoints(message.author.id);
     const args = message.content.slice(config.prefix.length).split(/ +/g); // basic argument by spliting a message by spaces, with the first argument given is args[0]
     const command = args.shift().toLowerCase(); 
-    const eargs = message.content.slice(config.econprefix.length).split(/ +/g);
-    const ecommand = eargs.shift().toLowerCase();
     console.log(command);
-    console.log(ecommand);
     AutomatedMessage(message);
-    if (message.content.startsWith(config.econprefix)) { // this is to extend UnbelievaBoat's functionality
-        switch (ecommand){
-            case 'cf':
-            case 'coinflip':
-                bot.commands.get("coinflip").execute(message, args, bot);
-                break;
-            case 'raffle':
-                bot.commands.get("jackpot").execute(message, args, bot, 0);
-                break;
-            case 'forceraffle':
-                if(message.member.roles.cache.find(role => role.name === config.modrole)){
-                    Jackpot(1);
-                    message.channel.send(`Forcing Raffle Status`);
-                }
-                break;
-            case 'stocks':
-                bot.commands.get("stocks").execute(message, args, bot);
-        }
-    }
     if (!message.content.startsWith(config.prefix) || message.author.bot){ // if the message doesn't start with our prefix don't bother
         return;
     }
@@ -87,7 +72,7 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     // Base for adding commands: if(command === "name"){
     //  bot.commands.get("name").execute(message, args, bot)
     //}
-
+    points_commands.commandHandler(command,bot,args,message, bot.commands);
     switch (command){
         case 'toggleauto':
             if(message.member.roles.cache.find(role => role.name === config.modrole)){
@@ -128,6 +113,14 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
             if(message.member.roles.cache.find(role => role.name === config.modrole)){
                 bot.commands.get("logsize").execute(message,args,bot);
             }
+            break;
+        case 'cf':
+        case 'coinflip':
+            bot.commands.get("coinflip").execute(message,args,bot);
+            break;
+        case 'stock':
+        case 'stocks':
+            bot.commands.get("stocks").execute(message,args,bot);
             break;
     }
 });
