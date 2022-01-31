@@ -44,7 +44,7 @@ var manager = module.exports = {
             "balance": {"cash":0,"bank": dbData.startingBalance}, 
             "id": user.id,
             "username": user.username, 
-            "inv": {},
+            "inv": [],
             "cooldown": false
         }
         return newUserData;
@@ -225,5 +225,29 @@ var manager = module.exports = {
         console.log(finalArray);
         console.log(`Took ${Date.now()-startTime}ms`)
         return finalArray;
+    },
+    giveUserItem(id, item){
+        dB = this.fetchData();
+        [users, userIndex] = this.fetchUser(id);
+        users[userIndex].inv.push(item);
+        dB.users = users;
+        this.saveDB(dB);
+    },
+    useItem(id, item){
+        dB.this.fetchData();
+        [users, userIndex] = this.fetchUser(id);
+        for(i=0;i<users[userIndex].inv.length;i++){
+            if(users[userIndex].inv[i].name == item.name){
+                users[userIndex].inv.splice(i, 1);
+            } else {
+                err = "Can't find Item";
+                return err;
+            }
+        }
+        dB.users = users;
+        this.saveDB(dB);
+        if(item.func){
+            item.func();
+        }
     }
 }
