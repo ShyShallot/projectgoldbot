@@ -148,14 +148,18 @@ var manager = module.exports = {
     },
     messagePoints(id){
         dB = this.fetchData();
-        [users, userIndex] = this.fetchUser(id);
-        if(!users[userIndex].cooldown){
-            console.log(`Giving User: ${id}, ${dB.pointsPerMessage} points`);
-            users[userIndex].balance.cash += ((dB.pointsPerMessage - pglibrary.percentage(dB.pointsPerMessage, dB.pointsTax)) * dB.pointsMulti);
-            users[userIndex].cooldown = true;
-            dB.users = users;
-            this.saveDB(dB);
-            setTimeout(()=> this.removeUserCooldown(id), dB.earnCooldown);
+        try{
+            [users, userIndex] = this.fetchUser(id);
+            if(!users[userIndex].cooldown){
+                console.log(`Giving User: ${id}, ${dB.pointsPerMessage} points`);
+                users[userIndex].balance.cash += ((dB.pointsPerMessage - pglibrary.percentage(dB.pointsPerMessage, dB.pointsTax)) * dB.pointsMulti);
+                users[userIndex].cooldown = true;
+                dB.users = users;
+                this.saveDB(dB);
+                setTimeout(()=> this.removeUserCooldown(id), dB.earnCooldown);
+            }
+        } catch{
+            console.log(`Whoops`);
         }
     },
     removeUserCooldown(id){
