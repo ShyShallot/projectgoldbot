@@ -1,7 +1,5 @@
 const {MessageEmbed} = require('discord.js');
 const config = require('../config.json');
-const { Client } = require('unb-api');
-const client = new Client(config.econtoken);
 const jackpotid = '875821312998793247' // same as below but for a role
 const rafflechannel = '844002249872113665'; // since this is used for one server we just define the channel we want to use by ID
 const fs = require('fs'); // File System for JS

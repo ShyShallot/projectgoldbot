@@ -28,24 +28,34 @@ var item_handler = module.exports = {
     },
     createItem(message,args){
         dB = this.fetchItems();
-        if(args[0] && args[1] && args[2], args[3]){
+        if(args[0] && args[1]){
             name =  args[0].replace('_', " ");
             cost = parseInt(args[1]);
             item = {
                 "name": name,
                 "price": cost
             }
-            switch(args[2]){
-                case 'role':
-                    item.func = function(){
-                        role = message.guild.roles.cache.find(role => role.name == args[3]);
-                        message.member.roles.add(role);
-                    }
-                    break;
+            if(args[2]){
+                switch(args[2]){
+                    case 'role':
+                        if(args[3]){
+                            item.func = function(){
+                                role = message.guild.roles.cache.find(role => role.name == args[3]);
+                                message.member.roles.add(role);
+                            }
+                        } else {
+                            err = "Invalid Role";
+                            return err;
+                        }
+                        break;
+                }
             }
             dB.push(item);
             this.saveDB(dB);
             return item;
+        } else {
+            err = "Invalid/No Args Provided";
+            return err;
         }
     },
     deleteItem(message,args){
