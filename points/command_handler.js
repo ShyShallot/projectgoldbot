@@ -62,9 +62,6 @@ module.exports = {
             case 'delete-item':
                 deleteItem(message,args);
                 break;
-            case 'buy-item':
-                buyItem(message,args);
-                break;
             case 'use-item':
                 useItem(message,args);
                 break;
@@ -79,7 +76,8 @@ module.exports = {
                 setEconomySymbol(message,args);
                 break;
         }
-    }
+    },
+    list: ["give","balance","econ-stats","leaderboard","reset-econ","reset-user","deposit","withdraw","create-item","store","buy-item","delete-item","use-item","inventory","work","set-econ-symbol"]
 }
 
 function givePoints(message,args){

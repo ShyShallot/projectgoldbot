@@ -1,5 +1,6 @@
 const {MessageEmbed} = require('discord.js'); // required for Rich Message Embeds
 const config = require('../config.json');
+const economy_commands = require('../points/command_handler');
 module.exports = {
     name: 'help',
     description: 'prints help',
@@ -22,10 +23,10 @@ module.exports = {
         .setTitle("Project Gold Help Menu")
         .setAuthor(`${bot.user.username}`, `${bot.user.avatarURL()}`)
         .setColor(0xFF4500)
-        .addField("Bot Info: ", `My Prefix: **${config.prefix}**, My Economy Prefix: **${config.econprefix}**. You can find my source code at: https://github.com/ShyShallot/projectgoldbot`)
-        .addField("Commands", "1");
+        .addField("Bot Info: ", `My Prefix: **${config.prefix}**. You can find my source code at: https://github.com/ShyShallot/projectgoldbot`)
+        .addField("Commands", "1")
+        .addField("Economy Comamnds", '1');
         for (const command of commands) { // for every file in our commandFiles Mapping
-            console.log(command);
             if(helpembed.fields[1].value.startsWith('1')){
                 if(command[1].active){
                     helpembed.fields[1].value = `${command[1].name}, `;
@@ -34,6 +35,13 @@ module.exports = {
                 if(command[1].active){
                     helpembed.fields[1].value += `${command[1].name}, `;
                 }
+            }
+        }
+        for(i=0;i<economy_commands.list.length;i++){
+            if(helpembed.fields[2].value.startsWith('1')){
+                helpembed.fields[2].value = `${economy_commands.list[i]}, `;
+            } else {
+                helpembed.fields[2].value += `${economy_commands.list[i]}, `;
             }
         }
         message.channel.send({embeds: [helpembed]});
