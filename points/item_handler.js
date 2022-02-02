@@ -9,15 +9,19 @@ var item_handler = module.exports = {
         console.log(this.dir);
         return JSON.parse(fs.readFileSync(this.dir + '\\items.json'));
     },
-    fetchItem(name){
+    fetchItem(name,bool){
         if(!name){
             err = "Not Name Provided";
             return err;
         }
         dB = this.fetchItems();
-        for(i=0;i<db.length;i++){
+        for(i=0;i<dB.length;i++){
             if(dB[i].name == name){
-                return [dB, i];
+                if(bool){
+                    return dB[i];
+                } else{
+                    return [dB, i];
+                }
             }
         }
     },
@@ -30,6 +34,12 @@ var item_handler = module.exports = {
         dB = this.fetchItems();
         if(args[0] && args[1]){
             name =  args[0].replace('_', " ");
+            for(i=0;i<dB.length;i++){
+                if(dB[i].name == name){
+                    err = "An Item with this name already exists";
+                    return err;
+                }
+            }
             cost = parseInt(args[1]);
             item = {
                 "name": name,
@@ -54,18 +64,19 @@ var item_handler = module.exports = {
             this.saveDB(dB);
             return item;
         } else {
-            err = "Invalid/No Args Provided";
+            err = "Valid Args: Name | Cost | Type (Optional) | Type Option (Optional)";
             return err;
         }
     },
     deleteItem(message,args){
         if(args[0]){
-            [items, index] = this.fetchItem(args[0])
+            name =  args[0].replace('_', " ");
+            [items, index] = this.fetchItem(name)
             if(typeof items === 'object'){
                 items.splice(i, 1);
                 this.saveDB(items);
             } else {
-                message.channel.send(item);
+                return item;
             }
         }
     }

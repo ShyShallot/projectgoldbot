@@ -20,7 +20,6 @@ const forwardButton = new MessageButton({
 const item_handler = require('./item_handler');
 module.exports = {
     commandHandler(command,bot,args,message){
-        points_manager.dir = "./points/"
         switch(command){
             case 'give':
                 givePoints(message,args);
@@ -54,11 +53,30 @@ module.exports = {
             case 'create-item':
                 createItem(message,args);
                 break;
-            case 'list-items':
+            case 'store':
                 listItems(message,args);
                 break;
             case 'buy-item':
                 buyItem(message,args);
+                break;
+            case 'delete-item':
+                deleteItem(message,args);
+                break;
+            case 'buy-item':
+                buyItem(message,args);
+                break;
+            case 'use-item':
+                useItem(message,args);
+                break;
+            case 'inv':
+            case 'inventory':
+                viewInventory(message,args);
+                break;
+            case 'work':
+                userWork(message,args);
+                break;
+            case 'set-econ-symbol':
+                setEconomySymbol(message,args);
                 break;
         }
     }
@@ -74,7 +92,7 @@ function givePoints(message,args){
                 message.channel.send(err);
                 return;
             }
-            message.channel.send(`<@${message.author.id}>, You gave <@${target.id}> ${pglibrary.commafy(amount)} points!`);
+            message.channel.send(`<@${message.author.id}>, You gave <@${target.id}> ${dB.pointSymbol}${pglibrary.commafy(amount)}`);
         } else {
             message.channel.send(`Please Mention a Valid Target/Provide an Amount and Location Arg`);
         }
@@ -87,14 +105,16 @@ function givePoints(message,args){
                 message.channel.send(err);
                 return;
             }
-            message.channel.send(`<@${message.author.id}>, You donated ${pglibrary.commafy(amount)} of your points to <@${target.id}>!`);
+            message.channel.send(`<@${message.author.id}>, You donated ${dB.pointSymbol}${pglibrary.commafy(amount)} to <@${target.id}>!`);
         } else {
             message.channel.send(`Please Mention a Valid Target/Provide an Amount and Location Arg`);
         }
     }
 }
 
-function getUserBalance(message, target){
+async function getUserBalance(message, target){
+    dB = points_manager.fetchData();
+    leaderboardArray = points_manager.sortForLeaderboard();
     balanceEmbed = new MessageEmbed()
     .setTitle(message.author.username)
     .setDescription(`Leaderboard Ranking: Not Yet`)
@@ -105,17 +125,28 @@ function getUserBalance(message, target){
     .addField('Total:', '1', true);
     if(target){
         [cash,bank] = points_manager.getUserBalance(target.id);
+        for(i=0;i<leaderboardArray.length;i++){
+            if(leaderboardArray[i].username === target.user.username){
+                position = i;
+            }
+        }
         balanceEmbed.title = target.user.username;
-        balanceEmbed.fields[0].value = `${cash} points`;
-        balanceEmbed.fields[1].value = `${bank} points`;
-        balanceEmbed.fields[2].value = `${cash+bank} points`;
+        balanceEmbed.description = `Leaderboard Ranking: ${position+1}`;
+        balanceEmbed.fields[0].value = `${dB.pointSymbol}${pglibrary.commafy(cash)}`;
+        balanceEmbed.fields[1].value = `${dB.pointSymbol}${pglibrary.commafy(bank)}`;
+        balanceEmbed.fields[2].value = `${dB.pointSymbol}${pglibrary.commafy(cash+bank)}`;
         message.channel.send({embeds:[balanceEmbed]});
     } else {
         [cash,bank] = points_manager.getUserBalance(message.author.id);
-        balanceEmbed.fields[0].value = `${pglibrary.commafy(cash)} points`;
-        balanceEmbed.fields[1].value = `${pglibrary.commafy(bank)} points`;
-        balanceEmbed.fields[2].value = `${pglibrary.commafy(cash+bank)} points`;
-        console.log(balanceEmbed)
+        for(i=0;i<leaderboardArray.length;i++){
+            if(leaderboardArray[i].username === message.author.username){
+                position = i;
+            }
+        }
+        balanceEmbed.description = `Leaderboard Ranking: ${position+1}`;
+        balanceEmbed.fields[0].value = `${dB.pointSymbol}${pglibrary.commafy(cash)}`;
+        balanceEmbed.fields[1].value = `${dB.pointSymbol}${pglibrary.commafy(bank)}`;
+        balanceEmbed.fields[2].value = `${dB.pointSymbol}${pglibrary.commafy(cash+bank)}`;
         message.channel.send({embeds:[balanceEmbed]});
     }
 }
@@ -126,9 +157,9 @@ function getTotalServerStats(message){
     .setTitle(`Server Total Stats`)
     .setTimestamp()
     .setColor(0x00AE86)
-    .addField('Cash:', `${pglibrary.commafy(cash)}`, true)
-    .addField('Bank:', `${pglibrary.commafy(bank)}`, true)
-    .addField('Total:', `${pglibrary.commafy(total)}`, true);
+    .addField('Cash:', `${dB.pointSymbol}${pglibrary.commafy(cash)}`, true)
+    .addField('Bank:', `${dB.pointSymbol}${pglibrary.commafy(bank)}`, true)
+    .addField('Total:', `${dB.pointSymbol}${pglibrary.commafy(total)}`, true);
     message.channel.send({embeds:[balanceEmbed]});
 }
 
@@ -147,7 +178,7 @@ function createLeaderboardEmbed(start,message){
         if(start == 0){
             start = 1
         }
-        leaderEmbed.addField(`${start+i}. ${user.username}`, `${pglibrary.commafy(user.total)}`);
+        leaderEmbed.addField(`${start+i}. ${user.username}`, `${dB.pointSymbol}${pglibrary.commafy(user.total)}`);
     }
     return leaderEmbed;
 }
@@ -204,18 +235,27 @@ function resetUser(message, args){
 
 function depositCash(message,args){
     if(args[0]){
+        console.log(args[0]);
         if(args[0] == "all"){
+            console.log(`Provided Arg is all of users balance`);
             [cash,bank] = points_manager.getUserBalance(message.author.id);
-            args[0] == cash;
-        } else if(args[0] == half){
+            amount = cash;
+        } else if(args[0] == 'half'){
             [cash,bank] = points_manager.getUserBalance(message.author.id);
-            args[0] == Math.round(cash/2);
+            amount = Math.round(cash/2);
+        } else {
+            amount = parseInt(args[0]);
+            if(isNaN(amount)){
+                message.channel.send(`<@${message.author.id}>, The Provided amount was not a number`);
+                return;
+            }
         }
-        err = points_manager.depositPoints(message.author.id, args[0]);
+        console.log(amount);
+        err = points_manager.depositPoints(message.author.id, amount);
         if(err){
             message.channel.send(err);
         } else {
-            message.channel.send(`<@${message.author.id}>, You have successfully deposited ${pglibrary.commafy(args[0])} points`);
+            message.channel.send(`<@${message.author.id}>, You have successfully withdrew ${dB.pointSymbol}${pglibrary.commafy(amount)}`);
         }
     } else {
         message.channel.send(`<@${message.author.id}>, Please provide a valid argument`);
@@ -224,18 +264,27 @@ function depositCash(message,args){
 
 function withdrawCash(message,args){
     if(args[0]){
+        console.log(args[0]);
         if(args[0] == "all"){
+            console.log(`Provided Arg is all of users balance`);
             [cash,bank] = points_manager.getUserBalance(message.author.id);
-            args[0] == cash;
-        } else if(args[0] == half){
+            amount = bank;
+        } else if(args[0] == 'half'){
             [cash,bank] = points_manager.getUserBalance(message.author.id);
-            args[0] == Math.round(cash/2);
+            amount = Math.round(bank/2);
+        } else {
+            amount = parseInt(args[0]);
+            if(isNaN(amount)){
+                message.channel.send(`<@${message.author.id}>, The Provided amount was not a number`);
+                return;
+            }
         }
-        err = points_manager.withdrawPoints(message.author.id, args[0]);
+        console.log(amount);
+        err = points_manager.withdrawPoints(message.author.id, amount);
         if(err){
             message.channel.send(err);
         } else {
-            message.channel.send(`<@${message.author.id}>, You have successfully withdrew ${pglibrary.commafy(args[0])} points`);
+            message.channel.send(`<@${message.author.id}>, You have successfully withdrew ${dB.pointSymbol}${pglibrary.commafy(amount)}`);
         }
     } else {
         message.channel.send(`<@${message.author.id}>, Please provide a valid argument`);
@@ -243,6 +292,9 @@ function withdrawCash(message,args){
 }
 
 function createItem(message,args){
+    if(!(message.member.roles.cache.find(role => role.name === config.modrole))){
+        message.channel.send(`<@${message.author.id}>, You do Not Have Permission for this Command`);
+    }
     newItem = item_handler.createItem(message,args);
     if(typeof newItem == 'string'){
         message.channel.send(newItem);
@@ -264,7 +316,193 @@ function createItem(message,args){
     message.channel.send({embeds:[itemEmbed]});
 }
 
-function listItems(message,args){
+function createItemEmbed(start,message){
+    if(!start){
+        start = 0;
+    }
     items = item_handler.fetchItems();
+    startArray = items.slice(start, start+10);
+    itemEmbed = new MessageEmbed()
+    .setTitle(`${message.guild.name}'s Item Store - Items: ${start+1}-${start+startArray.length} out of ${items.length} Items`)
+    .setTimestamp()
+    .setColor(0x00AE86);
+    for(i=0;i<startArray.length;i++){
+        item = startArray[i];
+        if(start == 0){
+            start = 1
+        }
+        if(typeof item.func !== 'undefined'){
+            type = "Instant"
+        } else {
+            type = "Use"
+        }
+        itemEmbed.addField(`${item.name}`, `Cost: ${dB.pointSymbol}${item.price}, Type: ${type}`);
+    }
+    return itemEmbed;
+}
 
+async function listItems(message,args){
+    items = item_handler.fetchItems();
+    if(items.length <= 0){
+        message.channel.send(`<@${message.author.id}>, This server doesn't have any Items`);
+        return;
+    }
+    start = 0;
+    const fit = items.length <= 10;
+    const embed = await message.channel.send({embeds:[await createItemEmbed(0, message)], components: fit ? []: [new MessageActionRow({components: [forwardButton]})]});
+    if(fit) return;
+    const interactCollect = embed.createMessageComponentCollector({
+        filter: ({user}) => user.id = message.author.id
+    });
+    interactCollect.on('collect', async interaction => {
+        interaction.customId === backId ? (start -= 10) : (start += 10)
+        await interaction.update({
+            embeds: [await createItemEmbed(start, message)],
+            components: [
+                new MessageActionRow({
+                    components: [
+                        ...(start ? [backButton] : []),
+                        ...(start + 10 < items.length ? [forwardButton]: [])
+                    ]
+                })
+            ]
+        })
+    })
+}
+
+function deleteItem(message,args){
+    if(!(message.member.roles.cache.find(role => role.name === config.modrole))){
+        message.channel.send(`<@${message.author.id}>, You do Not Have Permission for this Command`);
+    }
+    err = item_handler.deleteItem(message,args);
+    if(err){
+        message.channel.send(err);
+        return;
+    } else {
+        itemName = args[0].replace('_', " ");
+        message.channel.send(`<@${message.author.id}>, You have deleted ${itemName}`);
+        return;
+    }
+}
+
+function buyItem(message,args){
+    if(!args[0]){
+        message.channel.send(`<@${message.author.id}>, Missing Item Name Argument`);
+        return;
+    }
+    let user = points_manager.fetchUser(message.author.id, true);
+    let dB = points_manager.fetchData();
+    if(user.inv.length >= dB.maxInventorySize){
+        message.channel.send(`<@${message.author.id}>, Your Inventory is full, please remove items to buy another`);
+        return;
+    }
+    item = item_handler.fetchItem(args[0], true);
+    if(typeof item === 'string'){
+        message.channel.send(item);
+        return;
+    } else {
+        [cash,bank] = points_manager.getUserBalance(message.author.id);
+        if(cash >= item.price){
+            if(args[1]){
+                numberArg = parseInt(args[1]);
+                if(!isNaN(numberArg)){
+                    if(numberArg >= 2){
+                        if(cash >= item.price*numberArg){
+                            points_manager.giveUserPoints(message.author.id, (item.price*numberArg)*-1, 'cash');
+                            points_manager.giveUserItem(message.author.id, item, numberArg);
+                            message.channel.send(`<@${message.author.id}>, You have successfully bought ${item.name} ${numberArg} times for ${dB.pointSymbol}${item.price*numberArg}`);
+                        } else {
+                            message.channel.send(`<@${message.author.id}>, You do not have enough have for this action.`);
+                        }
+                    } else {
+                        points_manager.giveUserPoints(message.author.id, item.price*-1, 'cash');
+                        points_manager.giveUserItem(message.author.id, item);
+                        message.channel.send(`<@${message.author.id}>, You have successfully bought ${item.name} for ${dB.pointSymbol}${item.price}`);
+                    }
+                } else {
+                    message.channel.send(`<@${message.author.id}>, A Second Argument was not a Number`);
+                }
+            } else {
+                points_manager.giveUserPoints(message.author.id, item.price*-1, 'cash');
+                points_manager.giveUserItem(message.author.id, item);
+                message.channel.send(`<@${message.author.id}>, You have successfully bought ${item.name} for ${dB.pointSymbol}${item.price}`);
+            }
+        } else {
+            message.channel.send(`<@${message.author.id}>, You do not have enough have for this action.`);
+        }
+    }
+}
+
+function useItem(message,args){
+    if(args[0]){
+        itemName = args[0].replace('_, " ');
+        item = item_handler.fetchItem(itemName, true);
+        err = points_manager.useItem(message.author.id, item);
+        if(err){
+            message.channel.send(err);
+            return;
+        } else{
+            message.channel.send(`<@${message.author.id}>, You have successfully used the Item: ${item.name}`);
+            return;
+        }
+    }
+}
+
+function viewInventory(message,args){
+    target = message.mentions.members.first();
+    if(target){
+        userObject = target;
+        targted = true;
+    } else {
+        userObject = message.author;
+    }  
+    user = points_manager.fetchUser(userObject.id, true);
+    if(!user){
+        message.channel.send(`<@${message.author.id}>, That user does not exist in the Database`);
+        return;
+    }
+    if(user.inv.length <= 0){
+        if(typeof targted === 'boolean'){
+            message.channel.send(`<@${message.author.id}>, Their Inventory is Empty`);
+            return;
+        }   
+        message.channel.send(`<@${message.author.id}>, Your Inventory is Empty`);
+        return;
+    }
+    
+    itemEmbed = new MessageEmbed()
+    .setTitle(`${userObject.username}'s Inventory`)
+    .setTimestamp()
+    .setColor(0x00AE86);
+    for(i=0;i<user.inv.length;i++){
+        item = user.inv[i];
+        itemEmbed.addField(`**${i+1}.${item.name}**`,`⠀`);
+    }
+    message.channel.send({content: `<@${message.author.id}>`, embeds: [itemEmbed]});
+}
+
+function userWork(message,args){
+    dB = points_manager.fetchData();
+    amount = pglibrary.getRandomInt(35000);
+    amount *= dB.pointsMulti;
+    workStrings = [
+        `You Worked at a Tech Job for ${pglibrary.getRandomInt(18)} Hours and drank ${pglibrary.getRandomInt(5)} cups of coffee and earned ${dB.pointSymbol}${pglibrary.commafy(amount)}`, 
+        `You Slammed your head on a table ${pglibrary.getRandomInt(21)} time and won ${dB.pointSymbol}${pglibrary.commafy(amount)}!`,
+        `You scammed ${pglibrary.getRandomInt(7)} old people and unfortunately got away with ${dB.pointSymbol}${pglibrary.commafy(amount)}, hope you rot!`
+    ]
+    workStatus = points_manager.work(message.author.id,amount);
+    if(workStatus == 'false'){
+        message.channel.send(`<@${message.author.id}>, You are on work cooldown for ${((dB.workCooldownTime/1000)/60)/60} Hours`);
+    } else {
+        randomString = workStrings[pglibrary.getRandomInt(workStrings.length)];
+        message.channel.send(`<@${message.author.id}>, ${randomString}`);
+    }
+}
+function setEconomySymbol(message,args){
+    if(!(message.member.roles.cache.find(role => role.name === config.modrole))){
+        message.channel.send(`<@${message.author.id}>, You do Not Have Permission for this Command`);
+    }
+    if(args[0]){
+        points_manager.setEconSymbol(args[0]);
+    }
 }

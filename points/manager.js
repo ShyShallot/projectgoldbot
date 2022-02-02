@@ -9,28 +9,30 @@ var manager = module.exports = {
     setBot: function(bot){
         manager.bot = bot;
     },
+    getBot(){
+        return this.bot;
+    },
     fetchData: function(){
         this.dir = __dirname;
-        console.log(this.dir);
         return JSON.parse(fs.readFileSync(this.dir + '\\points-db.json'));
     },
     fetchItems: function(){
         this.dir = __dirname;
-        console.log(this.dir);
         return JSON.parse(fs.readFileSync(this.dir +'\\items.json'));
     },
     saveDB(newData){
         this.dir = __dirname;
-        console.log(this.dir);
         pglibrary.WriteToJson(newData, `${this.dir}` + '\\points-db.json');
     },
-    fetchUser(id){
+    fetchUser(id,bool){
         let users = this.fetchData().users;
         if(users.length >= 1){
             for(i=0;i<users.length;i++){
                 let user = users[i];
                 if(user.id == id){
-                    return [users, i];
+                    if(bool){
+                        return users[i];
+                    } else {return [users, i];}
                 }
             }
         } else {
@@ -38,14 +40,14 @@ var manager = module.exports = {
         }
     },
     setupUser: function(user){
-        console.log(user.username);
         let dbData = this.fetchData();
         let newUserData = {
             "balance": {"cash":0,"bank": dbData.startingBalance}, 
             "id": user.id,
             "username": user.username, 
             "inv": [],
-            "cooldown": false
+            "cooldown": false,
+            "workCooldown": false,
         }
         return newUserData;
     },
@@ -80,7 +82,6 @@ var manager = module.exports = {
             pglibrary.sleep(10);
         }
         let guild = this.bot.guilds.cache.get(config.serverid);
-        console.log(guild);
         let startTime = Date.now();
         let userList = await guild.members.fetch().then(members =>{
             members.forEach(member => {
@@ -104,8 +105,9 @@ var manager = module.exports = {
         } else if(location == "cash"){
             users[userIndex].balance.cash += amount;
         } else {
-            err = "Invalid Location";
-            return err;
+            console.error('Invalid Points Location Provided');
+            process.exit(1);
+            return;
         }
         dB.users = users;
         this.saveDB(dB);
@@ -194,6 +196,8 @@ var manager = module.exports = {
         if(amount <= users[userIndex].balance.cash){
             users[userIndex].balance.cash -= amount;
             users[userIndex].balance.bank += amount;
+            dB.users = users;
+            this.saveDB(dB);
         } else {
             err = "Not Enough Points to Deposit";
             return err;
@@ -205,6 +209,8 @@ var manager = module.exports = {
         if(amount <= users[userIndex].balance.bank){
             users[userIndex].balance.bank -= amount;
             users[userIndex].balance.cash += amount;
+            dB.users = users;
+            this.saveDB(dB);
         } else {
             err = "Not Enough Points to Withdraw";
             return err;
@@ -222,21 +228,31 @@ var manager = module.exports = {
         finalArray = allTotalArray.sort(function(a,b) {
             return b.total-a.total;
         });
-        console.log(finalArray);
         console.log(`Took ${Date.now()-startTime}ms`)
         return finalArray;
     },
-    giveUserItem(id, item){
+    giveUserItem(id, item,amount){
         dB = this.fetchData();
         [users, userIndex] = this.fetchUser(id);
-        users[userIndex].inv.push(item);
+        if(amount){
+            if(amount >= 2){
+                for(i=0;i<amount;i++){
+                    users[userIndex].inv.push(item);
+                }
+            } else {
+                users[userIndex].inv.push(item);
+            }
+        } else {
+            users[userIndex].inv.push(item);
+        }
         dB.users = users;
         this.saveDB(dB);
     },
     useItem(id, item){
-        dB.this.fetchData();
+        dB = this.fetchData();
         [users, userIndex] = this.fetchUser(id);
         for(i=0;i<users[userIndex].inv.length;i++){
+            console.log(users[userIndex].inv[i]);
             if(users[userIndex].inv[i].name == item.name){
                 users[userIndex].inv.splice(i, 1);
             } else {
@@ -249,5 +265,29 @@ var manager = module.exports = {
         if(item.func){
             item.func();
         }
+    },
+    work(id,amount){
+        dB = this.fetchData();
+        [users, userIndex] = this.fetchUser(id);
+        if(users[userIndex].workCooldown){
+            return 'false';
+        }
+        users[userIndex].balance.cash += amount;
+        users[userIndex].workCooldown = true;
+        dB.users = users;
+        this.saveDB(dB);
+        setTimeout(()=> removeWorkCooldown(id), dB.workCooldownTime);
+    },
+    removeWorkCooldown(id){
+        dB = this.fetchData();
+        [users, userIndex] = this.fetchUser(id);
+        users[userIndex].workCooldown = false;
+        dB.users = users;
+        this.saveDB(dB);
+    },
+    setEconSymbol(input){
+        dB = this.fetchData();
+        dB.pointSymbol = input;
+        this.saveDB(dB);
     }
 }
