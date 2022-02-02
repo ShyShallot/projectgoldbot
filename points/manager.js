@@ -101,9 +101,9 @@ var manager = module.exports = {
         let [users, userIndex] = this.fetchUser(id);
         let dB = this.fetchData();
         if(location == "bank"){
-            users[userIndex].balance.bank += amount;
+            users[userIndex].balance.bank += ((amount - pglibrary.percentage(amount, dB.pointsTax)) * dB.pointsMulti);
         } else if(location == "cash"){
-            users[userIndex].balance.cash += amount;
+            users[userIndex].balance.cash += ((amount - pglibrary.percentage(amount, dB.pointsTax)) * dB.pointsMulti);
         } else {
             console.error('Invalid Points Location Provided');
             process.exit(1);
