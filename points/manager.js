@@ -3,9 +3,18 @@ const config = require('../config.json'); // basic config file read
 const pglibrary = require("../libraryfunctions.js"); // load our custom library functions.
 const fs = require('fs'); // File System for JS 
 const path = require('path');
+const os = require('os');
 var manager = module.exports = {
     bot: null,
     dir: null,
+    platform: os.platform(),
+    folderDirection(){
+        if(this.platform != 'win32'){
+            return '/';
+        } else {
+            return '\\';
+        }
+    },
     setBot: function(bot){
         manager.bot = bot;
     },
@@ -14,15 +23,15 @@ var manager = module.exports = {
     },
     fetchData: function(){
         this.dir = __dirname;
-        return JSON.parse(fs.readFileSync(this.dir + '\\points-db.json'));
+        return JSON.parse(fs.readFileSync(this.dir + this.folderDirection() +'points-db.json'));
     },
     fetchItems: function(){
         this.dir = __dirname;
-        return JSON.parse(fs.readFileSync(this.dir +'\\items.json'));
+        return JSON.parse(fs.readFileSync(this.dir + this.folderDirection() +'items.json'));
     },
     saveDB(newData){
         this.dir = __dirname;
-        pglibrary.WriteToJson(newData, `${this.dir}` + '\\points-db.json');
+        pglibrary.WriteToJson(newData, `${this.dir + this.folderDirection()}points-db.json`);
     },
     fetchUser(id,bool){
         let users = this.fetchData().users;
