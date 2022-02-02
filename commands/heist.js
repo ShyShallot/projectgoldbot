@@ -3,7 +3,7 @@ const config = require('../config.json'); // basic config file read
 const pglibrary = require("../libraryfunctions.js"); // load our custom library functions.
 const fs = require('fs'); // File System for JS 
 const heisttimers = require('../heists/heisttimers');
-const { channel } = require('diagnostics_channel');
+const points_manager = require('../points/manager');
 module.exports = {
     name: 'heist',
     description: 'Setup and Start or Join Heists to earn large amounts of money',
@@ -713,7 +713,7 @@ function BuyEquipment(message, bot, args){
     message.channel.send(`<@${message.author.id}>, Select an item to buy by replying to this message with the item name, to buy multiple do Item Name 1, Item Name 2, Item Name 3 and so on.`);
     collector = message.channel.createMessageCollector(message.channel, {time: 5000});
 
-    collector.on('collect', m => {
+    collector.on('collect', async m => {
         if (m.author.bot) return;
         if (m.author.id != message.author.id) return;
         if (m.channel.id != message.channel.id) return;
@@ -740,46 +740,45 @@ function BuyEquipment(message, bot, args){
             return;
         }
         console.log(requestedItems);
-        client.getUserBalance(m.guild.id, m.author.id).then(async (econuser) =>{
-            console.log(`Checking if user has enough cash`);
-            cost = 0;
-            requestedItems.forEach(item => {
-                cost += item.cost;
-            });
-            if(econuser.cash >= cost){
-                client.editUserBalance(m.guild.id, m.author.id, {cash: -cost, bank:0});
-                await HeistInventoryMain(m.author, requestedItems);
-                string = ""
-                for(i=0;i<requestedItems.length;i++){
-                    item = requestedItems[i];
-                    console.log(`Item: ${item.name}`);
-                    if(i == requestedItems.length - 2){ // i starts at 0, so the 2nd to last index would be -2
-                        console.log(`Item is 2nd to Last, adjusting string`);
-                        if(item.name.includes('Drill') || item.name.includes('Medkit')){
-                            string += `${item.name} and a `;
-                        } else {
-                            string += `${item.name} and `;
-                        }
-                        console.log(string);
-                    } else {
-                        console.log(`String is not 2nd to last`);
-                        string += `${item.name}, `;
-                        console.log(string);
-                    }
-                }
-                if(string.endsWith(', ')){
-                    string = string.substring(0, string.length - 2); 
-                }
-                sPrefix = stringPrefix(string);
-                message.channel.send(`<@${m.author.id}>, You have bought ${sPrefix} ${string} for ${pglibrary.commafy(cost)} points.`);
-                collector.stop();
-                return;
-            } else {
-                message.channel.send(`<@${m.author.id}>, You do not have enough cash in hand for that action.`);
-                collector.stop();
-                return;
-            }
+        [cash,bank] = points_manager.getUserBalance();
+        console.log(`Checking if user has enough cash`);
+        cost = 0;
+        requestedItems.forEach(item => {
+            cost += item.cost;
         });
+        if(cash >= cost){
+            points_manager.giveUserPoints(m.author.id,cost*-1,'cash');
+            await HeistInventoryMain(m.author, requestedItems);
+            string = ""
+            for(i=0;i<requestedItems.length;i++){
+                item = requestedItems[i];
+                console.log(`Item: ${item.name}`);
+                if(i == requestedItems.length - 2){ // i starts at 0, so the 2nd to last index would be -2
+                    console.log(`Item is 2nd to Last, adjusting string`);
+                    if(item.name.includes('Drill') || item.name.includes('Medkit')){
+                        string += `${item.name} and a `;
+                    } else {
+                        string += `${item.name} and `;
+                    }
+                    console.log(string);
+                } else {
+                    console.log(`String is not 2nd to last`);
+                    string += `${item.name}, `;
+                    console.log(string);
+                }
+            }
+            if(string.endsWith(', ')){
+                string = string.substring(0, string.length - 2); 
+            }
+            sPrefix = stringPrefix(string);
+            message.channel.send(`<@${m.author.id}>, You have bought ${sPrefix} ${string} for ${pglibrary.commafy(cost)} points.`);
+            collector.stop();
+            return;
+        } else {
+            message.channel.send(`<@${m.author.id}>, You do not have enough cash in hand for that action.`);
+            collector.stop();
+            return;
+        }
         collector.stop();
     });
 

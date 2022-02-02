@@ -4,6 +4,7 @@ const jackpotid = '875821312998793247' // same as below but for a role
 const rafflechannel = '844002249872113665'; // since this is used for one server we just define the channel we want to use by ID
 const fs = require('fs'); // File System for JS
 const pglibrary = require("../libraryfunctions.js");
+const points_manager = require('../points/manager');
 // This was a jackpot command but was changed to a raffle, this file handles the starting, ending and current raffle functions
 module.exports = {
     name: 'jackpot',
@@ -17,19 +18,16 @@ module.exports = {
             JackpotEnd(bot);
         } else { // if there is a message, this doesn't really care about jackpotState
             var userID = message.author.id; // Get the ID of the person who sent the message
-            var serverID = message.guild.id; // Get the Server ID from the server where the message was sent
-            client.getUserBalance(serverID, userID).then(user => { // This is a function of the Unbeliaveboat API, the API documentation is linked on the github.
-                var jackpot = fs.readFileSync('./jackpot.json', 'utf-8'); // Read and write the contents of jackpot.JSON to a var
-                var data = JSON.parse(jackpot); // parse the JSON file into a JS object array format
-                if (data.raffleactive == 1 && !IsUserAlreadyInJackpot(userID)) { // if a raffle is active and the user sending the raffle command is not already in the raffle
-                    console.log(`User is not in Jackpot, running function`);
-                    MainJackpot(user, message); // Run Main Raffle Function of adding the user to the raffle
-                } else if (data.raffleactive == 1 && IsUserAlreadyInJackpot(userID)) { // if a raffle is active and the user sending the command is already in the raffle
-                    message.channel.send(`<@${userID}>, you are already in the raffle.`);
-                } else { // This can only be triggered if the conditions above are false
-                    message.channel.send(`<@${userID}>, there is no raffle active.`);
-                }
-            });
+            var jackpot = fs.readFileSync('./jackpot.json', 'utf-8'); // Read and write the contents of jackpot.JSON to a var
+            var data = JSON.parse(jackpot); // parse the JSON file into a JS object array format
+            if (data.raffleactive == 1 && !IsUserAlreadyInJackpot(userID)) { // if a raffle is active and the user sending the raffle command is not already in the raffle
+                console.log(`User is not in Jackpot, running function`);
+                MainJackpot(user, message); // Run Main Raffle Function of adding the user to the raffle
+            } else if (data.raffleactive == 1 && IsUserAlreadyInJackpot(userID)) { // if a raffle is active and the user sending the command is already in the raffle
+                message.channel.send(`<@${userID}>, you are already in the raffle.`);
+            } else { // This can only be triggered if the conditions above are false
+                message.channel.send(`<@${userID}>, there is no raffle active.`);
+            }
         }
   }
 }
@@ -139,19 +137,16 @@ async function JackpotEnd(bot){
         console.log(`Pick: ${randomPick}`);
         var winner = data.users[randomPick]; // grab the winner from array using the index from our randomPick var
         console.log(`Winner ID: ${winner}`);
-        client.getUserBalance(serverID, winner.id).then(user => { // get the balance of our user
-            var gain = data.rafflepot; // define the var gain as the rafflepot in jackpot.JSON
-            console.log(`Gain ${gain}`);
-            client.editUserBalance(serverID, winner.id, { cash: gain, bank: 0}).then(user => { // edit the user balance to add the points from our raffle
-                const embed = new MessageEmbed()
-                    .setTitle("Raffle")
-                    .setAuthor(`${winner.username}`, winner.displayAvatarURL)
-                    .setColor("#2bff00")
-                    .setDescription(`<@&${jackpotid}>, <@${winner.id}> has won the raffle and has gained ${gain} points!`)
-                bot.channels.cache.get(rafflechannel).send({ content: `<@&${jackpotid}>`, embeds: [embed] }); 
-                console.log("Resetting Jackpot.JSON");
-            });
-        });
+        var gain = data.rafflepot; // define the var gain as the rafflepot in jackpot.JSON
+        console.log(`Gain ${gain}`);
+            points_manager.giveUserPoints(winner.id, gain, 'cash');
+            const embed = new MessageEmbed()
+                .setTitle("Raffle")
+                .setAuthor(`${winner.username}`, winner.displayAvatarURL)
+                .setColor("#2bff00")
+                .setDescription(`<@&${jackpotid}>, <@${winner.id}> has won the raffle and has gained ${gain} points!`)
+            bot.channels.cache.get(rafflechannel).send({ content: `<@&${jackpotid}>`, embeds: [embed] }); 
+            console.log("Resetting Jackpot.JSON");
         await ResetRaffleJson(data); // reset our jackpot.JSON for the next raffle to start
     } else { // if not enough people entered the raffle end it with no winner
         const embed = new MessageEmbed()

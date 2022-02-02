@@ -2,6 +2,7 @@ const config = require('../config.json'); // basic config file read
 const pglibrary = require("../libraryfunctions.js"); // load our custom library functions.
 const fs = require('fs'); // File System for JS 
 const path = require('path');
+const points_manager = require('../points/manager');
 module.exports = {
     name: 'heistecon',
     description: 'Heist System',
@@ -25,7 +26,7 @@ function Loss(heist){
         curUser = heist.users[i];
         amount = (CostOfEquipment(curUser) + MaxPossibleRewardLoss(heist) + 50000 + CostOfDamages(heist)); 
         ClearUsersInventory(curUser);
-        client.editUserBalance(serverID, curUser.id, {cash: -amount, bank: 0});
+        points_manager.giveUserPoints(curUser.id, amount*-1, 'cash');
     }
 }
 
@@ -33,7 +34,7 @@ function Gain(heist){
     for(i=0;i<heist.users.length;i++){
         curUser = heist.users[i];
         amount = CalculateCut(curUser, heist);
-        client.editUserBalance(serverID, curUser.id, {cash: amount, bank: 0});
+        points_manager.giveUserPoints(curUser.id, amount, 'cash');
     }
 }
 
