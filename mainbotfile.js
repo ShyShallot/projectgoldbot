@@ -10,16 +10,20 @@ const pglibrary = require("./libraryfunctions.js");
 const sqlconfig = require('./sql.json');
 const SQL = require('mssql');
 const points_manager = require('./points/manager');
-const points_commands = require('./points/command_handler');
 
 bot.commands = new Map(); // New Array for our commands
+bot.commands.econ = new Map();
 bot.on('ready', () => { // Runs everything inside when the bot has successfully logged in and is active
     console.log('PG Bot Ready');
     console.log(`Current Game: ${config.game}`);
     bot.user.setActivity(config.game, {type: 'PLAYING'}); // Set our game status
     for (const file of commandFiles) { // for every file in our commandFiles Mapping
-      const command = require(`./commands/${file}`); // load the data of the file into memory 
-      bot.commands.set(command.name, command); // add our commands to our array
+        const command = require(`./commands/${file}`); // load the data of the file into memory 
+        if(file.startsWith('econ_')){
+            bot.commands.econ.set(command.name,command);
+        } else {
+            bot.commands.set(command.name, command); // add our commands to our array
+        }
     }
     points_manager.setBot(bot);
     points_manager.firstSetup();
@@ -72,7 +76,6 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     // Base for adding commands: if(command === "name"){
     //  bot.commands.get("name").execute(message, args, bot)
     //}
-    points_commands.commandHandler(command,bot,args,message, bot.commands);
     switch (command){
         case 'toggleauto':
             if(message.member.roles.cache.find(role => role.name === config.modrole)){
@@ -121,6 +124,57 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
         case 'stock':
         case 'stocks':
             bot.commands.get("stocks").execute(message,args,bot);
+            break;
+        case 'buy-item':
+            bot.commands.get("buy-item").execute(message,args,bot);
+            break;
+        case 'create-item':
+            bot.commands.get("create-item").execute(message,args,bot);
+            break;
+        case 'delete-item':
+            bot.commands.get("delete-item").execute(message,args,bot);
+            break;
+        case 'deposit':
+            bot.commands.get("deposit").execute(message,args,bot);
+            break;
+        case 'econ-stats':
+            bot.commands.get("econ-stats").execute(message,args,bot);
+            break;
+        case 'bal':
+        case 'balance':
+            bot.commands.get("balance").execute(message,args,bot);
+            break;
+        case 'give':
+            bot.commands.get("give").execute(message,args,bot);
+            break;
+        case 'inv':
+        case 'inventory':
+            bot.commands.get("inventory").execute(message,args,bot);
+            break;
+        case 'store':
+            bot.commands.get("store").execute(message,args,bot);
+            break;
+        case 'reset-econ':
+            bot.commands.get("reset-econ").execute(message,args,bot);
+            break;
+        case 'reset-user':
+            bot.commands.get("reset-user").execute(message,args,bot);
+            break;
+        case 'lb':
+        case 'leaderboard':
+            bot.commands.get("leaderboard").execute(message,args,bot);
+            break;
+        case 'set-econ-symbol':
+            bot.commands.get("set-econ-symbol").execute(message,args,bot);
+            break;
+        case 'use-item':
+            bot.commands.get("use-item").execute(message,args,bot);
+            break;
+        case 'withdraw':
+            bot.commands.get("withdraw").execute(message,args,bot);
+            break;
+        case 'work':
+            bot.commands.get("work").execute(message,args,bot);
             break;
     }
 });

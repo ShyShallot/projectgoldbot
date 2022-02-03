@@ -1,6 +1,5 @@
 const {MessageEmbed} = require('discord.js'); // required for Rich Message Embeds
 const config = require('../config.json');
-const economy_commands = require('../points/command_handler');
 module.exports = {
     name: 'help',
     description: 'prints help',
@@ -9,8 +8,14 @@ module.exports = {
         console.log(args);
         if(args[0]){
             command = commands.get(args[0]);
-            console.log(command);
             if(command){
+                var helpembed = new MessageEmbed()
+                .setColor(0xFF4500)
+                .addField(`Command info for ${command.name}`, `About this command: **${command.description}**. Arguments: **${command.args}**`);
+                message.channel.send({embeds: [helpembed]});
+                return;
+            } else {
+                command = commands.econ.get(args[0]);
                 var helpembed = new MessageEmbed()
                 .setColor(0xFF4500)
                 .addField(`Command info for ${command.name}`, `About this command: **${command.description}**. Arguments: **${command.args}**`);
@@ -18,7 +23,6 @@ module.exports = {
                 return;
             }
         }
-        console.log(commands);
         var helpembed = new MessageEmbed()
         .setTitle("Project Gold Help Menu")
         .setAuthor(`${bot.user.username}`, `${bot.user.avatarURL()}`)
@@ -26,22 +30,42 @@ module.exports = {
         .addField("Bot Info: ", `My Prefix: **${config.prefix}**. You can find my source code at: https://github.com/ShyShallot/projectgoldbot`)
         .addField("Commands", "1")
         .addField("Economy Comamnds", '1');
+        var i=0;
         for (const command of commands) { // for every file in our commandFiles Mapping
+            i++;
             if(helpembed.fields[1].value.startsWith('1')){
                 if(command[1].active){
                     helpembed.fields[1].value = `${command[1].name}, `;
                 }
             } else {
                 if(command[1].active){
-                    helpembed.fields[1].value += `${command[1].name}, `;
+                    if(i+2 == commands.size){
+                        console.log(i, commands.size);
+                        helpembed.fields[1].value += `${command[1].name}.`;
+                    } else {
+                        console.log(i, commands.size);
+                        helpembed.fields[1].value += `${command[1].name}, `;
+                    }
                 }
             }
         }
-        for(i=0;i<economy_commands.list.length;i++){
+        var i=0;
+        for (const command of commands.econ) { // for every file in our commandFiles Mapping
+            i++;
             if(helpembed.fields[2].value.startsWith('1')){
-                helpembed.fields[2].value = `${economy_commands.list[i]}, `;
+                if(command[1].active){
+                    helpembed.fields[2].value = `${command[1].name}, `;
+                }
             } else {
-                helpembed.fields[2].value += `${economy_commands.list[i]}, `;
+                if(command[1].active){
+                    if(i == commands.econ.size){
+                        console.log(i, commands.econ.size);
+                        helpembed.fields[2].value += `${command[1].name}.`;
+                    } else {
+                        console.log(i, commands.econ.size);
+                        helpembed.fields[2].value += `${command[1].name}, `;
+                    }
+                }
             }
         }
         message.channel.send({embeds: [helpembed]});
