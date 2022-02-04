@@ -8,21 +8,21 @@ var manager = module.exports = {
     bot: null,
     dir: null,
     platform: os.platform(),
-    folderDirection(){
+    folderDirection(){ // Used to automatically detect linux or windows type filesystems to automatically adjust for file searching differences 
         if(this.platform != 'win32'){
             return '/';
         } else {
-            return '\\';
+            return '\\'; // with JS double back slash is pretty much just one back slash for anything using it
         }
     },
-    setBot: function(bot){
+    setBot: function(bot){ // funky work around 
         manager.bot = bot;
     },
-    getBot(){
+    getBot(){ // trying to access the var directly has some weird issues sometimes
         return this.bot;
     },
-    fetchData: function(){
-        this.dir = __dirname;
+    fetchData: function(){ // Fetch data from points-db.json
+        this.dir = __dirname; // get Directory Name for this File as we access it from other places
         return JSON.parse(fs.readFileSync(this.dir + this.folderDirection() +'points-db.json'));
     },
     fetchItems: function(){
@@ -33,7 +33,7 @@ var manager = module.exports = {
         this.dir = __dirname;
         pglibrary.WriteToJson(newData, `${this.dir + this.folderDirection()}points-db.json`);
     },
-    fetchUser(id,bool){
+    fetchUser(id,bool){ // if true just return the user Data point, used for Read only instances
         let users = this.fetchData().users;
         if(users.length >= 1){
             for(i=0;i<users.length;i++){
@@ -48,7 +48,7 @@ var manager = module.exports = {
             return false;
         }
     },
-    setupUser: function(user){
+    setupUser: function(user){ // this is just the user data template
         let dbData = this.fetchData();
         let newUserData = {
             "balance": {"cash":0,"bank": dbData.startingBalance}, 
@@ -61,7 +61,7 @@ var manager = module.exports = {
         }
         return newUserData;
     },
-    removeUser: function(id){
+    removeUser: function(id){ // remove a user from the points-db for whatever reason
         let dbData = this.fetchData();
         for(i=0;i<dbData.users.length;i++){
             if(dbData.users[i].id == id){
@@ -70,7 +70,7 @@ var manager = module.exports = {
         }
         this.saveDB(dbData);
     },
-    addUser: function(user){
+    addUser: function(user){ // used for when a user joins the server
         let dbData = this.fetchData();
         let newUserData = this.setupUser(user);
         dbData.users.push(newUserData);
@@ -82,7 +82,7 @@ var manager = module.exports = {
         pglibrary.sleep(10);
         this.addUser(user.user);
     },
-    firstSetup: async function(bool){
+    firstSetup: async function(bool){ // if the bool is true it overrides everything and force restarts points-db.json
         dB = this.fetchData();
         if(dB.setup && !bool){
             return;
@@ -93,7 +93,7 @@ var manager = module.exports = {
         }
         let guild = this.bot.guilds.cache.get(config.serverid);
         let startTime = Date.now();
-        let userList = await guild.members.fetch().then(members =>{
+        let userList = await guild.members.fetch().then(members =>{ // since the cache doesnt get EVERY user we manually ask for each user in the server
             members.forEach(member => {
                 if(member.user.bot){
                     console.log(`User is a Bot`);
@@ -309,7 +309,7 @@ var manager = module.exports = {
         dB.pointSymbol = input;
         this.saveDB(dB);
     },
-    ready(){
+    ready(){ // a function used so that if the bot restarts cooldowns using the setTimeout are taken careoff as they are cleared on restart
         dB = this.fetchData();
         users = dB.users;  
         for(i=0;i<users.length;i++){
@@ -323,7 +323,7 @@ var manager = module.exports = {
         dB.users = users;
         this.saveDB(dB);
     },
-    symbol(){
+    symbol(){ // read only thing
         dB = this.fetchData();
         return dB.pointSymbol;
     }

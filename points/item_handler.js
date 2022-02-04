@@ -3,11 +3,20 @@ const fs = require('fs'); // File System for JS
 const pglibrary = require("../libraryfunctions.js");
 const points_manager = require('./manager');
 const {MessageEmbed, Message} = require('discord.js');
+const os = require('os');
 var item_handler = module.exports = {
+    platform: os.platform(),
+    folderDirection(){ // Used to automatically detect linux or windows type filesystems to automatically adjust for file searching differences 
+        if(this.platform != 'win32'){
+            return '/';
+        } else {
+            return '\\'; // with JS double back slash is pretty much just one back slash for anything using it
+        }
+    },
     fetchItems(){
         this.dir = __dirname;
         console.log(this.dir);
-        return JSON.parse(fs.readFileSync(this.dir + '\\items.json'));
+        return JSON.parse(fs.readFileSync(this.dir + this.folderDirection() +'items.json'));
     },
     fetchItem(name,bool){
         if(!name){
@@ -28,7 +37,7 @@ var item_handler = module.exports = {
     saveDB(newData){
         this.dir = __dirname;
         console.log(this.dir);
-        pglibrary.WriteToJson(newData, `${this.dir}` + '\\items.json');
+        pglibrary.WriteToJson(newData, `${this.dir + this.folderDirection()}` +'items.json');
     },
     createItem(message,args){
         dB = this.fetchItems();
