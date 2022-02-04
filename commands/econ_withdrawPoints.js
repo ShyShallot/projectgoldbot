@@ -6,7 +6,7 @@ const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discor
 module.exports = {
     name: 'withdraw',
     description: 'Withdraw all your Points in the Bank into cash',
-    args: 'Arguments: Amount to Withdraw | All/Half is also accepted as an amount',
+    args: 'Amount to Withdraw | All/Half is also accepted as an amount',
     active: true,
     async execute(message, args, bot){
         if(args[0]){

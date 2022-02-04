@@ -6,7 +6,7 @@ const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discor
 module.exports = {
     name: 'reset-user',
     description: "Reset a User's Economy Stats - Mod Only!",
-    args: 'Arguments: Mention Target User',
+    args: 'Mention Target User',
     active: true,
     async execute(message, args, bot){
         if(message.member.roles.cache.find(role => role.name === config.modrole)){

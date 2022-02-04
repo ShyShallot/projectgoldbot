@@ -6,7 +6,7 @@ const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discor
 module.exports = {
     name: 'delete-item',
     description: 'Delete the Item from the Servers Item Store - Mod Only',
-    args: 'Arguments: Item Name - For Spaces Use Underscores',
+    args: 'Item Name - For Spaces Use Underscores',
     active: true,
     async execute(message, args, bot){
         if(!(message.member.roles.cache.find(role => role.name === config.modrole))){

@@ -107,13 +107,21 @@ var manager = module.exports = {
         dB.setup = true;
         this.saveDB(dB);
     },
-    giveUserPoints: function(id, amount, location){
+    giveUserPoints: function(id, amount, location,taxFree){
         let [users, userIndex] = this.fetchUser(id);
         let dB = this.fetchData();
         if(location == "bank"){
-            users[userIndex].balance.bank += ((amount - pglibrary.percentage(amount, dB.pointsTax)) * dB.pointsMulti);
+            if(taxFree){
+                users[userIndex].balance.bank += (amount * dB.pointsMulti);
+            } else {
+                users[userIndex].balance.bank += ((amount - pglibrary.percentage(amount, dB.pointsTax)) * dB.pointsMulti);
+            }
         } else if(location == "cash"){
-            users[userIndex].balance.cash += ((amount - pglibrary.percentage(amount, dB.pointsTax)) * dB.pointsMulti);
+            if(taxFree){
+                users[userIndex].balance.cash += (amount * dB.pointsMulti);
+            } else {
+                users[userIndex].balance.cash += ((amount - pglibrary.percentage(amount, dB.pointsTax)) * dB.pointsMulti);
+            }
         } else {
             console.error('Invalid Points Location Provided');
             process.exit(1);
@@ -314,5 +322,9 @@ var manager = module.exports = {
         }
         dB.users = users;
         this.saveDB(dB);
+    },
+    symbol(){
+        dB = this.fetchData();
+        return dB.pointSymbol;
     }
 }

@@ -7,7 +7,7 @@ const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discor
 module.exports = {
     name: 'store',
     description: "Lists all items available in the Server's Item Store",
-    args: 'Arguments: None',
+    args: 'None',
     active: true,
     async execute(message, args, bot){
         items = item_handler.fetchItems();

@@ -6,7 +6,7 @@ const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discor
 module.exports = {
     name: 'work',
     description: 'Work a Random Job to make some points',
-    args: 'Arguments: None',
+    args: 'None',
     active: true,
     async execute(message, args, bot){
         dB = points_manager.fetchData();

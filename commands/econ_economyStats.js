@@ -6,7 +6,7 @@ const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discor
 module.exports = {
     name: 'econ-stats',
     description: 'Get the Total of all the points in the server',
-    args: 'Arguments: None',
+    args: 'None',
     active: true,
     async execute(message, args, bot){
         [cash,bank,total] = points_manager.getServerStats();

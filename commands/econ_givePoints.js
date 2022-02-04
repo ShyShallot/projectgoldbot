@@ -6,7 +6,7 @@ const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discor
 module.exports = {
     name: 'give',
     description: 'Give a User your points if you can afford it',
-    args: 'Arguments: 1. [Mention User] | 2. Point Amount | 3. Location: Cash/Bank | 4. (Mod Only) false - Used to give points without subtracting from yours',
+    args: '1. [Mention User] | 2. Point Amount | 3. Location: Cash/Bank | 4. (Mod Only) false - Used to give points without subtracting from yours',
     active: true,
     async execute(message, args, bot){
         if(message.member.roles.cache.find(role => role.name === config.modrole) && args[3] == `false`){

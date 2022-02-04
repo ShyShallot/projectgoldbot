@@ -28,7 +28,7 @@ bot.on('ready', () => { // Runs everything inside when the bot has successfully 
     points_manager.setBot(bot);
     points_manager.firstSetup();
     points_manager.ready();
-    Economy() // handle our encomy functions for stuff that has to calculate every so often
+    //Economy() // handle our encomy functions for stuff that has to calculate every so often
 });
 
 
@@ -177,6 +177,9 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
             break;
         case 'work':
             bot.commands.econ.get("work").execute(message,args,bot);
+            break;
+        case 'rob':
+            bot.commands.econ.get("rob").execute(message,args,bot);
             break;
     }
 });

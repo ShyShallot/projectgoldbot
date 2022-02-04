@@ -7,7 +7,7 @@ const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discor
 module.exports = {
     name: 'use-item',
     description: 'Use an Item in your inventory',
-    args: 'Arguments: Item Name - For Spaces use Underscores',
+    args: 'Item Name - For Spaces use Underscores',
     active: true,
     async execute(message, args, bot){
         if(args[0]){

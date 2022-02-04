@@ -6,7 +6,7 @@ const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discor
 module.exports = {
     name: 'set-econ-symbol',
     description: "Set the Server's Economy Symbol - Mod Only",
-    args: 'Arguments: Any Text/Emoji',
+    args: 'Any Text/Emoji',
     active: true,
     async execute(message, args, bot){
         if(!(message.member.roles.cache.find(role => role.name === config.modrole))){

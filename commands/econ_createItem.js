@@ -7,7 +7,7 @@ const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discor
 module.exports = {
     name: 'create-item',
     description: 'Create an Item - Mod Only',
-    args: 'Arguments: 1. Item Name (for Spaces Use an Underscore) | 2. Cost of Item | 3. Item Type (Only role at the Moment) | 4. Item Type Arg ',
+    args: '1. Item Name (for Spaces Use an Underscore) | 2. Cost of Item | 3. Item Type (Only role at the Moment) | 4. Item Type Arg ',
     active: true,
     async execute(message, args, bot){
         if(!(message.member.roles.cache.find(role => role.name === config.modrole))){

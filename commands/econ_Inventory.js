@@ -6,7 +6,7 @@ const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discor
 module.exports = {
     name: 'inventory',
     description: "Check your's or another user's Item Inventory Contents",
-    args: 'Arguments: Target User - Optional',
+    args: 'Target User - Optional',
     active: true,
     async execute(message, args, bot){
         target = message.mentions.members.first();

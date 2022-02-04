@@ -6,7 +6,7 @@ const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discor
 module.exports = {
     name: 'balance',
     description: 'Check your or another Users Balance',
-    args: 'Arguments: 1. [Mention User] (Optional)',
+    args: '1. [Mention User] (Optional)',
     active: true,
     async execute(message, args, bot){
         dB = points_manager.fetchData();

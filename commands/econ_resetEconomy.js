@@ -6,7 +6,7 @@ const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discor
 module.exports = {
     name: 'reset-econ',
     description: 'Reset the Economy for the Entire Server - Mod Only!',
-    args: 'Arguments: None',
+    args: 'None',
     active: true,
     async execute(message, args, bot){
         if(message.member.roles.cache.find(role => role.name === config.modrole)){

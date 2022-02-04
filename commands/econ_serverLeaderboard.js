@@ -6,7 +6,7 @@ const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discor
 module.exports = {
     name: 'leaderboard',
     description: 'Get the Server Leaderboard for most points',
-    args: 'Arguments: None',
+    args: 'None',
     active: true,
     async execute(message, args, bot){
         start = 0;
