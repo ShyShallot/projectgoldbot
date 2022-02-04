@@ -18,7 +18,7 @@ module.exports = {
             message.channel.send(err);
             return;
         } else {
-            itemName = args[0].replace('_', " ");
+            itemName = args[0].replaceAll('_', " ");
             message.channel.send(`<@${message.author.id}>, You have deleted ${itemName}`);
             return;
         }

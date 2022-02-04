@@ -25,10 +25,10 @@ module.exports = {
             }
         }
         itemEmbed = new MessageEmbed()
-        .setTitle(`${newItem.name.replace("_", " ")}`)
+        .setTitle(`${newItem.name.replaceAll("_", " ")}`)
         .setTimestamp()
         .setColor(0x00AE86)
-        .addField('Name', `${newItem.name.replace("_", " ")}`, true)
+        .addField('Name', `${newItem.name.replaceAll("_", " ")}`, true)
         .addField('Cost:', `${pglibrary.commafy(newItem.price)}`, true)
         .addField('Item Type:', `${type}`, true);
         message.channel.send({embeds:[itemEmbed]});

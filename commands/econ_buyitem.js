@@ -20,7 +20,9 @@ module.exports = {
             message.channel.send(`<@${message.author.id}>, Your Inventory is full, please remove items to buy another`);
             return;
         }
-        item = item_handler.fetchItem(args[0], true);
+        itemName = args[0].replaceAll("_"," ");
+        console.log(itemName)
+        item = item_handler.fetchItem(itemName, true);
         if(typeof item === 'string'){
             message.channel.send(item);
             return;

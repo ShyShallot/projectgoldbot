@@ -266,7 +266,7 @@ var manager = module.exports = {
         dB.users = users;
         this.saveDB(dB);
     },
-    useItem(id, item){
+    async useItem(id, item){
         dB = this.fetchData();
         [users, userIndex] = this.fetchUser(id);
         for(i=0;i<users[userIndex].inv.length;i++){
@@ -280,8 +280,17 @@ var manager = module.exports = {
         }
         dB.users = users;
         this.saveDB(dB);
-        if(item.func){
-            item.func();
+        switch(item.type){
+            case 'role':
+                roleId = item.typeParam.replace(/[^0-9\.]+/g,"");
+                let guild = this.bot.guilds.cache.get(config.serverid);
+                let userList = await guild.members.fetch().then(members =>{ // since the cache doesnt get EVERY user we manually ask for each user in the server
+                    members.forEach(member => {
+                        if(member.id == users[userIndex]){
+                            member.roles.add(roleId);
+                        }
+                    });
+                });
         }
     },
     work(id,amount){

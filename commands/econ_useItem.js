@@ -11,10 +11,10 @@ module.exports = {
     active: true,
     async execute(message, args, bot){
         if(args[0]){
-            itemName = args[0].replace('_, " ');
+            itemName = args[0].replaceAll('_, " ');
             item = item_handler.fetchItem(itemName, true);
             err = points_manager.useItem(message.author.id, item);
-            if(err){
+            if(typeof err === 'string'){
                 message.channel.send(err);
                 return;
             } else{

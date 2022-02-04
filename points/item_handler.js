@@ -45,7 +45,7 @@ var item_handler = module.exports = {
     createItem(message,args){
         dB = this.fetchItems();
         if(args[0] && args[1]){
-            itemName =  args[0].replace('_', " ");
+            itemName =  args[0].replaceAll('_', " ");
             for(i=0;i<dB.length;i++){
                 if(dB[i].name == itemName){
                     err = "An Item with this name already exists";
@@ -61,15 +61,8 @@ var item_handler = module.exports = {
                 switch(args[2]){
                     case 'Role':
                     case 'role':
-                        if(args[3]){
-                            item.func = function(){
-                                role = message.guild.roles.cache.find(role => role.name == args[3]);
-                                message.member.roles.add(role);
-                            }
-                        } else {
-                            err = "Invalid Role";
-                            return err;
-                        }
+                        item.type = 'role';
+                        item.typeParam = args[3];
                         break;
                 }
             }
@@ -83,7 +76,7 @@ var item_handler = module.exports = {
     },
     deleteItem(message,args){
         if(args[0]){
-            itemName =  args[0].replace('_', " ");
+            itemName =  args[0].replaceAll('_', " ");
             err = this.fetchItem(itemName);
             console.log(err);
             if(typeof err === 'string'){
