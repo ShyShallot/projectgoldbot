@@ -27,6 +27,7 @@ bot.on('ready', () => { // Runs everything inside when the bot has successfully 
     }
     points_manager.setBot(bot);
     points_manager.firstSetup();
+    points_manager.ready();
     Economy() // handle our encomy functions for stuff that has to calculate every so often
 });
 
@@ -126,55 +127,55 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
             bot.commands.get("stocks").execute(message,args,bot);
             break;
         case 'buy-item':
-            bot.commands.get("buy-item").execute(message,args,bot);
+            bot.commands.econ.get("buy-item").execute(message,args,bot);
             break;
         case 'create-item':
-            bot.commands.get("create-item").execute(message,args,bot);
+            bot.commands.econ.get("create-item").execute(message,args,bot);
             break;
         case 'delete-item':
-            bot.commands.get("delete-item").execute(message,args,bot);
+            bot.commands.econ.get("delete-item").execute(message,args,bot);
             break;
         case 'deposit':
-            bot.commands.get("deposit").execute(message,args,bot);
+            bot.commands.econ.get("deposit").execute(message,args,bot);
             break;
         case 'econ-stats':
-            bot.commands.get("econ-stats").execute(message,args,bot);
+            bot.commands.econ.get("econ-stats").execute(message,args,bot);
             break;
         case 'bal':
         case 'balance':
-            bot.commands.get("balance").execute(message,args,bot);
+            bot.commands.econ.get("balance").execute(message,args,bot);
             break;
         case 'give':
-            bot.commands.get("give").execute(message,args,bot);
+            bot.commands.econ.get("give").execute(message,args,bot);
             break;
         case 'inv':
         case 'inventory':
-            bot.commands.get("inventory").execute(message,args,bot);
+            bot.commands.econ.get("inventory").execute(message,args,bot);
             break;
         case 'store':
-            bot.commands.get("store").execute(message,args,bot);
+            bot.commands.econ.get("store").execute(message,args,bot);
             break;
         case 'reset-econ':
-            bot.commands.get("reset-econ").execute(message,args,bot);
+            bot.commands.econ.get("reset-econ").execute(message,args,bot);
             break;
         case 'reset-user':
-            bot.commands.get("reset-user").execute(message,args,bot);
+            bot.commands.econ.get("reset-user").execute(message,args,bot);
             break;
         case 'lb':
         case 'leaderboard':
-            bot.commands.get("leaderboard").execute(message,args,bot);
+            bot.commands.econ.get("leaderboard").execute(message,args,bot);
             break;
         case 'set-econ-symbol':
-            bot.commands.get("set-econ-symbol").execute(message,args,bot);
+            bot.commands.econ.get("set-econ-symbol").execute(message,args,bot);
             break;
         case 'use-item':
-            bot.commands.get("use-item").execute(message,args,bot);
+            bot.commands.econ.get("use-item").execute(message,args,bot);
             break;
         case 'withdraw':
-            bot.commands.get("withdraw").execute(message,args,bot);
+            bot.commands.econ.get("withdraw").execute(message,args,bot);
             break;
         case 'work':
-            bot.commands.get("work").execute(message,args,bot);
+            bot.commands.econ.get("work").execute(message,args,bot);
             break;
     }
 });

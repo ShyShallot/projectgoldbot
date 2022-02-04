@@ -57,6 +57,7 @@ var manager = module.exports = {
             "inv": [],
             "cooldown": false,
             "workCooldown": false,
+            "setOnCooldown": null,
         }
         return newUserData;
     },
@@ -283,9 +284,10 @@ var manager = module.exports = {
         }
         users[userIndex].balance.cash += amount;
         users[userIndex].workCooldown = true;
+        users[userIndex].setOnCooldown = Date.now();
         dB.users = users;
         this.saveDB(dB);
-        setTimeout(()=> removeWorkCooldown(id), dB.workCooldownTime);
+        setTimeout(()=> this.removeWorkCooldown(id), dB.workCooldownTime);
     },
     removeWorkCooldown(id){
         dB = this.fetchData();
@@ -297,6 +299,20 @@ var manager = module.exports = {
     setEconSymbol(input){
         dB = this.fetchData();
         dB.pointSymbol = input;
+        this.saveDB(dB);
+    },
+    ready(){
+        dB = this.fetchData();
+        users = dB.users;  
+        for(i=0;i<users.length;i++){
+            if(users[i].workCooldown && typeof users[i].setOnCooldown !== 'undefined'){
+                if(Date.now() >= users[i].setOnCooldown + dB.workCooldownTime){
+                    users[i].workCooldown = false;
+                    users[i].setOnCooldown = null;
+                }
+            }
+        }
+        dB.users = users;
         this.saveDB(dB);
     }
 }
