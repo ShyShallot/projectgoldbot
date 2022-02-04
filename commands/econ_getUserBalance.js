@@ -19,6 +19,7 @@ module.exports = {
         .addField('Cash:', "1", true)
         .addField('Bank:', '1', true)
         .addField('Total:', '1', true);
+        target = message.mentions.members.first();
         if(target){
             [cash,bank] = points_manager.getUserBalance(target.id);
             for(i=0;i<leaderboardArray.length;i++){
