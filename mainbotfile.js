@@ -308,7 +308,7 @@ async function StockMarket() {
         if(typeof stockmarket.lastupdate === 'undefined'){
             return;
         }
-        if(Date.now() >= stockmarket.lastupdate + (stockmarket.updateinterval * 3600000)){
+        if(Date.now() >= stockmarket.lastupdate + (stockmarket.updateinterval * 3600000) && stockmarket.active == 0){
             EnableStockMarket();
         }
     }
