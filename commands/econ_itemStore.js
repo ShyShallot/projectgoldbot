@@ -59,7 +59,7 @@ function createItemEmbed(start,message){
         } else {
             type = "Use"
         }
-        itemEmbed.addField(`${item.name}`, `Cost: ${dB.pointSymbol}${item.price}, Type: ${type}`);
+        itemEmbed.addField(`${item.name}`, `Cost: ${dB.pointSymbol}${pglibrary.commafy(item.price)}, Type: ${type}`);
     }
     return itemEmbed;
 }

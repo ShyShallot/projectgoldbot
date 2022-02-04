@@ -31,6 +31,9 @@ var item_handler = module.exports = {
                 } else{
                     return [dB, i];
                 }
+            } else {
+                err ='Could Not Find Item';
+                return err;
             }
         }
     },
@@ -42,20 +45,21 @@ var item_handler = module.exports = {
     createItem(message,args){
         dB = this.fetchItems();
         if(args[0] && args[1]){
-            name =  args[0].replace('_', " ");
+            itemName =  args[0].replace('_', " ");
             for(i=0;i<dB.length;i++){
-                if(dB[i].name == name){
+                if(dB[i].name == itemName){
                     err = "An Item with this name already exists";
                     return err;
                 }
             }
             cost = parseInt(args[1]);
             item = {
-                "name": name,
+                "name": itemName,
                 "price": cost
             }
             if(args[2]){
                 switch(args[2]){
+                    case 'Role':
                     case 'role':
                         if(args[3]){
                             item.func = function(){
@@ -79,13 +83,21 @@ var item_handler = module.exports = {
     },
     deleteItem(message,args){
         if(args[0]){
-            name =  args[0].replace('_', " ");
-            [items, index] = this.fetchItem(name)
+            itemName =  args[0].replace('_', " ");
+            err = this.fetchItem(itemName);
+            console.log(err);
+            if(typeof err === 'string'){
+                return err;
+            }
+            [items, index] = this.fetchItem(itemName);
+            console.log(items, index)
             if(typeof items === 'object'){
-                items.splice(i, 1);
-                this.saveDB(items);
-            } else {
-                return item;
+                console.log(items[index], itemName);
+                if(items[index].name == itemName){
+                    console.log(`Item to Delete: ${itemName}`);
+                    items.splice(i, 1);
+                    this.saveDB(items);
+                }
             }
         }
     }
