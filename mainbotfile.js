@@ -135,6 +135,7 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
         case 'delete-item':
             bot.commands.econ.get("delete-item").execute(message,args,bot);
             break;
+        case 'dep':
         case 'deposit':
             bot.commands.econ.get("deposit").execute(message,args,bot);
             break;
