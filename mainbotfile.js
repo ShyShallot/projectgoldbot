@@ -41,7 +41,7 @@ bot.on('guildMemberAdd', member => { // When a someone joins the server
         .setColor(0x00AE86)
         .setDescription("Welcome to the Project Gold Discord Server, Please Read <#631010878568923136> before continuing for server links and rules.")
         .setThumbnail("https://i.imgur.com/7s7AuxI.png")
-    bot.channels.cache.get(config.serverid).send({content: config.newUserMessages.Welcome, embeds: [welcomeEmbed] });
+    bot.guilds.cache.get(config.serverid).channels.cache.get(config.welcomeChannel).send({content: config.newUserMessages.Welcome, embeds: [welcomeEmbed] });
     points_manager.addUser(member.user);
 });
 
@@ -54,7 +54,7 @@ bot.on('guildMemberRemove', member => { // When someone leaves the server
         .setColor(0x00AE86)
         .setDescription("We wish the best, thanks for stopping by :).")
         .setThumbnail("https://i.imgur.com/7s7AuxI.png")
-    bot.channels.cache.get(config.serverid).send({content: `${name} ${config.newUserMessages.Leave}`, embeds: [welcomeEmbed] });
+        bot.guilds.cache.get(config.serverid).channels.cache.get(config.welcomeChannel).send({content: `${name} ${config.newUserMessages.Leave}`, embeds: [welcomeEmbed] });
     points_manager.removeUser(member.user.id);
 });
 
