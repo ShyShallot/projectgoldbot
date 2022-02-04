@@ -296,6 +296,7 @@ async function StockMarket() {
         console.log(`Logging final stock array`);
         console.log(finalstocks);
         stockmarket.stockmarketactive = 0;
+        stockmarket.lastupdate = Date.now();
         stockmarket.stocks = finalstocks; 
         pglibrary.WriteToJson(stockmarket, './stockmarket.json');
         console.log(`Setting Up timer for reenable`);
@@ -303,7 +304,14 @@ async function StockMarket() {
         console.log(stockTimeout);
         pglibrary.sleep(100);
         console.log(`End of StockMarket func`);
-    }   
+    } else {
+        if(typeof stockmarket.lastupdate === 'undefined'){
+            return;
+        }
+        if(Date.now() >= stockmarket.lastupdate + (stockmarket.updateinterval * 3600000)){
+            EnableStockMarket();
+        }
+    }
 }
 
 function GrabStockMarketData(){
