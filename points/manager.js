@@ -318,7 +318,7 @@ var manager = module.exports = {
         dB.pointSymbol = input;
         this.saveDB(dB);
     },
-    ready(){ // a function used so that if the bot restarts cooldowns using the setTimeout are taken careoff as they are cleared on restart
+    checkPausedTimers(){ // a function used so that if the bot restarts cooldowns using the setTimeout are taken careoff as they are cleared on restart
         dB = this.fetchData();
         users = dB.users;  
         for(i=0;i<users.length;i++){

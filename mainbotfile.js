@@ -27,7 +27,6 @@ bot.on('ready', () => { // Runs everything inside when the bot has successfully 
     }
     points_manager.setBot(bot);
     points_manager.firstSetup();
-    points_manager.ready();
     Economy() // handle our encomy functions for stuff that has to calculate every so often
 });
 
@@ -201,6 +200,7 @@ async function Economy(){ // Janky as fuck but works
             await ClearSQLDB(); // Temp thing till i figure out SQL more
             await WritetoSQLDB();
         }
+        points_manager.checkPausedTimers();
         await pglibrary.sleep(5000);
     }
 }
@@ -216,7 +216,7 @@ async function Jackpot(forced) { // Changed to a raffle but am too lazy to updat
         if (jackpotData.raffleactive == 0){ // if a raffle is not active
             console.log(hour, day);
             console.log(`Raffle Not Active Might Start One`);
-            if ((forced == 1) && jackpotData.raffleactive == 0 || hour >= 12 && jackpotData.raffleactive == 0) { // the Jackpot function was forced and their is no raffle active OR its 12pm and their is no raffle active
+            if ((forced == 1) && jackpotData.raffleactive == 0 || hour >= 12 && hour <= 21 && jackpotData.raffleactive == 0) { // the Jackpot function was forced and their is no raffle active OR its 12pm and their is no raffle active
                 pglibrary.ChannelLog(`Starting Jackpot`, 'Automated Function', bot);
                 console.log(`Starting Jackpot`);
                 await bot.commands.get("jackpot").execute(null, null, bot, 1); // run jackpot.js with a state of 1
