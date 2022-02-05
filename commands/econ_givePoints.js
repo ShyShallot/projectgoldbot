@@ -13,7 +13,7 @@ module.exports = {
             if(args[0] && args[1] && args[2]){
                 target = message.mentions.members.first();
                 amount = parseInt(args[1]);
-                err = points_manager.giveUserPoints(target.id, amount, args[2]);
+                err = points_manager.giveUserPoints(target.id, amount, args[2], true);
                 if(err){
                     message.channel.send(err);
                     return;
@@ -26,7 +26,7 @@ module.exports = {
             if(args[0] && args[1] && args[2]){
                 target = message.mentions.members.first();
                 amount = parseInt(args[1]);
-                err = points_manager.donatePoints(message.author.id, target.id, amount, args[2]);
+                err = points_manager.donatePoints(message.author.id, target.id, amount, args[2],true);
                 if(err){
                     message.channel.send(err);
                     return;

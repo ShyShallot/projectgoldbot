@@ -42,7 +42,7 @@ function IncomeGain(land, args, message) {
     console.log(`Bet Multiplier: ${multi}`);
     var gain = Math.round(args[1] * multi); // round their bet times the calculated mutliplier 
     var gaininPlace = commafy(gain); // create string var of their gained points with every three digits being seperated by a ,
-    points_manager.giveUserPoints(message.author.id, gain, 'cash');
+    points_manager.giveUserPoints(message.author.id, gain, 'cash',true);
     const embed = new MessageEmbed()
     .setTitle("Coin Flip")
     .setAuthor(`${message.author.username}`, message.author.displayAvatarURL)
@@ -80,7 +80,8 @@ function FlipCoin(cash, args, message) {
         var parsedMinBet = parseInt(config.mincoinbet); // turn the minimum bet found in config.json 
         if (args[1] >= parsedMinBet){ // if the given bet is over the minimum required bet
             console.log("Bet is over min");
-            points_manager.giveUserPoints(message.author.id, cash*-1, "cash");
+            console.log(cash);
+            points_manager.giveUserPoints(message.author.id, -args[1], "cash", true);
             var landing = Math.random() * 1.15; // the landing of the coin * 1.15, this makes it so it doesn't constantly land on 1 side to many times
             console.log(landing);
             if (landing <= 0.5 && args[0] == "heads"){ // if the landing is less than or equal to 0.5 and the user chose heads

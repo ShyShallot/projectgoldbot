@@ -299,7 +299,7 @@ var manager = module.exports = {
         if(users[userIndex].workCooldown){
             return 'false';
         }
-        users[userIndex].balance.cash += amount;
+        users[userIndex].balance.cash += ((amount - pglibrary.percentage(amount, dB.pointsTax)) * dB.pointsMulti);
         users[userIndex].workCooldown = true;
         users[userIndex].setOnCooldown = Date.now();
         dB.users = users;
