@@ -256,6 +256,7 @@ var manager = module.exports = {
         if(amount <= users[userIndex].balance.cash){
             users[userIndex].balance.cash -= amount;
             users[userIndex].balance.bank += amount;
+            users[userIndex].balance.bank = Math.round(users[userIndex].balance.bank*100)/100;
             dB.users = users;
             this.saveDB(dB);
         } else {
