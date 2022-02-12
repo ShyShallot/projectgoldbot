@@ -11,22 +11,38 @@ module.exports = {
     active: true,
     async execute(message, args, bot){
         dB = points_manager.fetchData();
-        failChance = 1;
+        failChance = 0.45;
         failAmount = pglibrary.getRandomInt(15000);
         let randomChance = Math.random();
         console.log(randomChance);
         if(failChance >= randomChance) {
-            string_handler.replacePlaceholder('fail', failAmount).then((result) =>{
-                console.log(result);
-                message.channel.send(result);
+            err = points_manager.crime(message.author.id, -failAmount);
+            if(err === 'false'){
+                sendResult(`You are on Cooldown for Crime`,message);
+                return;
+            }
+            string_handler.replacePlaceholder('fail', failAmount).then((result) => {
+                sendResult(result,message);
             }).catch((result)=>{
-                console.log(result);
-                message.channel.send(result);
+                sendResult(result,message);
             })
-            
-            //points_manager.work(message.author.id,failAmount);
             return;
-        }
-
+        } 
+        amount = pglibrary.getRandomInt(85000);
+        string_handler.replacePlaceholder('crime',amount).then((result) => {
+            err = points_manager.crime(message.author.id, amount);
+            console.log(err);
+            if(err === 'false'){
+                sendResult(err);
+                return;
+            }
+            sendResult(result,message);
+        }).catch((result) => {
+            sendResult(result,message);
+        })
     }
+}
+function sendResult(result,message){
+    console.log(result);
+    message.channel.send(`<@${message.author.id}>, ${result}`);
 }

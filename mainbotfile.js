@@ -180,6 +180,12 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
         case 'rob':
             bot.commands.econ.get("rob").execute(message,args,bot);
             break;
+        case 'crime':
+            bot.commands.econ.get("crime").execute(message,args,bot);
+            break;
+        case 'seteconprop':
+            bot.commands.econ.get("seteconprop").execute(message,args,bot);
+            break;
     }
 });
 bot.login(config.token);

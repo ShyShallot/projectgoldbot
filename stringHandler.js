@@ -1,7 +1,7 @@
 const fs = require('fs');
-const pglibrary = require('./libraryfunctions');
-const point_handler = require('./points/manager');
+const lib = require('./libraryfunctions');
 const os = require('os');
+const point_handler = require('./points/manager');
 const handler = module.exports = {
     dir: null,
     platform: os.platform(),
@@ -37,17 +37,23 @@ const handler = module.exports = {
             strings = handler.fetchStrings(type);
             if(strings == 'No Type'){
                 rej('No Type Found');
-                return 
+                return;
             }
             console.log(strings.length);
-            randomString = strings[pglibrary.getRandomInt(strings.length)];
-            count = (randomString.match(/$random/g) || []).length;
+            if(strings.length == 0){
+                rej('No Strings for that Category');
+                return;
+            }
+            randomString = strings[lib.getRandomInt(strings.length)];
+            console.log(randomString);
+            count = (randomString.match(/Srandom/g) || []).length;
             console.log(count);
             if(count >= 1){
                 for(i=0;i<count;i++){
-                    randomAmount = pglibrary.getRandomInt(10);
-                    console.log(randomAmount);
-                    randomString = randomString.replace('$random', `${randomAmount}`);
+                    console.log(`Srandom Index: ${i}`);
+                    randomAmount = lib.getRandomInt(10+i);
+                    console.log(`Random Amount: ${randomAmount}`);
+                    randomString = randomString.replace('Srandom', `${randomAmount}`);
                     console.log(randomString);
                 }
             }
@@ -55,7 +61,7 @@ const handler = module.exports = {
             console.log(dB.pointSymbol);
             randomString = randomString.replace('$symbol', dB.pointSymbol.toString());
             console.log(randomString);
-            randomString = randomString.replace('$amount', `${pglibrary.commafy(amount)}`);
+            randomString = randomString.replace('$amount', `${lib.commafy(amount)}`);
             res(randomString);
         });
     }

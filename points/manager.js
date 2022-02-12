@@ -58,8 +58,45 @@ var manager = module.exports = {
             "cooldown": false,
             "workCooldown": false,
             "setOnCooldown": null,
+            "crimeCooldown": false,
+            "lastCrime": null,
         }
         return newUserData;
+    },
+    addNewPropGlobal(prop, value){ // so we dont have to reset the economy when a new Property is introduced
+        let dB = this.fetchData();
+        let count = 0;
+        for(i=0;i<dB.users.length;i++){
+            if(typeof dB.users[i][prop] === 'undefined'){
+                console.log(prop);
+                dB.users[i][prop] = value;
+            } else {
+                count++;
+            }
+        }
+        this.saveDB(dB);
+        if(count == dB.users.length){
+            return `Everyone already has this property. ${count}`;
+        } else {
+            return `Successfully set prop ${prop} for every user but ${count} amount of people already had it`;
+        }
+    },
+    removePropGlobal(prop){
+        let dB = this.fetchData();
+        let count = 0;
+        for(i=0;i<dB.users.length;i++){
+            if(typeof dB.users[i][prop] === 'undefined'){
+                count++;
+            } else {
+                delete dB.users[i][prop];
+            }
+        }
+        this.saveDB(dB);
+        if(count == dB.users.length){
+            return `Removed property ${prop} from ${count} users`;
+        } else {
+            return `Removed property ${prop} but ${count} users already didn't have it`;
+        }
     },
     removeUser: function(id){ // remove a user from the points-db for whatever reason
         let dbData = this.fetchData();
@@ -320,17 +357,39 @@ var manager = module.exports = {
             return 'false';
         }
         users[userIndex].balance.cash += ((amount - pglibrary.percentage(amount, dB.pointsTax)) * dB.pointsMulti);
-        users[userIndex].balance.cash = Math.round(users[userIndex].balance.cash*100)/100;
+        users[userIndex].balance.cash = Math.round(users[userIndex].balance.cash*100)/100; // round to the hundredths place
         users[userIndex].workCooldown = true;
         users[userIndex].setOnCooldown = Date.now();
         dB.users = users;
         this.saveDB(dB);
         setTimeout(()=> this.removeWorkCooldown(id), dB.workCooldownTime);
     },
+    crime(id,amount){
+        dB = this.fetchData();
+        [users, userIndex] = this.fetchUser(id);
+        if(users[userIndex].crimeCooldown){
+            console.log(`User: ${users[userIndex].id} is on cooldown`);
+            return 'false';
+        }
+        users[userIndex].balance.cash += (amount * dB.pointsMulti);
+        users[userIndex].balance.cash = Math.round(users[userIndex].balance.cash*100)/100; // round to the hundredths place
+        users[userIndex].crimeCooldown = true;
+        users[userIndex].lastCrime = Date.now();
+        dB.users = users;
+        this.saveDB(dB);
+        setTimeout(()=> this.removeCrimeCooldown(id), dB.crimeCooldownTime);
+    },
     removeWorkCooldown(id){
         dB = this.fetchData();
         [users, userIndex] = this.fetchUser(id);
         users[userIndex].workCooldown = false;
+        dB.users = users;
+        this.saveDB(dB);
+    },
+    removeCrimeCooldown(id){
+        dB = this.fetchData();
+        [users, userIndex] = this.fetchUser(id);
+        users[userIndex].crimeCooldown = false;
         dB.users = users;
         this.saveDB(dB);
     },
@@ -347,6 +406,12 @@ var manager = module.exports = {
                 if(Date.now() >= users[i].setOnCooldown + dB.workCooldownTime){
                     users[i].workCooldown = false;
                     users[i].setOnCooldown = null;
+                }
+            }
+            if(users[i].crimeCooldown && typeof users[i].lastCrime !== 'undefined'){
+                if(Date.now() >= users[i].lastCrime + dB.crimeCooldownTime){
+                    users[i].crimeCooldown = false;
+                    users[i].lastCrime = null;
                 }
             }
         }
