@@ -15,7 +15,6 @@ module.exports = {
         workStrings = [
             `You Worked at a Tech Job for ${pglibrary.getRandomInt(18)} Hours and drank ${pglibrary.getRandomInt(5)} cups of coffee and earned ${dB.pointSymbol}${pglibrary.commafy(amount)}`, 
             `You Slammed your head on a table ${pglibrary.getRandomInt(21)} times and won ${dB.pointSymbol}${pglibrary.commafy(amount)}!`,
-            `You scammed ${pglibrary.getRandomInt(7)} old people and unfortunately got away with ${dB.pointSymbol}${pglibrary.commafy(amount)}, hope you rot!`
         ]
         workStatus = points_manager.work(message.author.id,amount);
         if(workStatus == 'false'){
