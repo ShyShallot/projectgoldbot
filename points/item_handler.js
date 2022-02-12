@@ -24,6 +24,7 @@ var item_handler = module.exports = {
             return err;
         }
         dB = this.fetchItems();
+        console.log(name);
         for(i=0;i<dB.length;i++){
             if(dB[i].name == name){
                 if(bool){

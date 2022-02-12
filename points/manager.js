@@ -113,14 +113,18 @@ var manager = module.exports = {
         if(location == "bank"){
             if(taxFree){
                 users[userIndex].balance.bank += (amount * dB.pointsMulti);
+                users[userIndex].balance.bank = Math.round(users[userIndex].balance.bank*100)/100;
             } else {
                 users[userIndex].balance.bank += ((amount - pglibrary.percentage(amount, dB.pointsTax)) * dB.pointsMulti);
+                users[userIndex].balance.bank = Math.round(users[userIndex].balance.bank*100)/100;
             }
         } else if(location == "cash"){
             if(taxFree){
                 users[userIndex].balance.cash += (amount * dB.pointsMulti);
+                users[userIndex].balance.cash = Math.round(users[userIndex].balance.cash*100)/100;
             } else {
                 users[userIndex].balance.cash += ((amount - pglibrary.percentage(amount, dB.pointsTax)) * dB.pointsMulti);
+                users[userIndex].balance.cash = Math.round(users[userIndex].balance.cash*100)/100;
             }
         } else {
             console.error('Invalid Points Location Provided');
@@ -173,6 +177,7 @@ var manager = module.exports = {
             if(!users[userIndex].cooldown){
                 console.log(`Giving User: ${id}, ${dB.pointsPerMessage} points`);
                 users[userIndex].balance.cash += ((dB.pointsPerMessage - pglibrary.percentage(dB.pointsPerMessage, dB.pointsTax)) * dB.pointsMulti);
+                users[userIndex].balance.cash = Math.round(users[userIndex].balance.cash*100)/100;
                 users[userIndex].cooldown = true;
                 dB.users = users;
                 this.saveDB(dB);
@@ -266,32 +271,47 @@ var manager = module.exports = {
         dB.users = users;
         this.saveDB(dB);
     },
-    async useItem(id, item){
-        dB = this.fetchData();
-        [users, userIndex] = this.fetchUser(id);
-        for(i=0;i<users[userIndex].inv.length;i++){
-            console.log(users[userIndex].inv[i]);
-            if(users[userIndex].inv[i].name == item.name){
-                users[userIndex].inv.splice(i, 1);
-            } else {
-                err = "Can't find Item";
-                return err;
+    async useItem(id, item, message){
+        return new Promise(async function(res,rej){
+            dB = manager.fetchData();
+            [users, userIndex] = manager.fetchUser(id);
+            if(users[userIndex].inv.length <= 0){
+                rej('Your Inventory is Empty!');
+                return;
             }
-        }
-        dB.users = users;
-        this.saveDB(dB);
-        switch(item.type){
-            case 'role':
-                roleId = item.typeParam.replace(/[^0-9\.]+/g,"");
-                let guild = this.bot.guilds.cache.get(config.serverid);
-                let userList = await guild.members.fetch().then(members =>{ // since the cache doesnt get EVERY user we manually ask for each user in the server
-                    members.forEach(member => {
-                        if(member.id == users[userIndex]){
-                            member.roles.add(roleId);
-                        }
+            for(i=0;i<users[userIndex].inv.length;i++){
+                console.log(`User Inv Index: ${i}`);
+                console.log(users[userIndex].inv[i]);
+                if(users[userIndex].inv[i].name == item.name){
+                    users[userIndex].inv.splice(i, 1);
+                } else {
+                    rej(`Your Inventory Does not contain ${item.name}`);
+                    return;
+                }
+            }
+            dB.users = users;
+            manager.saveDB(dB);
+            switch(item.type){
+                case 'role':
+                    roleId = item.typeParam.replace(/[^0-9\.]+/g,"");
+                    let guild = message.guild;
+                    let userList = await guild.members.fetch().then(members =>{ // since the cache doesnt get EVERY user we manually ask for each user in the server
+                        members.forEach(member => {
+                            if(member.id == users[userIndex].id){
+                                let role = guild.roles.cache.find(r => r.id === roleId);
+                                console.log(role);
+                                if(typeof role !== 'object'){
+                                    console.error(`Could Not Find Role: ${roleId}`);
+                                    rej('Could Not Find Role associated with this Item, if you not an Admin please let this be known.');
+                                    return;
+                                }
+                                member.roles.add(role);
+                                res('done');
+                            }
+                        });
                     });
-                });
-        }
+            }
+        });
     },
     work(id,amount){
         dB = this.fetchData();
@@ -300,6 +320,7 @@ var manager = module.exports = {
             return 'false';
         }
         users[userIndex].balance.cash += ((amount - pglibrary.percentage(amount, dB.pointsTax)) * dB.pointsMulti);
+        users[userIndex].balance.cash = Math.round(users[userIndex].balance.cash*100)/100;
         users[userIndex].workCooldown = true;
         users[userIndex].setOnCooldown = Date.now();
         dB.users = users;
