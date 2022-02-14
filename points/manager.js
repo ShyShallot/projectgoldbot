@@ -143,6 +143,11 @@ var manager = module.exports = {
         console.log(`Finished Task in: ${Date.now() - startTime}ms`);
         dB.setup = true;
         this.saveDB(dB);
+        if(bool){
+            pglibrary.EconChannelLog('The Server Economy has been reset', 'Admin Forced', this.bot);
+        } else {
+            pglibrary.EconChannelLog('Server Economy has been setup', 'Automated On Start Up', this.bot);
+        }
     },
     giveUserPoints: function(id, amount, location,taxFree){
         let [users, userIndex] = this.fetchUser(id);
@@ -170,20 +175,22 @@ var manager = module.exports = {
         }
         dB.users = users;
         this.saveDB(dB);
+        pglibrary.EconChannelLog(`User ${id} has been given/removed ${pglibrary.commafy(amount)} points`, 'Command', this.bot);
     },
     setUserPoints: function(id, points, location){
         let [users, userIndex] = this.fetchUser(id);
         let dB = this.fetchData();
         if(location == "bank"){
-            users[userIndex].balance.bank += amount;
+            users[userIndex].balance.bank += points;
         } else if(location == "cash"){
-            users[userIndex].balance.cash += amount;
+            users[userIndex].balance.cash += points;
         } else {
             err = "Invalid Location";
             return err;
         }
         dB.users = users;
         this.saveDB(dB);
+        pglibrary.EconChannelLog(`User ${id} points have been set to ${pglibrary.commafy(points)}.`, `Admin Command`, this.bot);
     },
     donatePoints(patronId, targetID, amount){
         let dB = this.fetchData();
@@ -206,6 +213,7 @@ var manager = module.exports = {
             err = "You do not have enough points";
             return err;
         }
+        pglibrary.EconChannelLog(`User ${patronId} has given ${targetID} ${pglibrary.commafy(amount)} points.`, `Command`, this.bot);
     },
     messagePoints(id){
         dB = this.fetchData();
@@ -263,6 +271,7 @@ var manager = module.exports = {
             err = "Not Enough Points to Deposit";
             return err;
         }
+        pglibrary.EconChannelLog(`User ${id} has deposited ${pglibrary.commafy(points)} points`, `Command`, this.bot);
     },
     withdrawPoints(id,amount){
         dB = this.fetchData();
@@ -276,6 +285,7 @@ var manager = module.exports = {
             err = "Not Enough Points to Withdraw";
             return err;
         }
+        pglibrary.EconChannelLog(`User ${id} has Withdrew ${pglibrary.commafy(points)} points`, `Command`, this.bot);
     },
     sortForLeaderboard(){
         userDB = this.fetchData().users;
@@ -364,6 +374,7 @@ var manager = module.exports = {
         dB.users = users;
         this.saveDB(dB);
         setTimeout(()=> this.removeWorkCooldown(id), dB.workCooldownTime);
+        pglibrary.EconChannelLog(`User ${id} has worked and earned ${pglibrary.commafy(amount)} points`, `Command`, this.bot);
     },
     crime(id,amount){
         dB = this.fetchData();
@@ -379,6 +390,7 @@ var manager = module.exports = {
         dB.users = users;
         this.saveDB(dB);
         setTimeout(()=> this.removeCrimeCooldown(id), dB.crimeCooldownTime);
+        pglibrary.EconChannelLog(`User ${id} has committed a crime and earned ${pglibrary.commafy(amount)} points`, `Command`, this.bot);
     },
     removeWorkCooldown(id){
         dB = this.fetchData();
@@ -386,6 +398,7 @@ var manager = module.exports = {
         users[userIndex].workCooldown = false;
         dB.users = users;
         this.saveDB(dB);
+        pglibrary.EconChannelLog(`Removed Work Cooldown for user ${id}`, `Automated Timer`, this.bot);
     },
     removeCrimeCooldown(id){
         dB = this.fetchData();
@@ -393,6 +406,7 @@ var manager = module.exports = {
         users[userIndex].crimeCooldown = false;
         dB.users = users;
         this.saveDB(dB);
+        pglibrary.EconChannelLog(`Removed Crime Cooldown for user ${id}`, `Automated Timer`, this.bot);
     },
     setEconSymbol(input){
         dB = this.fetchData();

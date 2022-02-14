@@ -107,4 +107,20 @@ function ChannelLog(content, reason, bot){
     logchannel.send({embeds: [logEmbed]});
 }
 
-module.exports = {numDigits, getRandomInt, WriteToJson, sleep, commafy, convertMS, addHours, ChannelLog, percentage};
+function EconChannelLog(content,reason,bot){
+    logchannel = bot.channels.cache.get(config.econLogChannel);
+    if(!logchannel){
+        console.error(`INVALID LOG CHANNEL CANCELING!`);
+        return;
+    }
+    date = new Date();
+    logEmbed = new MessageEmbed()
+    .setTitle(reason)
+    .setDescription(content)
+    .setTimestamp()
+    .setAuthor(`${bot.user.username}`, `${bot.user.avatarURL()}`)
+    .setColor(0x00AE86);
+    logchannel.send({embeds: [logEmbed]});
+}
+
+module.exports = {numDigits, getRandomInt, WriteToJson, sleep, commafy, convertMS, addHours, ChannelLog, EconChannelLog, percentage};
