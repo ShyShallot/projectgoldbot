@@ -15,7 +15,6 @@ var item_handler = module.exports = {
     },
     fetchItems(){
         this.dir = __dirname;
-        console.log(this.dir);
         return JSON.parse(fs.readFileSync(this.dir + this.folderDirection() +'items.json'));
     },
     fetchItem(name,bool){
@@ -24,15 +23,16 @@ var item_handler = module.exports = {
             return err;
         }
         dB = this.fetchItems();
-        console.log(name);
+        console.log(dB.length);
         for(i=0;i<dB.length;i++){
+            console.log(i);
             if(dB[i].name == name){
                 if(bool){
                     return dB[i];
                 } else{
                     return [dB, i];
                 }
-            } else {
+            } else if (i == dB.length){
                 err ='Could Not Find Item';
                 return err;
             }
@@ -64,6 +64,19 @@ var item_handler = module.exports = {
                     case 'role':
                         item.type = 'role';
                         item.typeParam = args[3];
+                        break;
+                    case 'Points':
+                    case 'points':
+                        pointsNum = parseInt(args[3]);
+                        if(isNaN(pointsNum)){
+                            err = 'Given Argument is not a valid number'
+                            return err;
+                        } else if(pointsNum == 0){
+                            err = 'Given Number cannot be 0';
+                            return err;
+                        }
+                        item.type ='points';
+                        item.typeParam = pointsNum;
                         break;
                 }
             }

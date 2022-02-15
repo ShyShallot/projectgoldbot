@@ -271,7 +271,7 @@ var manager = module.exports = {
             err = "Not Enough Points to Deposit";
             return err;
         }
-        pglibrary.EconChannelLog(`User ${id} has deposited ${pglibrary.commafy(points)} points`, `Command`, this.bot);
+        pglibrary.EconChannelLog(`User ${id} has deposited ${pglibrary.commafy(amount)} points`, `Command`, this.bot);
     },
     withdrawPoints(id,amount){
         dB = this.fetchData();
@@ -285,7 +285,7 @@ var manager = module.exports = {
             err = "Not Enough Points to Withdraw";
             return err;
         }
-        pglibrary.EconChannelLog(`User ${id} has Withdrew ${pglibrary.commafy(points)} points`, `Command`, this.bot);
+        pglibrary.EconChannelLog(`User ${id} has Withdrew ${pglibrary.commafy(amount)} points`, `Command`, this.bot);
     },
     sortForLeaderboard(){
         userDB = this.fetchData().users;
@@ -337,8 +337,6 @@ var manager = module.exports = {
                     return;
                 }
             }
-            dB.users = users;
-            manager.saveDB(dB);
             switch(item.type){
                 case 'role':
                     roleId = item.typeParam.replace(/[^0-9\.]+/g,"");
@@ -358,7 +356,12 @@ var manager = module.exports = {
                             }
                         });
                     });
+                case 'points':
+                    users[userIndex].balance.cash += item.typeParam;
+                    res('done');
             }
+            dB.users = users;
+            manager.saveDB(dB);
         });
     },
     work(id,amount){
