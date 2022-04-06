@@ -34,15 +34,15 @@ function StockHandler(message, args) {
     user = message.author;
     if (typeof stock !== `undefined`) { // check if the stock var has something valid defined to it
         if (args[2]) { // if we have a 3rd argument
-            args[2] = parseInt(args[2]); // turn the 3rd argument into a int
-            if (typeof args[2] === `number` && args[2] > 0) { // check if our 3rd argument is a number and is above 0.
+            if ( args[2] == "all" || args[2] == "half" || typeof parseInt(args[2]) === 'number' && parseInt(args[2]) > 0) { // check if our 3rd argument is a number and is above 0.
+                curUser = GrabUserInfo(user.id, stock); // GrabUserInfo returns valid define it to a var
                 if(args[0] == "buy"){
                     if (MaxUserStocks(user.id)) { // check if the user has the maximum amount of stocks.
                         message.channel.send(`<@${user.id}>, you own the max amount stocks, purchase did not go through`);
                         return; // stop all function if they do.
                     }
                     if (GrabUserInfo(user.id, stock)) { // check if user exists as a owner for the given stock
-                        curUser = GrabUserInfo(user.id, stock); // GrabUserInfo returns valid define it to a var
+                        
                         if (args[2] + curUser.amount > stockdata.maxownedstocks) { // if the requested amount plus the amount they already have is greater than the limit.
                             message.channel.send(`<@${user.id}>, The entered amount of stocks (${args[2]}) along with your currently owned stocks (${curUser.amount}) will go over the allowed amount of owned stocks which is ${stockdata.maxownedstocks}.`);
                             return; 
@@ -70,6 +70,26 @@ function StockHandler(message, args) {
                         message.channel.send(`<@${message.author.id}>, you don't have enough money for that action.`);
                     }
                 } else{ // since we already check our first argument we dont need an if else
+                    curUser = GrabUserInfo(user.id, stock); // GrabUserInfo returns valid define it to a var
+                    for(i = 0, y = stock.owners.length; i < y; i++){
+                        if(stock.owners[i].id == user.id){
+                            if(args[2] == "all"){
+                                if(stock.owners[i].amount > 0){
+                                    args[2] = stock.owners[i].amount;
+                                } else{
+                                    message.channel.send(`<@${message.author.id}>, You Don't have enough stocks`);
+                                    return;
+                                }
+                            } else if (args[2] == "half"){
+                                if(stock.owners[i].amount > 1){
+                                    args[2] = Math.round(stock.owners[i].amount / 2);
+                                } else {
+                                    message.channel.send(`<@${message.author.id}>, You Don't have enough stocks for half`);
+                                    return;
+                                }
+                            }
+                        }
+                    }
                     negativeAmount = args[2]*-1;
                     if(UserHasEnoughStocks(user.id,stock,args[2])){
                         let stockprice = stock.price;
