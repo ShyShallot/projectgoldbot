@@ -49,6 +49,7 @@ function createLeaderboardEmbed(start,message){
         if(start == 0){
             start = 1
         }
+        dB = points_manager.fetchData();
         leaderEmbed.addField(`${start+i}. ${user.username}`, `${dB.pointSymbol}${pglibrary.commafy(user.total)}`);
     }
     return leaderEmbed;

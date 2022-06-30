@@ -368,7 +368,7 @@ var manager = module.exports = {
         dB = this.fetchData();
         [users, userIndex] = this.fetchUser(id);
         if(users[userIndex].workCooldown){
-            return 'false';
+            return;
         }
         users[userIndex].balance.cash += ((amount - pglibrary.percentage(amount, dB.pointsTax)) * dB.pointsMulti);
         users[userIndex].balance.cash = Math.round(users[userIndex].balance.cash*100)/100; // round to the hundredths place
@@ -382,6 +382,9 @@ var manager = module.exports = {
     crime(id,amount){
         dB = this.fetchData();
         [users, userIndex] = this.fetchUser(id);
+        if(users[userIndex].crimeCooldown){
+            return;
+        }
         users[userIndex].balance.cash += (amount * dB.pointsMulti);
         users[userIndex].balance.cash = Math.round(users[userIndex].balance.cash*100)/100; // round to the hundredths place
         users[userIndex].crimeCooldown = true;

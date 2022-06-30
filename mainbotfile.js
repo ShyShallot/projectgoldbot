@@ -15,7 +15,7 @@ const levels = require('./levels/level_handler');
 bot.commands = new Map(); // New Array for our commands
 bot.commands.econ = new Map();
 bot.commands.level = new Map();
-bot.on('ready', () => { // Runs everything inside when the bot has successfully logged in and is active
+bot.on('ready', async () => { // Runs everything inside when the bot has successfully logged in and is active
     console.log('PG Bot Ready');
     console.log(`Current Game: ${config.game}`);
     bot.user.setActivity(config.game, {type: 'PLAYING'}); // Set our game status
@@ -29,8 +29,10 @@ bot.on('ready', () => { // Runs everything inside when the bot has successfully 
             bot.commands.set(command.name, command); // add our commands to our array
         }
     }
+    await pglibrary.sleep(1000);
     points_manager.setBot(bot);
     points_manager.firstSetup();
+    await pglibrary.sleep(1000);
     levels.setBot(bot);
     levels.firstSetup();
     Economy() // handle our encomy functions for stuff that has to calculate every so often
