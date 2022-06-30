@@ -197,7 +197,7 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
             bot.commands.level.get("rank").execute(message,args,bot);
             break;
         case 'lvllb':
-            bot.commands.level.get("levellb").execute(message.args.bot);
+            bot.commands.level.get("levellb").execute(message,args,bot);
             break;
         case 'lvlrst':
             if(message.member.roles.cache.find(role => role.name === config.modrole)){
