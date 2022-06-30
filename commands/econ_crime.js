@@ -37,7 +37,6 @@ module.exports = {
         amount = pglibrary.getRandomInt(85000);
         string_handler.replacePlaceholder('crime',amount).then((result) => {
             points_manager.crime(message.author.id, amount);
-            console.log(err);
             sendResult(result,message);
         }).catch((result) => {
             sendResult(result,message);
