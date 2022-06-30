@@ -28,6 +28,10 @@ module.exports = {
             return;
         } else {
             [cash,bank] = points_manager.getUserBalance(message.author.id);
+            if(typeof item === 'undefined'){
+                console.log(`Could Not Find Item`);
+                return;
+            }
             if(cash >= item.price){
                 if(args[1]){
                     numberArg = parseInt(args[1]);

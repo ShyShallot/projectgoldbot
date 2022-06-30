@@ -29,41 +29,64 @@ module.exports = {
         .setColor(0xFF4500)
         .addField("Bot Info: ", `My Prefix: **${config.prefix}**. You can find my source code at: https://github.com/ShyShallot/projectgoldbot`)
         .addField("Commands", "1")
-        .addField("Economy Comamnds", '1');
+        .addField("Economy Commands", '1')
+        .addField("Level Commands", '1');
         var i=0;
+        var field = 1;
         for (const command of commands) { // for every file in our commandFiles Mapping
             i++;
-            if(helpembed.fields[1].value.startsWith('1')){
+            if(helpembed.fields[field].value.startsWith('1')){
                 if(command[1].active){
-                    helpembed.fields[1].value = `${command[1].name}, `;
+                    helpembed.fields[field].value = `${command[1].name}, `;
                 }
             } else {
                 if(command[1].active){
                     if(i+2 == commands.size){
                         console.log(i, commands.size);
-                        helpembed.fields[1].value += `${command[1].name}.`;
+                        helpembed.fields[field].value += `${command[1].name}.`;
                     } else {
                         console.log(i, commands.size);
-                        helpembed.fields[1].value += `${command[1].name}, `;
+                        helpembed.fields[field].value += `${command[1].name}, `;
                     }
                 }
             }
         }
+        field++;
         var i=0;
         for (const command of commands.econ) { // for every file in our commandFiles Mapping
             i++;
-            if(helpembed.fields[2].value.startsWith('1')){
+            if(helpembed.fields[field].value.startsWith('1')){
                 if(command[1].active){
-                    helpembed.fields[2].value = `${command[1].name}, `;
+                    helpembed.fields[field].value = `${command[1].name}, `;
                 }
             } else {
                 if(command[1].active){
                     if(i == commands.econ.size){
                         console.log(i, commands.econ.size);
-                        helpembed.fields[2].value += `${command[1].name}.`;
+                        helpembed.fields[field].value += `${command[1].name}.`;
                     } else {
                         console.log(i, commands.econ.size);
-                        helpembed.fields[2].value += `${command[1].name}, `;
+                        helpembed.fields[field].value += `${command[1].name}, `;
+                    }
+                }
+            }
+        }
+        field++;
+        var i=0;
+        for (const command of commands.level) { // for every file in our commandFiles Mapping
+            i++;
+            if(helpembed.fields[field].value.startsWith('1')){
+                if(command[1].active){
+                    helpembed.fields[field].value = `${command[1].name}, `;
+                }
+            } else {
+                if(command[1].active){
+                    if(i == commands.level.size){
+                        console.log(i, commands.level.size);
+                        helpembed.fields[field].value += `${command[1].name}.`;
+                    } else {
+                        console.log(i, commands.level.size);
+                        helpembed.fields[field].value += `${command[1].name}, `;
                     }
                 }
             }

@@ -10,17 +10,23 @@ module.exports = {
     args: 'None',
     active: true,
     async execute(message, args, bot){
-        dB = points_manager.fetchData();
+        [users,userIndex] = points_manager.fetchUser(message.author.id);
+        db = points_manager.fetchData();
+        if(users[userIndex].crimeCooldown){
+            timeDiff = pglibrary.convertMS(Math.abs(users[userIndex].lastCrime+db.crimeCooldownTime));
+            timeDisplay = `${timeDiff.hour} hour(s).`;
+            if(timeDiff.hour < 1){
+                timeDisplay = `${timeDiff.minute} minutes.`;
+            }
+            message.channel.send(`<@${message.author.id}>, You have too much heat and cannot commit a crime for ${timeDisplay}`);
+            return;
+        }
         failChance = 0.45;
         failAmount = pglibrary.getRandomInt(15000);
         let randomChance = Math.random();
         console.log(randomChance);
         if(failChance >= randomChance) {
-            err = points_manager.crime(message.author.id, -failAmount);
-            if(err === 'false'){
-                sendResult(`You are on Cooldown for Crime`,message);
-                return;
-            }
+            points_manager.crime(message.author.id, -failAmount);
             string_handler.replacePlaceholder('fail', failAmount).then((result) => {
                 sendResult(result,message);
             }).catch((result)=>{
@@ -30,12 +36,8 @@ module.exports = {
         } 
         amount = pglibrary.getRandomInt(85000);
         string_handler.replacePlaceholder('crime',amount).then((result) => {
-            err = points_manager.crime(message.author.id, amount);
+            points_manager.crime(message.author.id, amount);
             console.log(err);
-            if(err === 'false'){
-                sendResult(err);
-                return;
-            }
             sendResult(result,message);
         }).catch((result) => {
             sendResult(result,message);

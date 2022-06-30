@@ -10,9 +10,11 @@ const pglibrary = require("./libraryfunctions.js");
 const sqlconfig = require('./sql.json');
 const SQL = require('mssql');
 const points_manager = require('./points/manager');
+const levels = require('./levels/level_handler');
 
 bot.commands = new Map(); // New Array for our commands
 bot.commands.econ = new Map();
+bot.commands.level = new Map();
 bot.on('ready', () => { // Runs everything inside when the bot has successfully logged in and is active
     console.log('PG Bot Ready');
     console.log(`Current Game: ${config.game}`);
@@ -21,12 +23,16 @@ bot.on('ready', () => { // Runs everything inside when the bot has successfully 
         const command = require(`./commands/${file}`); // load the data of the file into memory 
         if(file.startsWith('econ_')){
             bot.commands.econ.set(command.name,command);
+        } else if(file.startsWith('level_')){
+            bot.commands.level.set(command.name, command);
         } else {
             bot.commands.set(command.name, command); // add our commands to our array
         }
     }
     points_manager.setBot(bot);
     points_manager.firstSetup();
+    levels.setBot(bot);
+    levels.firstSetup();
     Economy() // handle our encomy functions for stuff that has to calculate every so often
 });
 
@@ -65,6 +71,7 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
         return;
     }
     points_manager.messagePoints(message.author.id);
+    levels.messageXP(message.author.id,message);
     const args = message.content.slice(config.prefix.length).split(/ +/g); // basic argument by spliting a message by spaces, with the first argument given is args[0]
     const command = args.shift().toLowerCase(); 
     console.log(command);
@@ -186,6 +193,28 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
         case 'seteconprop':
             bot.commands.econ.get("seteconprop").execute(message,args,bot);
             break;
+        case 'rank':
+            bot.commands.level.get("rank").execute(message,args,bot);
+            break;
+        case 'lvllb':
+            bot.commands.level.get("levellb").execute(message.args.bot);
+            break;
+        case 'lvlrst':
+            if(message.member.roles.cache.find(role => role.name === config.modrole)){
+                bot.commands.level.get("levelreset").execute(message,args,bot);
+            }
+            break;
+        case 'lvlmulti':
+            if(message.member.roles.cache.find(role => role.name === config.modrole)){
+                bot.commands.level.get("levelmulti").execute(message,args,bot);
+            }
+            break;
+        case 'levelcooldown':
+            if(message.member.roles.cache.find(role => role.name === config.modrole)){
+                bot.commands.level.get("levelcooldown").execute(message,args,bot);
+            }
+            break;
+
     }
 });
 bot.login(config.token);

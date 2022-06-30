@@ -38,6 +38,12 @@ function WriteToJson(rawdata, location) {
         return true;
     });
 }
+
+function ReadJSON(location){
+    return JSON.parse(fs.readFileSync(location,'utf-8'));
+}
+
+
 /**
  * 
  * @param {number} num Number to commafy
@@ -123,4 +129,4 @@ function EconChannelLog(content,reason,bot){
     logchannel.send({embeds: [logEmbed]});
 }
 
-module.exports = {numDigits, getRandomInt, WriteToJson, sleep, commafy, convertMS, addHours, ChannelLog, EconChannelLog, percentage};
+module.exports = {numDigits, getRandomInt, WriteToJson, sleep, commafy, convertMS, addHours, ChannelLog, EconChannelLog, percentage,ReadJSON};
