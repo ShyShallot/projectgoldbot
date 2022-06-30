@@ -33,12 +33,12 @@ function Embed(user,level,xp,nextXP){
     leaderBoard = levels.sortForLeaderboard();
     for(i=0;i<leaderBoard.length;i++){
         if(leaderBoard[i].username == user.username){
-            position = i++;
+            position = i;
         }
     }
     levelEmbed = new MessageEmbed()
         .setTitle(user.username)
-        .setDescription(`Leaderboard Ranking: ${position}`)
+        .setDescription(`Leaderboard Ranking: ${position+1}`)
         .setTimestamp()
         .setColor(0x00AE86)
         .addField('Current Level:', `${level}`, true)
