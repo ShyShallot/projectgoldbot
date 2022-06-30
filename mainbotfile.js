@@ -227,6 +227,7 @@ function AutomatedMessage(message) { // this is to keep annoying as people from 
 }
 
 async function Economy(){ // Janky as fuck but works
+    await pglibrary.sleep(1000);
     while (true) {
         await Heists();
         await Jackpot(0); // Init Raffle
