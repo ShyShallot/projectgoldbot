@@ -79,7 +79,7 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     //  bot.commands.get("name").execute(message, args, bot)
     //}
     cmd = bot.commands.get(command);
-    if(cmd.admin){
+    if(typeof cmd.admin === 'boolean' && cmd.admin){
         if(message.member.roles.cache.find(role => role.name === config.modrole)){
             cmd.execute(message,args,bot);
         }
