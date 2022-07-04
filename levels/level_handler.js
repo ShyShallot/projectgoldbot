@@ -84,12 +84,41 @@ var manager = module.exports = {
     },
     firstSetup: async function(bool){ // if the bool is true it overrides everything and force restarts points-db.json
         dB = this.fetchData();
+        if(dB.users.length == 0 && dB.setup){
+            dB.setup = false;
+        }
         if(dB.setup){ // to clear any message cooldowns on startup but only if we have setup before
+            let startTime = Date.now();
             users = dB.users;
             if(users.length <= 0){return;}
             for(i=0;i<users.length;i++){
                 this.removeUserCooldown(users[i].id);
             }
+            if(dB.levelsRewards.length == 0){return};
+            rewards = dB.levelsRewards.sort((a,b) => b.level-a.level);
+            //console.log(rewards);
+            let guild = this.bot.guilds.cache.get(config.serverid);
+            let userList = await guild.members.fetch().then(members =>{ // since the cache doesnt get EVERY user we manually ask for each user in the server
+                console.log(`Checking for existing Levels`);
+                members.forEach(member => {
+                    if(member.user.bot){
+                        console.log(`User is a Bot`);
+                        return;
+                    }
+                    let user = this.fetchUser(member.id,true);
+                    //console.log(member.id);
+                    for(i=0;i<rewards.length;i++){
+                        console.log(rewards[i]);
+                        if(user.level == rewards[i].level){return};
+                        //console.log(member.roles.cache);
+                        if(member.roles.cache.some(role => role.id === rewards[i].roleID)){
+                            //console.log(`Setting User Data`);
+                            this.setUserData(member.id,rewards[i].level);
+                        }
+                    }
+                });
+            });
+            console.log(`Done, took: ${Date.now()-startTime}ms`);
         }
         if(dB.setup && !bool){
             return;
@@ -150,12 +179,14 @@ var manager = module.exports = {
         }
         if(bool){
             users[userIndex].xp += amount;
+            pglibrary.EconChannelLog(`User ${id} xp has been set to ${pglibrary.commafy(users[userIndex].xp += amount)}.`, `Admin Command`, this.bot);
         } else {
             users[userIndex].level = amount;
+            users[userIndex].xp = 500 * dB.nextLevelXpMulti * amount;
+            pglibrary.EconChannelLog(`User ${id} level has been set to ${pglibrary.commafy(amount)}.`, `Admin Command`, this.bot);
         }
         dB.users = users;
         this.saveDB(dB);
-        pglibrary.EconChannelLog(`User ${id} points have been set to ${pglibrary.commafy(points)}.`, `Admin Command`, this.bot);
     },
     messageXP(id,message){
         dB = this.fetchData();

@@ -64,6 +64,7 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     if (message.author.bot){ // if the message is sent by a bot don't even bother
         return;
     }
+    config.serverid = message.guild.id;
     points_manager.messagePoints(message.author.id);
     levels.messageXP(message.author.id,message);
     const args = message.content.slice(config.prefix.length).split(/ +/g); // basic argument by spliting a message by spaces, with the first argument given is args[0]
