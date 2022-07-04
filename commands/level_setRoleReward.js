@@ -12,12 +12,12 @@ module.exports = {
     admin: true,
     level: true,
     async execute(message, args, bot){
-        if(args.length != 2){message.channel.send(`<@${message.author.id}, Not Enough Args`); return;}
+        if(args.length != 2){message.channel.send(`<@${message.author.id}>, Not Enough Args`); return;}
         roleMention = message.mentions.roles.first();
-        if(!roleMention){message.channel.send(`<@${message.author.id}, No Role Mentioned`); return;}
+        if(!roleMention){message.channel.send(`<@${message.author.id}>, No Role Mentioned`); return;}
         level = parseInt(args[1]);
-        if(isNaN(level)){message.channel.send(`<@${message.author.id}, Provided Level is not a Number`);return;}
+        if(isNaN(level)){message.channel.send(`<@${message.author.id}>, Provided Level is not a Number`);return;}
         lvl_mng.setRoleReward(roleMention.id, level);
-        message.channel.send(`<@${message.author.id}, Added ${roleMention.name} to Level ${level}`);
+        message.channel.send(`<@${message.author.id}>, Added ${roleMention.name} to Level ${level}`);
     }
 }
