@@ -9,6 +9,7 @@ module.exports = {
     description: 'Buy an Item from the Item Store',
     args: 'Item Name - For Spaces Use Underscores',
     active: true,
+    econ: true,
     async execute(message, args, bot){
         if(!args[0]){
             message.channel.send(`<@${message.author.id}>, Missing Item Name Argument`);

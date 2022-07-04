@@ -13,21 +13,13 @@ const points_manager = require('./points/manager');
 const levels = require('./levels/level_handler');
 
 bot.commands = new Map(); // New Array for our commands
-bot.commands.econ = new Map();
-bot.commands.level = new Map();
 bot.on('ready', async () => { // Runs everything inside when the bot has successfully logged in and is active
     console.log('PG Bot Ready');
     console.log(`Current Game: ${config.game}`);
     bot.user.setActivity(config.game, {type: 'PLAYING'}); // Set our game status
     for (const file of commandFiles) { // for every file in our commandFiles Mapping
         const command = require(`./commands/${file}`); // load the data of the file into memory 
-        if(file.startsWith('econ_')){
-            bot.commands.econ.set(command.name,command);
-        } else if(file.startsWith('level_')){
-            bot.commands.level.set(command.name, command);
-        } else {
-            bot.commands.set(command.name, command); // add our commands to our array
-        }
+        bot.commands.set(command.name, command); // add our commands to our array
     }
     await pglibrary.sleep(1000);
     points_manager.setBot(bot);
@@ -85,6 +77,15 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     // Base for adding commands: if(command === "name"){
     //  bot.commands.get("name").execute(message, args, bot)
     //}
+    cmd = bot.commands.get(command);
+    if(cmd.admin){
+        if(message.member.roles.cache.find(role => role.name === config.modrole)){
+            cmd.execute(message,args,bot);
+        }
+    } else {
+        cmd.execute(message,args,bot);
+    }
+    return;
     switch (command){
         case 'toggleauto':
             if(message.member.roles.cache.find(role => role.name === config.modrole)){

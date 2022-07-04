@@ -8,6 +8,7 @@ module.exports = {
     description: 'Get the Total of all the points in the server',
     args: 'None',
     active: true,
+    econ: true,
     async execute(message, args, bot){
         [cash,bank,total] = points_manager.getServerStats();
         balanceEmbed = new MessageEmbed()

@@ -9,6 +9,8 @@ module.exports = {
     description: 'Sets the Server Multiplier',
     args: 'First Arg: Number | Second Optional Arg: Math Operations (*,+,/,-,=)',
     active: true,
+    admin: true,
+    level: true,
     async execute(message, args, bot){
         if(typeof parseInt(args[0]) === 'number'){
             if(typeof args[1] === 'undefined'){

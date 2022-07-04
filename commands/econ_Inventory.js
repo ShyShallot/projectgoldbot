@@ -8,6 +8,7 @@ module.exports = {
     description: "Check your's or another user's Item Inventory Contents",
     args: 'Target User - Optional',
     active: true,
+    econ: true,
     async execute(message, args, bot){
         target = message.mentions.members.first();
         if(target){

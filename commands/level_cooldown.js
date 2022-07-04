@@ -9,6 +9,8 @@ module.exports = {
     description: 'Sets the Server Level Cooldown per Message',
     args: 'First Arg: Time in Seconds',
     active: true,
+    admin: true,
+    level: true,
     async execute(message, args, bot){
         if(typeof parseInt(args[0]) === 'number'){
             lvl_mng.setCooldown(parseInt(args[0]));

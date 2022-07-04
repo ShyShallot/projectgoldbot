@@ -11,6 +11,7 @@ module.exports = {
     description: 'Join the Public Raffle',
     args: 'No Arguments',
     active: true,
+    econ:true,
     execute(message, args, bot, jackpotState){
         if (!message && jackpotState == 1) { // hacky solution for starting the jackpot from our mainbotfile.js
             StartJackpot(bot);

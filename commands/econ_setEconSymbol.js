@@ -8,6 +8,8 @@ module.exports = {
     description: "Set the Server's Economy Symbol - Mod Only",
     args: 'Any Text/Emoji',
     active: true,
+    admin: true,
+    econ: true,
     async execute(message, args, bot){
         if(!(message.member.roles.cache.find(role => role.name === config.modrole))){
             message.channel.send(`<@${message.author.id}>, You do Not Have Permission for this Command`);

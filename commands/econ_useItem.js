@@ -9,6 +9,7 @@ module.exports = {
     description: 'Use an Item in your inventory',
     args: 'Item Name - For Spaces use Underscores',
     active: true,
+    econ: true,
     async execute(message, args, bot){
         use_item(message,args,bot);
     }

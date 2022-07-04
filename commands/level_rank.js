@@ -8,6 +8,7 @@ module.exports = {
     description: "Check's Users Rank and XP",
     args: '1. Mention a Target(optional)',
     active: true,
+    level: true,
     async execute(message, args, bot){
         if(args[1]){
             target = message.mentions.members.first();

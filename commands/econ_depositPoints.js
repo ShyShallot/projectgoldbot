@@ -8,6 +8,7 @@ module.exports = {
     description: 'Deposit all your Points in Cash into the Bank',
     args: 'Amount to Deposit | All/Half is also accepted as an amount',
     active: true,
+    econ: true,
     async execute(message, args, bot){
         if(args[0]){
             console.log(args[0]);

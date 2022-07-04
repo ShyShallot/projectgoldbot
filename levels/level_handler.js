@@ -84,6 +84,13 @@ var manager = module.exports = {
     },
     firstSetup: async function(bool){ // if the bool is true it overrides everything and force restarts points-db.json
         dB = this.fetchData();
+        if(dB.setup){ // to clear any message cooldowns on startup but only if we have setup before
+            users = dB.users;
+            if(users.length <= 0){return;}
+            for(i=0;i<users.length;i++){
+                this.removeUserCooldown(users[i].id);
+            }
+        }
         if(dB.setup && !bool){
             return;
         } else if(bool){
@@ -123,6 +130,12 @@ var manager = module.exports = {
             users[userIndex].xp += amount;
         } else {
             users[userIndex].level += amount;
+            this.giveRole(message.author, users[userIndex].level++);
+        }
+        if(users[userIndex].xp >= this.calculateNextLevel(id) && bool){
+            this.giveRole(message.author, users[userIndex].level++);
+            this.levelUpUser(id);
+            message.channel.send(`<@${message.author.id}>, You have leveled up to Level ${users[userIndex].level++}!`);
         }
         dB.users = users;
         this.saveDB(dB);
@@ -136,7 +149,7 @@ var manager = module.exports = {
             return err;
         }
         if(bool){
-            users[userIndex].xp = amount;
+            users[userIndex].xp += amount;
         } else {
             users[userIndex].level = amount;
         }
@@ -154,6 +167,7 @@ var manager = module.exports = {
                 users[userIndex].xp += dB.xpPerMessage;
                 users[userIndex].cooldown = true;
                 if(users[userIndex].xp >= this.calculateNextLevel(id)){
+                    this.giveRole(message.author, users[userIndex].level++);
                     this.levelUpUser(id);
                     message.channel.send(`<@${message.author.id}>, You have leveled up to Level ${users[userIndex].level++}!`);
                 }
@@ -245,6 +259,44 @@ var manager = module.exports = {
         db = this.fetchData();
         secondsToMS = seconds*1000;
         db.messageCooldownTime = secondsToMS;
+        this.saveDB(db);
+    },
+    giveRole(user,level){
+        dB = this.fetchData();
+        levelRoles = dB.levelsRewards;
+        if(levelRoles.length == 0){
+            return;
+        }
+        for(i=0;i<levelRoles.length;i++){
+            if(levelRoles[i].level <= level){
+                let role = message.guild.roles.cache.find(r => r.id = levelRoles[i].roleID);
+                if(typeof role === 'undefined'){
+                    return;
+                }
+                user.roles.add(role);
+            }
+        }
+    },
+    setRoleReward(roleID,level){
+        db = this.fetchData();
+        filled = false;
+        for(i=0;i<db.levelsRewards.length;i++){
+            if(db.levelsRewards[i].level == level){
+                filled = true;
+            }
+        }
+        if(!filled){
+            db.levelsRewards.push({"roleID":roleID,"level": level});
+        }
+        this.saveDB(db);
+    },
+    removeRoleReward(level){
+        db = this.fetchData();
+        for(i=0;i<db.levelsRewards.length;i++){
+            if(db.levelsRewards[i].level = level){
+                db.levelsRewards.splice(i,1);
+            }
+        }
         this.saveDB(db);
     }
 }

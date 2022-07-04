@@ -8,6 +8,8 @@ module.exports = {
     description: 'Reset the Economy for the Entire Server - Mod Only!',
     args: 'None',
     active: true,
+    admin: true,
+    econ: true,
     async execute(message, args, bot){
         if(message.member.roles.cache.find(role => role.name === config.modrole)){
             points_manager.firstSetup(true);

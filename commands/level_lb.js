@@ -9,6 +9,7 @@ module.exports = {
     description: 'Get the Server Leaderboard for levels',
     args: 'None',
     active: true,
+    level: true,
     async execute(message, args, bot){
         start = 0;
         leaderboardArray = lvl_mng.sortForLeaderboard();

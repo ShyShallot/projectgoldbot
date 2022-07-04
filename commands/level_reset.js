@@ -9,6 +9,8 @@ module.exports = {
     description: 'Resets a User or the whole server',
     args: 'server || Mention Target',
     active: true,
+    admin: true,
+    level: true,
     async execute(message, args, bot){
         if(args[0] == "server"){
             lvl_mng.firstSetup(true);

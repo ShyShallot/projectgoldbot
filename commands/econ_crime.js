@@ -9,6 +9,7 @@ module.exports = {
     description: 'Become the criminal',
     args: 'None',
     active: true,
+    econ: true,
     async execute(message, args, bot){
         [users,userIndex] = points_manager.fetchUser(message.author.id);
         db = points_manager.fetchData();

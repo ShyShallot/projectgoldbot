@@ -9,10 +9,9 @@ module.exports = {
     description: 'Delete the Item from the Servers Item Store - Mod Only',
     args: 'Item Name - For Spaces Use Underscores',
     active: true,
+    admin: true,
+    econ: true,
     async execute(message, args, bot){
-        if(!(message.member.roles.cache.find(role => role.name === config.modrole))){
-            message.channel.send(`<@${message.author.id}>, You do Not Have Permission for this Command`);
-        }
         err = item_handler.deleteItem(message,args);
         if(typeof err === 'string'){
             message.channel.send(err);

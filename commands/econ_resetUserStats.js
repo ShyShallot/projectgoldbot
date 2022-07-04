@@ -8,6 +8,8 @@ module.exports = {
     description: "Reset a User's Economy Stats - Mod Only!",
     args: 'Mention Target User',
     active: true,
+    admin: true,
+    econ: true,
     async execute(message, args, bot){
         if(message.member.roles.cache.find(role => role.name === config.modrole)){
             if(args[0]){

@@ -7,6 +7,7 @@ module.exports = {
     description: 'flip a coin',
     args: 'Heads/Tails | Bet Amount',
     active: true,
+    econ: true,
     execute(message, args, bot){
         [cash,bank] = points_manager.getUserBalance(message.author.id);
         console.log(cash, bank);

@@ -9,6 +9,7 @@ module.exports = {
     description: 'Setup and Start or Join Heists to earn large amounts of money',
     args: 'Possible First Args: list/l | setup | join/j | split | status | start | cancel | equipment | give | inv/inventory',
     active: true,
+    econ: true,
     async execute(message, args, bot){
         console.log(args);
         switch (args[0]){ // check the first argument of the command 

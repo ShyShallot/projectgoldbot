@@ -9,10 +9,9 @@ module.exports = {
     description: 'Create an Item - Mod Only',
     args: '1. Item Name (for Spaces Use an Underscore) | 2. Cost of Item | 3. Item Type (Only role at the Moment) | 4. Item Type Arg ',
     active: true,
+    admin: true,
+    econ: true,
     async execute(message, args, bot){
-        if(!(message.member.roles.cache.find(role => role.name === config.modrole))){
-            message.channel.send(`<@${message.author.id}>, You do Not Have Permission for this Command`);
-        }
         newItem = item_handler.createItem(message,args);
         if(typeof newItem == 'string'){
             message.channel.send(newItem);

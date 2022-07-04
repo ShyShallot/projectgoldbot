@@ -8,6 +8,7 @@ module.exports = {
     description: 'Check your or another Users Balance',
     args: '1. [Mention User] (Optional)',
     active: true,
+    econ: true,
     async execute(message, args, bot){
         dB = points_manager.fetchData();
         leaderboardArray = points_manager.sortForLeaderboard();

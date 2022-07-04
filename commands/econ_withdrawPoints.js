@@ -8,6 +8,7 @@ module.exports = {
     description: 'Withdraw all your Points in the Bank into cash',
     args: 'Amount to Withdraw | All/Half is also accepted as an amount',
     active: true,
+    econ: true,
     async execute(message, args, bot){
         if(args[0]){
             console.log(args[0]);

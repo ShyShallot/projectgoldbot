@@ -8,6 +8,7 @@ module.exports = {
     description: 'Rob a user to make some points',
     args: 'Target a User via Mention',
     active: true,
+    econ: true,
     async execute(message, args, bot){
         target = message.mentions.members.first();
         if(!target){

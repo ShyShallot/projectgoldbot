@@ -8,6 +8,7 @@ module.exports = {
     description: 'Give a User your points if you can afford it',
     args: '1. [Mention User] | 2. Point Amount | 3. Location: Cash/Bank | 4. (Mod Only) false - Used to give points without subtracting from yours',
     active: true,
+    econ: true,
     async execute(message, args, bot){
         if(message.member.roles.cache.find(role => role.name === config.modrole) && args[3] == `false`){
             if(args[0] && args[1] && args[2]){

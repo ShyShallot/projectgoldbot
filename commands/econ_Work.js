@@ -9,6 +9,7 @@ module.exports = {
     description: 'Work a Random Job to make some points',
     args: 'None',
     active: true,
+    econ: true,
     async execute(message, args, bot){
         dB = point_handler.fetchData();
         amount = pglibrary.getRandomInt(35000);

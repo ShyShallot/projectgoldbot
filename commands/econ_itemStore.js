@@ -9,6 +9,7 @@ module.exports = {
     description: "Lists all items available in the Server's Item Store",
     args: 'None',
     active: true,
+    econ: true,
     async execute(message, args, bot){
         items = item_handler.fetchItems();
         if(items.length <= 0){

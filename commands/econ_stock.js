@@ -9,6 +9,7 @@ module.exports = {
     description: 'Buy and Sell stocks as they go up and down', 
     args: '1st Args: Buy | Sell, 2nd Args: Stock Name, 3rd Args: Amount to Buy/Sell',
     active: true,
+    econ: true,
     execute(message, args, bot){
         console.log(args);
         if (args[0] == "buy" || args[0] == "sell") { // basic arg test to decide which function to  run

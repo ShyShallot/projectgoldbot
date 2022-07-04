@@ -8,6 +8,7 @@ module.exports = {
     description: 'Get the Server Leaderboard for most points',
     args: 'None',
     active: true,
+    econ: true,
     async execute(message, args, bot){
         start = 0;
         leaderboardArray = points_manager.sortForLeaderboard();

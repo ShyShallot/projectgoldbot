@@ -2,9 +2,11 @@ const {MessageEmbed} = require('discord.js'); // required for Rich Message Embed
 const config = require('../config.json');
 const pglibrary = require("../libraryfunctions");
 module.exports = {
-    name: 'Join and Leave Messages',
+    name: 'welcomemsgs',
     description: `Set the Join and Leave Messages, leave/join message has to be in quotes like "Welcome to the Server"`,
     args: 'join/leave "Message Content"',
+    active: true,
+    admin: true,
     execute(message, args, bot){
         switch (args[0]){
             case 'W':
