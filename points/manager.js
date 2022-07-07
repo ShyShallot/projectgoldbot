@@ -4,6 +4,7 @@ const pglibrary = require("../libraryfunctions.js"); // load our custom library 
 const fs = require('fs'); // File System for JS 
 const path = require('path');
 const os = require('os');
+const masterdb = require('../master-db/masterdb');
 var manager = module.exports = {
     bot: null,
     dir: null,
@@ -21,20 +22,20 @@ var manager = module.exports = {
     getBot(){ // trying to access the var directly has some weird issues sometimes
         return this.bot;
     },
-    fetchData: function(){ // Fetch data from points-db.json
-        this.dir = __dirname; // get Directory Name for this File as we access it from other places
-        return JSON.parse(fs.readFileSync(this.dir + this.folderDirection() +'points-db.json'));
+    fetchData: async function(guildID){ // Fetch data from points-db.json
+        data = await masterdb.getGuildJson(guildID,"points-db");
+        return data;
+        
     },
-    fetchItems: function(){
-        this.dir = __dirname;
-        return JSON.parse(fs.readFileSync(this.dir + this.folderDirection() +'items.json'));
+    fetchItems: async function(guildID){
+        data = await masterdb.getGuildJson(guildID,"items");
+        return data;
     },
-    saveDB(newData){
-        this.dir = __dirname;
-        pglibrary.WriteToJson(newData, `${this.dir + this.folderDirection()}points-db.json`);
+    async saveDB(newData,guildID){
+        await masterdb.writeGuildJsonFile(guildID,"points-db",newData);
     },
-    fetchUser(id,bool){ // if true just return the user Data point, used for Read only instances
-        let users = this.fetchData().users;
+    async fetchUser(id,bool){ // if true just return the user Data point, used for Read only instances
+        let users = await this.fetchData().users;
         if(users.length >= 1){
             for(i=0;i<users.length;i++){
                 let user = users[i];
@@ -48,8 +49,8 @@ var manager = module.exports = {
             return false;
         }
     },
-    setupUser: function(user){ // this is just the user data template
-        let dbData = this.fetchData();
+    setupUser: async function(user){ // this is just the user data template
+        let dbData = await this.fetchData();
         let newUserData = {
             "balance": {"cash":0,"bank": dbData.startingBalance}, 
             "id": user.id,
@@ -63,8 +64,8 @@ var manager = module.exports = {
         }
         return newUserData;
     },
-    addNewPropGlobal(prop, value){ // so we dont have to reset the economy when a new Property is introduced
-        let dB = this.fetchData();
+    async addNewPropGlobal(prop, value){ // so we dont have to reset the economy when a new Property is introduced
+        let dB = await this.fetchData();
         let count = 0;
         for(i=0;i<dB.users.length;i++){
             if(typeof dB.users[i][prop] === 'undefined'){
@@ -81,8 +82,8 @@ var manager = module.exports = {
             return `Successfully set prop ${prop} for every user but ${count} amount of people already had it`;
         }
     },
-    removePropGlobal(prop){
-        let dB = this.fetchData();
+    async removePropGlobal(prop,guildId){
+        let dB = await this.fetchData(guildId);
         let count = 0;
         for(i=0;i<dB.users.length;i++){
             if(typeof dB.users[i][prop] === 'undefined'){
@@ -98,8 +99,8 @@ var manager = module.exports = {
             return `Removed property ${prop} but ${count} users already didn't have it`;
         }
     },
-    removeUser: function(id){ // remove a user from the points-db for whatever reason
-        let dbData = this.fetchData();
+    removeUser: async function(id,guildId){ // remove a user from the points-db for whatever reason
+        let dbData = await this.fetchData(guildId);
         for(i=0;i<dbData.users.length;i++){
             if(dbData.users[i].id == id){
                 dbData.users.splice(i, 1);
@@ -107,8 +108,8 @@ var manager = module.exports = {
         }
         this.saveDB(dbData);
     },
-    addUser: function(user){ // used for when a user joins the server
-        let dbData = this.fetchData();
+    addUser: async function(user,guildId){ // used for when a user joins the server
+        let dbData = await this.fetchData(guildId);
         let newUserData = this.setupUser(user);
         dbData.users.push(newUserData);
         this.saveDB(dbData);
@@ -119,8 +120,8 @@ var manager = module.exports = {
         pglibrary.sleep(10);
         this.addUser(user.user);
     },
-    firstSetup: async function(bool){ // if the bool is true it overrides everything and force restarts points-db.json
-        dB = this.fetchData();
+    firstSetup: async function(bool,guildId){ // if the bool is true it overrides everything and force restarts points-db.json
+        dB = await this.fetchData(guildId);
         if(dB.setup && !bool){
             return;
         } else if(bool){
@@ -148,10 +149,11 @@ var manager = module.exports = {
         } else {
             pglibrary.EconChannelLog('Server Economy has been setup', 'Automated On Start Up', this.bot);
         }
+        return true;
     },
-    giveUserPoints: function(id, amount, location,taxFree){
+    giveUserPoints: async function(id, amount, location,taxFree){
         let [users, userIndex] = this.fetchUser(id);
-        let dB = this.fetchData();
+        let dB = await this.fetchData();
         if(location == "bank"){
             if(taxFree){
                 users[userIndex].balance.bank += (amount * dB.pointsMulti);
@@ -177,9 +179,9 @@ var manager = module.exports = {
         this.saveDB(dB);
         pglibrary.EconChannelLog(`User ${id} has been given/removed ${pglibrary.commafy(amount)} points`, 'Command', this.bot);
     },
-    setUserPoints: function(id, points, location){
-        let [users, userIndex] = this.fetchUser(id);
-        let dB = this.fetchData();
+    setUserPoints: async function(id, points, location){
+        let [users, userIndex] = await this.fetchUser(id);
+        let dB = await this.fetchData();
         if(location == "bank"){
             users[userIndex].balance.bank += points;
         } else if(location == "cash"){
@@ -415,7 +417,7 @@ var manager = module.exports = {
         dB.pointSymbol = input;
         this.saveDB(dB);
     },
-    checkPausedTimers(){ // a function used so that if the bot restarts cooldowns using the setTimeout are taken careoff as they are cleared on restart
+    checkPausedTimers(){ // a function used so that if the bot restarts cooldowns using the setTimeout are taken care of as they are cleared on restart
         dB = this.fetchData();
         users = dB.users;  
         for(i=0;i<users.length;i++){

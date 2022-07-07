@@ -11,23 +11,34 @@ const sqlconfig = require('./sql.json');
 const SQL = require('mssql');
 const points_manager = require('./points/manager');
 const levels = require('./levels/level_handler');
+const masterdb = require('./master-db/masterdb');
 
 bot.commands = new Map(); // New Array for our commands
 bot.on('ready', async () => { // Runs everything inside when the bot has successfully logged in and is active
-    console.log('PG Bot Ready');
-    console.log(`Current Game: ${config.game}`);
+    console.log(`Starting Bot`);
     bot.user.setActivity(config.game, {type: 'PLAYING'}); // Set our game status
+    console.log(`Set Activity to: ${bot.presence.activities[0].type} ${config.game}`);
     for (const file of commandFiles) { // for every file in our commandFiles Mapping
         const command = require(`./commands/${file}`); // load the data of the file into memory 
+        if(!command.active){continue;}
         bot.commands.set(command.name, command); // add our commands to our array
     }
-    await pglibrary.sleep(1000);
+    console.log(`Added Commands to Array`);
     points_manager.setBot(bot);
-    points_manager.firstSetup();
-    await pglibrary.sleep(1000);
+    guilds = bot.guilds.cache.map(guild => guild.id);
+    console.log(guilds);
+    for(i=0;i<guilds.length;i++){
+        curGuild = guilds[i];
+        await points_manager.firstSetup(false,curGuild).then(()=>{
+            console.log(`Finished Setup for Guild ${curGuild}`);
+        });
+    }
     levels.setBot(bot);
-    levels.firstSetup();
-    Economy() // handle our encomy functions for stuff that has to calculate every so often
+    //await levels.firstSetup().then(() => {
+    //    console.log("Level Manager Setup Done");
+    //});
+    console.log('PG Bot Ready');
+    //Economy() // handle our encomy functions for stuff that has to calculate every so often
 });
 
 
@@ -39,12 +50,15 @@ bot.on('guildMemberAdd', member => { // When a someone joins the server
         .setTitle(`Welcome ${name} to Project Gold`)
         .setColor(0x00AE86)
         .setDescription("Welcome to the Project Gold Discord Server, Please Read <#631010878568923136> before continuing for server links and rules.")
-        .setThumbnail("https://i.imgur.com/7s7AuxI.png")
-    bot.guilds.cache.get(config.serverid).channels.cache.get(config.welcomeChannel).send({content: config.newUserMessages.Welcome, embeds: [welcomeEmbed] });
+        .setThumbnail("https://i.imgur.com/7s7AuxI.png");
+    masterdb.getGuildJson(member.guild.id,"config").then((guildConfig) =>{
+        bot.guilds.cache.get(member.guild.id).channels.cache.get(guildConfig.welcomeChannel).send({content: `${name} ${guildConfig.newUserMessages.Welcome}`, embeds: [welcomeEmbed] });
+    });
     points_manager.addUser(member.user);
 });
 
 bot.on('guildMemberRemove', member => { // When someone leaves the server
+    console.log(member);
     console.log(`User has left`);
     const name = member.user.username
     console.log(name);
@@ -52,8 +66,10 @@ bot.on('guildMemberRemove', member => { // When someone leaves the server
         .setTitle(`${name} has left :(`)
         .setColor(0x00AE86)
         .setDescription("We wish the best, thanks for stopping by :).")
-        .setThumbnail("https://i.imgur.com/7s7AuxI.png")
-        bot.guilds.cache.get(config.serverid).channels.cache.get(config.welcomeChannel).send({content: `${name} ${config.newUserMessages.Leave}`, embeds: [welcomeEmbed] });
+        .setThumbnail("https://i.imgur.com/7s7AuxI.png");
+    masterdb.getGuildJson(member.guild.id,"config").then((guildConfig) =>{
+        bot.guilds.cache.get(member.guild.id).channels.cache.get(guildConfig.welcomeChannel).send({content: `${name} ${guildConfig.newUserMessages.Leave}`, embeds: [welcomeEmbed] });
+    });
     points_manager.removeUser(member.user.id);
 });
 
@@ -79,13 +95,15 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     //  bot.commands.get("name").execute(message, args, bot)
     //}
     cmd = bot.commands.get(command);
+    console.log(cmd);
     if(typeof cmd === 'undefined'){return;}
+    guildid = message.guild.id;
     if(cmd.admin){
         if(message.member.roles.cache.find(role => role.name === config.modrole)){
-            cmd.execute(message,args,bot);
+            cmd.execute(message,args,bot,guildid);
         }
     } else {
-        cmd.execute(message,args,bot);
+        cmd.execute(message,args,bot,guildid);
     }
     return;
     switch (command){
@@ -234,9 +252,15 @@ function AutomatedMessage(message) { // this is to keep annoying as people from 
 async function Economy(){ // Janky as fuck but works
     await pglibrary.sleep(1000);
     while (true) {
-        await Heists();
-        await Jackpot(0); // Init Raffle
-        await StockMarket();
+        await Heists().then(()=>{
+            console.log(`Finished Heist Function`);
+        });
+        await Jackpot(0).then(()=>{
+            console.log(`Finished Jackpot Function`);
+        }); // Init Raffle
+        await StockMarket().then(()=>{
+            console.log(`Finished Stock Market Function`);
+        });
         if(config.sql == 1){
             await ClearSQLDB(); // Temp thing till i figure out SQL more
             await WritetoSQLDB();
@@ -562,23 +586,28 @@ async function ClearSQLDB(){
             "encrypt": true
         }
     }
-    var dbConn = new SQL.ConnectionPool(SQLconfig);
-    dbConn.connect().then(function() {
-        var transaction = new SQL.Transaction(dbConn);
-        transaction.begin().then(function (){
-            var request = new SQL.Request(transaction);
-            request.query('DELETE FROM StockInfo', function(err, result){
-                if(err) {
-                    console.log(err);
-                }
-                transaction.commit().then(function (recordSet){
-                    console.log(`Cleared Stock Info Table`);
-                    console.log(recordSet);
-                    dbConn.close();
+    try{
+        var dbConn = new SQL.ConnectionPool(SQLconfig);
+        dbConn.connect().then(function() {
+            var transaction = new SQL.Transaction(dbConn);
+            transaction.begin().then(function (){
+                var request = new SQL.Request(transaction);
+                request.query('DELETE FROM StockInfo', function(err, result){
+                    if(err) {
+                        console.log(err);
+                    }
+                    transaction.commit().then(function (recordSet){
+                        console.log(`Cleared Stock Info Table`);
+                        console.log(recordSet);
+                        dbConn.close();
+                    });
                 });
             });
         });
-    });
+    } catch{
+        console.log(`Something Went wrong, most likely could not connect to SQL Database`);
+    }
+    
 }
 
 async function WritetoSQLDB() {
@@ -607,23 +636,28 @@ async function WritetoSQLDB() {
         table.rows.add(stock.name, stock.price);
     });
     console.log(table);
-    var dbConn = new SQL.ConnectionPool(SQLconfig);
-    dbConn.connect().then(function() {
-        var transaction = new SQL.Transaction(dbConn);
-        transaction.begin().then(function (){
-            var request = new SQL.Request(transaction);
-            request.bulk(table, (err, result) => {
-                if(err) {
-                    console.log(err);
-                }
-                if(result){
-                    console.log(result);
-                }
-                transaction.commit().then(function (recordSet){
-                    console.log(recordSet);
-                    dbConn.close();
+    try{
+        var dbConn = new SQL.ConnectionPool(SQLconfig);
+        dbConn.connect().then(function() {
+            var transaction = new SQL.Transaction(dbConn);
+            transaction.begin().then(function (){
+                var request = new SQL.Request(transaction);
+                request.bulk(table, (err, result) => {
+                    if(err) {
+                        console.log(err);
+                    }
+                    if(result){
+                        console.log(result);
+                    }
+                    transaction.commit().then(function (recordSet){
+                        console.log(recordSet);
+                        dbConn.close();
+                    });
                 });
             });
         });
-    });
+    } catch{
+        console.log(`Something Went wrong, most likely could not connect to SQL Database`);
+    }
+    
 } // https://docs.microsoft.com/en-us/sql/connect/node-js/step-3-proof-of-concept-connecting-to-sql-using-node-js?view=sql-server-ver15

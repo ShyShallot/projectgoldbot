@@ -4,6 +4,7 @@ const pglibrary = require("../libraryfunctions.js"); // load our custom library 
 const fs = require('fs'); // File System for JS 
 const path = require('path');
 const os = require('os');
+const masterdb = require('../master-db/masterdb')
 var manager = module.exports = {
     bot: null,
     dir: null,
@@ -21,9 +22,9 @@ var manager = module.exports = {
     getBot(){ // trying to access the var directly has some weird issues sometimes
         return this.bot;
     },
-    fetchData: function(){ // Fetch data from points-db.json
-        this.dir = __dirname; // get Directory Name for this File as we access it from other places
-        return JSON.parse(fs.readFileSync(this.dir + this.folderDirection() +'level-db.json'));
+    fetchData: async function(){ // Fetch data from points-db.json
+        data = await masterdb.getGuildJson(guildID,"level-db");
+        return data;
     },
     saveDB(newData){
         this.dir = __dirname;
@@ -83,7 +84,13 @@ var manager = module.exports = {
         this.addUser(user.user);
     },
     firstSetup: async function(bool){ // if the bool is true it overrides everything and force restarts points-db.json
-        dB = this.fetchData();
+        dB = await this.fetchData();
+        if(typeof dB.lastupdated !== 'undefined'){
+            if(Date.now() < dB.lastupdated+60000){
+                console.log(`Cannot Update Yet`);
+                return;
+            }
+        }
         if(dB.users.length == 0 && dB.setup){
             dB.setup = false;
         }
@@ -108,17 +115,19 @@ var manager = module.exports = {
                     let user = this.fetchUser(member.id,true);
                     //console.log(member.id);
                     for(i=0;i<rewards.length;i++){
-                        console.log(rewards[i]);
-                        if(user.level == rewards[i].level){return};
+                        //console.log(rewards[i]);
+                        if(user.level == rewards[i].level){console.log(`${member.user.username} already is set`);return};
                         //console.log(member.roles.cache);
-                        if(member.roles.cache.some(role => role.id === rewards[i].roleID)){
-                            //console.log(`Setting User Data`);
+                        if(member.roles.cache.some(role => role.id === rewards[i].roleID) && user.level < rewards[i].level){
+                            console.log(`Setting User Data`);
                             this.setUserData(member.id,rewards[i].level);
                         }
                     }
                 });
             });
             console.log(`Done, took: ${Date.now()-startTime}ms`);
+            dB.lastupdated = Date.now();
+            this.saveDB(dB);
         }
         if(dB.setup && !bool){
             return;
@@ -140,6 +149,7 @@ var manager = module.exports = {
             });
         });
         console.log(`Finished Task in: ${Date.now() - startTime}ms`);
+        dB.lastupdated = Date.now();
         dB.setup = true;
         this.saveDB(dB);
         if(bool){
@@ -147,6 +157,7 @@ var manager = module.exports = {
         } else {
             pglibrary.EconChannelLog('Server Levelonomy has been setup', 'Automated On Start Up', this.bot);
         }
+        return true;
     },
     giveUserData: function(id, amount, bool){
         let [users, userIndex] = this.fetchUser(id);
@@ -159,10 +170,10 @@ var manager = module.exports = {
             users[userIndex].xp += amount;
         } else {
             users[userIndex].level += amount;
-            this.giveRole(message.author, users[userIndex].level++);
+            this.giveRole(message.member, users[userIndex].level++);
         }
         if(users[userIndex].xp >= this.calculateNextLevel(id) && bool){
-            this.giveRole(message.author, users[userIndex].level++);
+            this.giveRole(message.member, users[userIndex].level++);
             this.levelUpUser(id);
             message.channel.send(`<@${message.author.id}>, You have leveled up to Level ${users[userIndex].level++}!`);
         }
@@ -190,24 +201,23 @@ var manager = module.exports = {
     },
     messageXP(id,message){
         dB = this.fetchData();
-        try{
-            [users, userIndex] = this.fetchUser(id);
-            console.log(users[userIndex]);
-            if(!users[userIndex].cooldown){
-                console.log(`Giving User: ${id}, ${dB.xpPerMessage} xp`);
-                users[userIndex].xp += dB.xpPerMessage;
-                users[userIndex].cooldown = true;
-                if(users[userIndex].xp >= this.calculateNextLevel(id)){
-                    this.giveRole(message.author, users[userIndex].level++);
-                    this.levelUpUser(id);
-                    message.channel.send(`<@${message.author.id}>, You have leveled up to Level ${users[userIndex].level++}!`);
-                }
-                dB.users = users;
-                this.saveDB(dB);
-                setTimeout(this.removeUserCooldown(id), db.messageCooldownTime);
+        [users, userIndex] = this.fetchUser(id);
+        console.log(users[userIndex]);
+        if(!users[userIndex].cooldown){
+            console.log(`Giving User: ${id}, ${dB.xpPerMessage} xp`);
+            users[userIndex].xp += dB.xpPerMessage * dB.xpMultiplier;
+            users[userIndex].cooldown = true;
+            if(users[userIndex].xp >= this.calculateNextLevel(id)){
+                this.giveRole(message.member, users[userIndex].level++);
+                this.levelUpUser(id);
+                message.channel.send(`<@${message.author.id}>, You have leveled up to Level ${users[userIndex].level++}!`);
             }
-        } catch{
-            console.log(`Whoops`);
+            dB.users = users;
+            this.saveDB(dB);
+            setTimeout(() => this.removeUserCooldown(id), dB.messageCooldownTime);
+        } else {
+            console.log(`${id} is on cooldown`);
+            return;
         }
     },
     removeUserCooldown(id){
@@ -245,6 +255,7 @@ var manager = module.exports = {
         dB = this.fetchData();
         user = this.fetchUser(id,true);
         startingXp = 500 * dB.nextLevelXpMulti;
+        console.log(startingXp);
         nextLevelXPReq = startingXp * user.level;
         return nextLevelXPReq;
     },
@@ -293,6 +304,7 @@ var manager = module.exports = {
         this.saveDB(db);
     },
     giveRole(user,level){
+        console.log(user);
         dB = this.fetchData();
         levelRoles = dB.levelsRewards;
         if(levelRoles.length == 0){
@@ -300,10 +312,12 @@ var manager = module.exports = {
         }
         for(i=0;i<levelRoles.length;i++){
             if(levelRoles[i].level <= level){
-                let role = message.guild.roles.cache.find(r => r.id = levelRoles[i].roleID);
+                let guild = this.bot.guilds.cache.get(config.serverid);
+                let role = guild.roles.cache.find(r => r.id = levelRoles[i].roleID);
                 if(typeof role === 'undefined'){
                     return;
                 }
+                if(user.roles.cache.some(r => r.id === role.id)){console.log(`${user.user.username} already has that role`); return;}
                 user.roles.add(role);
             }
         }
