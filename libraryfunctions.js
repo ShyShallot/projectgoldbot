@@ -1,6 +1,7 @@
 const fs = require('fs'); // File System for JS
 const config = require('./config.json');
 const {MessageEmbed, Message} = require('discord.js');
+const masterdb = require('./master-db/masterdb');
 /**
  * Gets the digit length of any positive or negative number
  * @param {number} x Any Number 
@@ -97,8 +98,9 @@ function addHours(date, hours) {
     return newDate;
 }
 
-function ChannelLog(content, reason, bot){
-    logchannel = bot.channels.cache.get(config.logchannel);
+async function ChannelLog(content, reason, bot,guildId){
+    serverConfig = await masterdb.getGuildJson(guildId,'config');
+    logchannel = bot.guilds.cache.get(guildId).channels.cache.get(serverConfig.logchannel);
     if(!logchannel){
         console.log(`INVALID LOG CHANNEL CANCELING!`);
         return;

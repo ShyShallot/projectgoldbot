@@ -14,7 +14,7 @@ masterdb = module.exports = {
     * ASYNC Function to Grab a Guild/Server's JSON File
     * @param {string} GuildID The Guilds ID as a String to grab data from
     * @param {string} fileName The File to read from, Common Files: config,items,jackpot,points-db | DO NOT INCLUDE .JSON at the end, this is handled automatically 
-    * @returns {Object}  Returns an Object if it was able to find the file
+    * @returns {Promise}  Returns an Object Promise if it was able to find the file
     */
     getGuildJson: async function(id,fileName){
         guildDir = __dirname+this.folderDirection()+id;
@@ -40,13 +40,20 @@ masterdb = module.exports = {
             },1000);
         }
     },
+    /**
+    * ASYNC Function to Write to a JSON file for A guild, will create the directory or file automatically if its not present
+    * @param {string} GuildID The Guilds ID as a String to grab data from
+    * @param {string} fileName The File to write to, Common Files: config,items,jackpot,points-db | DO NOT INCLUDE .JSON at the end, this is handled automatically 
+    * @param {Object} data JS Array Object to Write to the JSON file DO NOT PRE STRINGIFY THIS IS HANDLED IN THE FUNCTION
+    * @returns {Promise}  Returns a Promise
+    */
     async writeGuildJsonFile(id,filename,data){
         guildDir = __dirname+this.folderDirection()+id;
         //console.log(guildDir);
         if(!fs.existsSync(guildDir)){
             fs.mkdirSync(guildDir);
             console.log(guildDir,data,filename);
-            fs.writeFileSync(guildDir+this.folderDirection()+filename+".json",data, function(err){
+            fs.writeFileSync(guildDir+this.folderDirection()+filename+".json",JSON.stringify(data), function(err){
                 if(err){
                     return Promise.reject(err);
                 }
@@ -55,7 +62,7 @@ masterdb = module.exports = {
             return Promise.resolve(`File was Created and Saved`);
         } else {
             guildDir = __dirname+this.folderDirection()+id;
-            fs.writeFileSync(guildDir+this.folderDirection()+filename+".json",data, function(err){
+            fs.writeFileSync(guildDir+this.folderDirection()+filename+".json",JSON.stringify(data), function(err){
                 
                 if(err){
                     return Promise.reject(err);

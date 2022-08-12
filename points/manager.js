@@ -143,6 +143,7 @@ var manager = module.exports = {
     * @returns {boolean} Return True when done
     */
     setup: async function(bool,guildId){ // if the bool is true it overrides everything and force restarts points-db.json
+        let startTime = Date.now();
         console.log(`Setting Up ${this.bot.guilds.cache.get(guildId).name}`);
         dB = await this.fetchData(guildId);
         if(typeof dB === "undefined"){
@@ -152,11 +153,10 @@ var manager = module.exports = {
             return;
         } else if(bool){
             dB.users = []; // when forced restart
-            await this.saveDB(JSON.stringify(db),guildId); 
+            await this.saveDB(db,guildId); 
             pglibrary.sleep(10);
         }
         let guild = this.bot.guilds.cache.get(guildId);
-        let startTime = Date.now();
         let userList = await guild.members.fetch()
         for(const member of userList){
             user = member[1].user;
@@ -169,7 +169,7 @@ var manager = module.exports = {
         }
         dB.setup = true;
         //console.log(dB,guildId);
-        await this.saveDB(JSON.stringify(dB),guildId);
+        await this.saveDB(dB,guildId);
         if(bool){
             //pglibrary.EconChannelLog('The Server Economy has been reset', 'Admin Forced', this.bot);
         } else {
@@ -462,7 +462,7 @@ var manager = module.exports = {
             }
         }
         dB.users = users;
-        await this.saveDB(db,guildId);
+        await this.saveDB(dB,guildId);
     },
     async symbol(guildId){ // read only thing
         dB = await this.fetchData(guildId);
