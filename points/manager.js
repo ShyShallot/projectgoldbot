@@ -22,20 +22,31 @@ var manager = module.exports = {
     getBot(){ // trying to access the var directly has some weird issues sometimes
         return this.bot;
     },
-    fetchData: async function(guildID){ // Fetch data from points-db.json
-        data = await masterdb.getGuildJson(guildID,"points-db");
+    fetchData: async function(guildId){ // Fetch data from points-db.json
+        //console.log(`Guild ID TO GRAB: ${guildId}`);
+        fileExists = await masterdb.DoesFileExist(guildId,"points-db").catch((err) => {
+            console.log(err);
+            fileExists = false;
+        });
+        //console.log(`Points Database File Status: ${fileExists}`);
+        if(fileExists){
+            data = await masterdb.getGuildJson(guildId,"points-db").catch((err)=>{console.error(err)});
+        } else {
+            data = undefined;
+        }
         return data;
         
     },
-    fetchItems: async function(guildID){
-        data = await masterdb.getGuildJson(guildID,"items");
+    fetchItems: async function(guildId){
+        data = await masterdb.getGuildJson(guildId,"items");
         return data;
     },
-    async saveDB(newData,guildID){
-        await masterdb.writeGuildJsonFile(guildID,"points-db",newData);
+    async saveDB(newData,guildId){
+        //console.log(newData);
+        await masterdb.writeGuildJsonFile(guildId,"points-db",newData).then(()=>{console.log(`Saved Points Database File for Guild ID: ${guildId}`)}).catch((err)=>{console.error(err)});
     },
-    async fetchUser(id,bool){ // if true just return the user Data point, used for Read only instances
-        let users = await this.fetchData().users;
+    async fetchUser(id,bool,guildId){ // if true just return the user Data point, used for Read only instances
+        let users = await this.fetchData(guildId).users;
         if(users.length >= 1){
             for(i=0;i<users.length;i++){
                 let user = users[i];
@@ -49,8 +60,12 @@ var manager = module.exports = {
             return false;
         }
     },
-    setupUser: async function(user){ // this is just the user data template
-        let dbData = await this.fetchData();
+    setupUser: async function(user,guildId){ // this is just the user data template
+        dbData = await this.fetchData(guildId);
+        if(typeof dbData === 'undefined'){
+            dbData = {};
+            dbData.startingBalance = 1000;
+        }
         let newUserData = {
             "balance": {"cash":0,"bank": dbData.startingBalance}, 
             "id": user.id,
@@ -62,10 +77,11 @@ var manager = module.exports = {
             "crimeCooldown": false,
             "lastCrime": null,
         }
+        //console.log(newUserData);
         return newUserData;
     },
-    async addNewPropGlobal(prop, value){ // so we dont have to reset the economy when a new Property is introduced
-        let dB = await this.fetchData();
+    async addNewPropGlobal(prop, value, guildId){ // so we dont have to reset the economy when a new Property is introduced
+        let dB = await this.fetchData(guildId);
         let count = 0;
         for(i=0;i<dB.users.length;i++){
             if(typeof dB.users[i][prop] === 'undefined'){
@@ -75,7 +91,7 @@ var manager = module.exports = {
                 count++;
             }
         }
-        this.saveDB(dB);
+        await this.saveDB(db,guildId);
         if(count == dB.users.length){
             return `Everyone already has this property. ${count}`;
         } else {
@@ -92,7 +108,7 @@ var manager = module.exports = {
                 delete dB.users[i][prop];
             }
         }
-        this.saveDB(dB);
+        await this.saveDB(db,guildId);
         if(count == dB.users.length){
             return `Removed property ${prop} from ${count} users`;
         } else {
@@ -106,13 +122,13 @@ var manager = module.exports = {
                 dbData.users.splice(i, 1);
             }
         }
-        this.saveDB(dbData);
+        await this.saveDB(dbData);
     },
     addUser: async function(user,guildId){ // used for when a user joins the server
         let dbData = await this.fetchData(guildId);
         let newUserData = this.setupUser(user);
         dbData.users.push(newUserData);
-        this.saveDB(dbData);
+        await this.saveDB(dbData);
     },
     resetUser(user){
         console.log(user)
@@ -120,40 +136,51 @@ var manager = module.exports = {
         pglibrary.sleep(10);
         this.addUser(user.user);
     },
-    firstSetup: async function(bool,guildId){ // if the bool is true it overrides everything and force restarts points-db.json
+    /**
+    * Runs Setup for Points Manager for a guild, goes through each user in a guild and adds them to the servers json file
+    * @param {boolean} Force If true forces the setup, useful for when restarting the Database from a command
+    * @param {string} GuildId The Guild ID (Has to be String) to setup for
+    * @returns {boolean} Return True when done
+    */
+    setup: async function(bool,guildId){ // if the bool is true it overrides everything and force restarts points-db.json
+        console.log(`Setting Up ${this.bot.guilds.cache.get(guildId).name}`);
         dB = await this.fetchData(guildId);
+        if(typeof dB === "undefined"){
+            dB = {setup: false,users:[],pointSymbol:"💰",earnCooldown:10000,workCooldownTime:86400000,crimeCooldownTime:86400000,pointsPerMessage:5,pointsMulti:1,pointsTax:5,startingBalance:1000,maxInventorySize:10}
+        }
         if(dB.setup && !bool){
             return;
         } else if(bool){
             dB.users = []; // when forced restart
-            this.saveDB(dB); 
+            await this.saveDB(JSON.stringify(db),guildId); 
             pglibrary.sleep(10);
         }
-        let guild = this.bot.guilds.cache.get(config.serverid);
+        let guild = this.bot.guilds.cache.get(guildId);
         let startTime = Date.now();
-        let userList = await guild.members.fetch().then(members =>{ // since the cache doesnt get EVERY user we manually ask for each user in the server
-            members.forEach(member => {
-                if(member.user.bot){
-                    console.log(`User is a Bot`);
-                    return;
-                }
-                let newUser = this.setupUser(member.user);
-                dB.users.push(newUser);
-            });
-        });
-        console.log(`Finished Task in: ${Date.now() - startTime}ms`);
-        dB.setup = true;
-        this.saveDB(dB);
-        if(bool){
-            pglibrary.EconChannelLog('The Server Economy has been reset', 'Admin Forced', this.bot);
-        } else {
-            pglibrary.EconChannelLog('Server Economy has been setup', 'Automated On Start Up', this.bot);
+        let userList = await guild.members.fetch()
+        for(const member of userList){
+            user = member[1].user;
+            if(user.bot){
+                console.error(`User ${user.username} is a Bot`);
+                continue;
+            }
+            newUser = await this.setupUser(user,guildId);
+            dB.users.push(newUser);
         }
-        return true;
+        dB.setup = true;
+        //console.log(dB,guildId);
+        await this.saveDB(JSON.stringify(dB),guildId);
+        if(bool){
+            //pglibrary.EconChannelLog('The Server Economy has been reset', 'Admin Forced', this.bot);
+        } else {
+            //pglibrary.EconChannelLog('Server Economy has been setup', 'Automated On Start Up', this.bot);
+        }
+        console.log(`Finished Task in: ${Date.now() - startTime}ms`);
+        return Promise.resolve(`Finished Setup for ${this.bot.guilds.cache.get(guildId).name}`);
     },
-    giveUserPoints: async function(id, amount, location,taxFree){
-        let [users, userIndex] = this.fetchUser(id);
-        let dB = await this.fetchData();
+    giveUserPoints: async function(id, amount, location,taxFree, guildId){
+        let [users, userIndex] = await this.fetchUser(id,false,guildId);
+        let dB = await this.fetchData(guildId);
         if(location == "bank"){
             if(taxFree){
                 users[userIndex].balance.bank += (amount * dB.pointsMulti);
@@ -176,12 +203,12 @@ var manager = module.exports = {
             return;
         }
         dB.users = users;
-        this.saveDB(dB);
+        await this.saveDB(db,guildId);
         pglibrary.EconChannelLog(`User ${id} has been given/removed ${pglibrary.commafy(amount)} points`, 'Command', this.bot);
     },
-    setUserPoints: async function(id, points, location){
-        let [users, userIndex] = await this.fetchUser(id);
-        let dB = await this.fetchData();
+    setUserPoints: async function(id, points, location,guildId){
+        let [users, userIndex] = await this.fetchUser(id,false,guildId);
+        let dB = await this.fetchData(guildId);
         if(location == "bank"){
             users[userIndex].balance.bank += points;
         } else if(location == "cash"){
@@ -191,13 +218,13 @@ var manager = module.exports = {
             return err;
         }
         dB.users = users;
-        this.saveDB(dB);
+        await this.saveDB(db,guildId);
         pglibrary.EconChannelLog(`User ${id} points have been set to ${pglibrary.commafy(points)}.`, `Admin Command`, this.bot);
     },
-    donatePoints(patronId, targetID, amount){
-        let dB = this.fetchData();
-        let [users, patronIndex] = this.fetchUser(patronId);
-        let [_, targetIndex] = this.fetchUser(targetID);
+    async donatePoints(patronId, targetID, amount,guildId){
+        let dB = await this.fetchData(guildId);
+        let [users, patronIndex] = await this.fetchUser(patronId,false,guildId);
+        let [_, targetIndex] = await this.fetchUser(targetID,false,guildId);
         if(users[patronIndex].balance < amount){
             if(location == "bank"){
                 users[patronIndex].balance.bank -= amount;
@@ -210,45 +237,45 @@ var manager = module.exports = {
                 return err;
             }
             dB.users = users;
-            this.saveDB(dB);
+            await this.saveDB(db,guildId);
         } else {
             err = "You do not have enough points";
             return err;
         }
         pglibrary.EconChannelLog(`User ${patronId} has given ${targetID} ${pglibrary.commafy(amount)} points.`, `Command`, this.bot);
     },
-    messagePoints(id){
-        dB = this.fetchData();
+    async messagePoints(id,guildId){
+        dB = await this.fetchData(guildId);
         try{
-            [users, userIndex] = this.fetchUser(id);
+            [users, userIndex] = await this.fetchUser(id,false,guildId);
             if(!users[userIndex].cooldown){
                 console.log(`Giving User: ${id}, ${dB.pointsPerMessage} points`);
                 users[userIndex].balance.cash += ((dB.pointsPerMessage - pglibrary.percentage(dB.pointsPerMessage, dB.pointsTax)) * dB.pointsMulti);
                 users[userIndex].balance.cash = Math.round(users[userIndex].balance.cash*100)/100;
                 users[userIndex].cooldown = true;
                 dB.users = users;
-                this.saveDB(dB);
+                await this.saveDB(db,guildId);
                 setTimeout(()=> this.removeUserCooldown(id), dB.earnCooldown);
             }
         } catch{
             console.log(`Whoops`);
         }
     },
-    removeUserCooldown(id){
-        dB = this.fetchData();
-        [users, userIndex] = this.fetchUser(id);
+    async removeUserCooldown(id,guildId){
+        dB = await this.fetchData(guildId);
+        [users, userIndex] = await this.fetchUser(id,false,guildId);
         users[userIndex].cooldown = false;
         dB.users = users;
-        this.saveDB(dB);
+        await this.saveDB(dB,guildId);
     },
-    getUserBalance(id){
+    async getUserBalance(id, guildId){
         console.log(`Checking User ${id}'s Balance`);
-        [users, userIndex] = this.fetchUser(id);
+        [users, userIndex] = await this.fetchUser(id,false,guildId);
         return [users[userIndex].balance.cash, users[userIndex].balance.bank];
     },
-    getServerStats(){
+    async getServerStats(guildId){
         startTime = Date.now();
-        dB = this.fetchData();
+        dB = await this.fetchData(guildId);
         let bank = 0;
         let cash = 0;
         dB.users.forEach(user =>{
@@ -260,37 +287,37 @@ var manager = module.exports = {
         console.log(`Time to Complete: ${Date.now() - startTime}ms`);
         return [cash,bank,total];
     },
-    depositPoints(id,amount){
-        dB = this.fetchData();
-        [users, userIndex] = this.fetchUser(id);
+    async depositPoints(id,amount,guildId){
+        dB = await this.fetchData(guildId);
+        [users, userIndex] = await this.fetchUser(id,false,guildId);
         if(amount <= users[userIndex].balance.cash){
             users[userIndex].balance.cash -= amount;
             users[userIndex].balance.bank += amount;
             users[userIndex].balance.bank = Math.round(users[userIndex].balance.bank*100)/100;
             dB.users = users;
-            this.saveDB(dB);
+            await this.saveDB(dB,guildId);
         } else {
             err = "Not Enough Points to Deposit";
             return err;
         }
         pglibrary.EconChannelLog(`User ${id} has deposited ${pglibrary.commafy(amount)} points`, `Command`, this.bot);
     },
-    withdrawPoints(id,amount){
-        dB = this.fetchData();
-        [users, userIndex] = this.fetchUser(id);
+    async withdrawPoints(id,amount, guildId){
+        dB = this.fetchData(guildId);
+        [users, userIndex] = await this.fetchUser(id,false,guildId);
         if(amount <= users[userIndex].balance.bank){
             users[userIndex].balance.bank -= amount;
             users[userIndex].balance.cash += amount;
             dB.users = users;
-            this.saveDB(dB);
+            await this.saveDB(dB,guildId);
         } else {
             err = "Not Enough Points to Withdraw";
             return err;
         }
         pglibrary.EconChannelLog(`User ${id} has Withdrew ${pglibrary.commafy(amount)} points`, `Command`, this.bot);
     },
-    sortForLeaderboard(){
-        userDB = this.fetchData().users;
+    async sortForLeaderboard(guildId){
+        userDB = await this.fetchData(guildId).users;
         allTotalArray = [];
         startTime = Date.now();
         userDB.forEach(user => {
@@ -304,9 +331,9 @@ var manager = module.exports = {
         console.log(`Took ${Date.now()-startTime}ms`)
         return finalArray;
     },
-    giveUserItem(id, item,amount){
-        dB = this.fetchData();
-        [users, userIndex] = this.fetchUser(id);
+    async giveUserItem(id, item,amount, guildId){
+        dB = await this.fetchData(guildId);
+        [users, userIndex] = await this.fetchUser(id,false,guildId);
         if(amount){
             if(amount >= 2){
                 for(i=0;i<amount;i++){
@@ -319,12 +346,12 @@ var manager = module.exports = {
             users[userIndex].inv.push(item);
         }
         dB.users = users;
-        this.saveDB(dB);
+        await this.saveDB(db,guildId);
     },
-    async useItem(id, item, message){
+    async useItem(id, item, message,guildId){
         return new Promise(async function(res,rej){
-            dB = manager.fetchData();
-            [users, userIndex] = manager.fetchUser(id);
+            dB = await manager.fetchData(guildId);
+            [users, userIndex] = manager.fetchUser(id,false,guildId);
             if(users[userIndex].inv.length <= 0){
                 rej('Your Inventory is Empty!');
                 return;
@@ -363,12 +390,12 @@ var manager = module.exports = {
                     res('done');
             }
             dB.users = users;
-            manager.saveDB(dB);
+            manager.saveDB(dB,guildId);
         });
     },
-    work(id,amount){
-        dB = this.fetchData();
-        [users, userIndex] = this.fetchUser(id);
+    async work(id,amount,guildId){
+        dB = await this.fetchData(guildId);
+        [users, userIndex] = await this.fetchUser(id,false,guildId);
         if(users[userIndex].workCooldown){
             return;
         }
@@ -377,13 +404,13 @@ var manager = module.exports = {
         users[userIndex].workCooldown = true;
         users[userIndex].setOnCooldown = Date.now();
         dB.users = users;
-        this.saveDB(dB);
+        await this.saveDB(dB,guildId);
         setTimeout(()=> this.removeWorkCooldown(id), dB.workCooldownTime);
         pglibrary.EconChannelLog(`User ${id} has worked and earned ${pglibrary.commafy(amount)} points`, `Command`, this.bot);
     },
-    crime(id,amount){
-        dB = this.fetchData();
-        [users, userIndex] = this.fetchUser(id);
+    async crime(id,amount,guildId){
+        dB = await this.fetchData(guildId);
+        [users, userIndex] = await this.fetchUser(id,false,guildId);
         if(users[userIndex].crimeCooldown){
             return;
         }
@@ -392,33 +419,33 @@ var manager = module.exports = {
         users[userIndex].crimeCooldown = true;
         users[userIndex].lastCrime = Date.now();
         dB.users = users;
-        this.saveDB(dB);
-        setTimeout(()=> this.removeCrimeCooldown(id), dB.crimeCooldownTime);
+        await this.saveDB(dB,guildId);
+        setTimeout(()=> this.removeCrimeCooldown(id,guildId), dB.crimeCooldownTime);
         pglibrary.EconChannelLog(`User ${id} has committed a crime and earned ${pglibrary.commafy(amount)} points`, `Command`, this.bot);
     },
-    removeWorkCooldown(id){
-        dB = this.fetchData();
-        [users, userIndex] = this.fetchUser(id);
+    async removeWorkCooldown(id,guildId){
+        dB = await this.fetchData(guildId);
+        [users, userIndex] = await this.fetchUser(id,false,guildId);
         users[userIndex].workCooldown = false;
         dB.users = users;
-        this.saveDB(dB);
+        await this.saveDB(dB,guildId);
         pglibrary.EconChannelLog(`Removed Work Cooldown for user ${id}`, `Automated Timer`, this.bot);
     },
-    removeCrimeCooldown(id){
-        dB = this.fetchData();
-        [users, userIndex] = this.fetchUser(id);
+    async removeCrimeCooldown(id,guildId){
+        dB = await this.fetchData(guildId);
+        [users, userIndex] = await this.fetchUser(id,false,guildId);
         users[userIndex].crimeCooldown = false;
         dB.users = users;
-        this.saveDB(dB);
+        await this.saveDB(dB,guildId);
         pglibrary.EconChannelLog(`Removed Crime Cooldown for user ${id}`, `Automated Timer`, this.bot);
     },
-    setEconSymbol(input){
-        dB = this.fetchData();
+    async setEconSymbol(input,guildId){
+        dB = await this.fetchData(guildId);
         dB.pointSymbol = input;
-        this.saveDB(dB);
+        await this.saveDB(db,guildId);
     },
-    checkPausedTimers(){ // a function used so that if the bot restarts cooldowns using the setTimeout are taken care of as they are cleared on restart
-        dB = this.fetchData();
+    async checkPausedTimers(guildId){ // a function used so that if the bot restarts cooldowns using the setTimeout are taken care of as they are cleared on restart
+        dB = await this.fetchData(guildId);
         users = dB.users;  
         for(i=0;i<users.length;i++){
             if(users[i].workCooldown && typeof users[i].setOnCooldown !== 'undefined'){
@@ -435,10 +462,10 @@ var manager = module.exports = {
             }
         }
         dB.users = users;
-        this.saveDB(dB);
+        await this.saveDB(db,guildId);
     },
-    symbol(){ // read only thing
-        dB = this.fetchData();
+    async symbol(guildId){ // read only thing
+        dB = await this.fetchData(guildId);
         return dB.pointSymbol;
     }
 }

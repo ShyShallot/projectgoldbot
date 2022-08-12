@@ -2,7 +2,7 @@
 // Find the github for the discord bot here: https://github.com/ShyShallot/projectgoldbot
 const { Client, Intents, MessageEmbed, MessageAttachment } = require('discord.js'); // Each thing in the Curly Brackets are special things we want to use
 const bot = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MEMBERS] }); // this handles events the bot checks for and receives from the API
-const config = require('./config.json'); // basic load of config file
+const hostconfig = require('./config.json'); // basic load of config file
 const fs = require('fs'); // File System for JS
 const talkedRecently = new Set(); // unused for cooldown
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js')); // read our commands folder for every command file
@@ -12,12 +12,15 @@ const SQL = require('mssql');
 const points_manager = require('./points/manager');
 const levels = require('./levels/level_handler');
 const masterdb = require('./master-db/masterdb');
+const async = require('async');
 
 bot.commands = new Map(); // New Array for our commands
+cusGuildCache = new Map();
 bot.on('ready', async () => { // Runs everything inside when the bot has successfully logged in and is active
     console.log(`Starting Bot`);
-    bot.user.setActivity(config.game, {type: 'PLAYING'}); // Set our game status
-    console.log(`Set Activity to: ${bot.presence.activities[0].type} ${config.game}`);
+    const cusGuildCache = bot.guilds.cache.map(guild => guild.id);
+    bot.user.setActivity(hostconfig.game, {type: 'PLAYING'}); // Set our game status
+    console.log(`Set Activity to: ${bot.presence.activities[0].type} ${hostconfig.game}`);
     for (const file of commandFiles) { // for every file in our commandFiles Mapping
         const command = require(`./commands/${file}`); // load the data of the file into memory 
         if(!command.active){continue;}
@@ -25,16 +28,25 @@ bot.on('ready', async () => { // Runs everything inside when the bot has success
     }
     console.log(`Added Commands to Array`);
     points_manager.setBot(bot);
-    guilds = bot.guilds.cache.map(guild => guild.id);
-    console.log(guilds);
-    for(i=0;i<guilds.length;i++){
-        curGuild = guilds[i];
-        await points_manager.firstSetup(false,curGuild).then(()=>{
-            console.log(`Finished Setup for Guild ${curGuild}`);
+    //console.log(cusGuildCache, cusGuildCache.length);
+    for(const curGuild of cusGuildCache){
+        //console.log(curGuild);
+        await points_manager.setup(false,curGuild).then(()=>{
+            console.log(`Finished Point Setup for ${bot.guilds.cache.get(curGuild).name}`);
+        }).catch((err) => {
+            console.error(err);
+        });
+        await masterdb.getGuildJson(curGuild,"config").then(() => {
+            console.log("Guild Has A Config");
+        }).catch((err) => {
+            console.error(err);
+            console.log(`Guild Most Likley Doesnt Have a Config Creating`);
+            defaultconfig = {"serverid":curGuild,"newUserMessages":[{"Welcome":"<@313159590285934595>, a new user has joined"},{"Leave":" has left :("}],"prefix":"pg","mincoinbet":"0"}
+            masterdb.writeGuildJsonFile(curGuild,"config",JSON.stringify(defaultconfig))
         });
     }
     levels.setBot(bot);
-    //await levels.firstSetup().then(() => {
+    //await levels.setup().then(() => {
     //    console.log("Level Manager Setup Done");
     //});
     console.log('PG Bot Ready');
@@ -53,6 +65,8 @@ bot.on('guildMemberAdd', member => { // When a someone joins the server
         .setThumbnail("https://i.imgur.com/7s7AuxI.png");
     masterdb.getGuildJson(member.guild.id,"config").then((guildConfig) =>{
         bot.guilds.cache.get(member.guild.id).channels.cache.get(guildConfig.welcomeChannel).send({content: `${name} ${guildConfig.newUserMessages.Welcome}`, embeds: [welcomeEmbed] });
+    }).catch((err) => {
+        console.error(err);
     });
     points_manager.addUser(member.user);
 });
@@ -69,6 +83,8 @@ bot.on('guildMemberRemove', member => { // When someone leaves the server
         .setThumbnail("https://i.imgur.com/7s7AuxI.png");
     masterdb.getGuildJson(member.guild.id,"config").then((guildConfig) =>{
         bot.guilds.cache.get(member.guild.id).channels.cache.get(guildConfig.welcomeChannel).send({content: `${name} ${guildConfig.newUserMessages.Leave}`, embeds: [welcomeEmbed] });
+    }).catch((err) => {
+        console.error(err);
     });
     points_manager.removeUser(member.user.id);
 });
@@ -76,18 +92,18 @@ bot.on('guildMemberRemove', member => { // When someone leaves the server
 
 
 bot.on('error', console.error); // prevent bot from crashing and log error to console
-bot.on('messageCreate', (message) =>{ // when someone sends a message
+bot.on('messageCreate', async (message) =>{ // when someone sends a message
     if (message.author.bot){ // if the message is sent by a bot don't even bother
         return;
     }
-    config.serverid = message.guild.id;
-    points_manager.messagePoints(message.author.id);
-    levels.messageXP(message.author.id,message);
-    const args = message.content.slice(config.prefix.length).split(/ +/g); // basic argument by spliting a message by spaces, with the first argument given is args[0]
+    guildId = message.guild.id;
+    guildConfig = await masterdb.getGuildJson(guildId,'config').catch((err) => {console.error(err);return});
+    points_manager.messagePoints(message.author.id,guildId);
+    //levels.messageXP(message.author.id,message,guildId);
+    const args = message.content.slice(guildConfig.prefix.length).split(/ +/g); // basic argument by spliting a message by spaces, with the first argument given is args[0]
     const command = args.shift().toLowerCase(); 
     console.log(command);
-    AutomatedMessage(message);
-    if (!message.content.startsWith(config.prefix) || message.author.bot){ // if the message doesn't start with our prefix don't bother
+    if (!message.content.startsWith(guildConfig.prefix) || message.author.bot){ // if the message doesn't start with our prefix don't bother
         return;
     }
 
@@ -97,13 +113,12 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     cmd = bot.commands.get(command);
     console.log(cmd);
     if(typeof cmd === 'undefined'){return;}
-    guildid = message.guild.id;
     if(cmd.admin){
-        if(message.member.roles.cache.find(role => role.name === config.modrole)){
-            cmd.execute(message,args,bot,guildid);
+        if(message.member.roles.cache.find(role => role.name === guildConfig.modrole)){
+            cmd.execute(message,args,bot,guildId);
         }
     } else {
-        cmd.execute(message,args,bot,guildid);
+        cmd.execute(message,args,bot,guildId);
     }
     return;
     switch (command){
@@ -240,75 +255,115 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
 
     }
 });
-bot.login(config.token);
-
-function AutomatedMessage(message) { // this is to keep annoying as people from asking annoying questions you can remove this or use it as a base for automoding 
-    //const automessge = require(`./automatedmessagestatus.json`);
-    //if (automessge.state == "1"){
-        
-    //}
-}
+bot.login(hostconfig.token);
 
 async function Economy(){ // Janky as fuck but works
     await pglibrary.sleep(1000);
     while (true) {
         await Heists().then(()=>{
             console.log(`Finished Heist Function`);
-        });
+        }).catch((err) => {console.error(err);});
         await Jackpot(0).then(()=>{
             console.log(`Finished Jackpot Function`);
-        }); // Init Raffle
+        }).catch((err) => {console.error(err);}); 
         await StockMarket().then(()=>{
             console.log(`Finished Stock Market Function`);
-        });
-        if(config.sql == 1){
+        }).catch((err) => {console.error(err);});
+        if(hostconfig.sql == 1){
             await ClearSQLDB(); // Temp thing till i figure out SQL more
             await WritetoSQLDB();
         }
-        points_manager.checkPausedTimers();
+        for(i=0;i<cusGuildCache.length;i++){
+            curGuild = cusGuildCache[i];
+            points_manager.checkPausedTimers(curGuild);
+        }
         await pglibrary.sleep(5000);
     }
 }
 
 // Jackpot Functions Related Functions
+async function UpdateJackpotData(guildId){ // update the jackpot data array
+    file = await masterdb.getGuildJson(guildId,'jackpot');
+    if(typeof file !== 'undefined'){
+        return file;
+    } else {
+        file = {"raffleactive":0,"rafflepot":0,"lastraffleday":0,"users":[]};
+        await masterdb.writeGuildJsonFile(guildId,'jackpot',file).then(() => {
+            console.log("Jackpot File was saved");
+        }).catch((err) => {console.error(err)});
+        return file;
+    }
+}
+
 async function Jackpot(forced) { // Changed to a raffle but am too lazy to update names -- Dyl 8/28/2021 also this function is a janky mess
     console.log(`Checking For Jackpot Status`);
-    var jackpotData = UpdateJackpotData(); // define jackpotData which is an array
-    console.log(jackpotData);
-    var [day, hour] = UpdateDate(); // set a var day and hour from the return from UpdateDate()
-    console.log(day, hour);
-    if (forced == 1 || RaffleValid(jackpotData, day)) { // if the Jackpot function was forced or the Raffle is Valid to start
-        if (jackpotData.raffleactive == 0){ // if a raffle is not active
-            console.log(hour, day);
-            console.log(`Raffle Not Active Might Start One`);
-            if ((forced == 1) && jackpotData.raffleactive == 0 || hour >= 12 && hour <= 21 && jackpotData.raffleactive == 0) { // the Jackpot function was forced and their is no raffle active OR its 12pm and their is no raffle active
-                pglibrary.ChannelLog(`Starting Jackpot`, 'Automated Function', bot);
-                console.log(`Starting Jackpot`);
-                await bot.commands.get("jackpot").execute(null, null, bot, 1); // run jackpot.js with a state of 1
-                //await sleep(20000); // wait 20 seconds
-            } else { // if neither of those conditions is true
-                //await sleep(20000);
-            }
-        } else { // else if there is a raffle active
-            jackpotData = UpdateJackpotData();
-            console.log(`Raffle Currently Active`);
-            console.log(hour, day);
-            if ((forced == 1) && jackpotData.raffleactive == 1 || hour >= 22 && jackpotData.raffleactive == 1) { // the Jackpot function was forced and their is a raffle active OR its 10pm and their is a raffle active
-                pglibrary.ChannelLog(`Stopping Jackpot`, 'Automated Function', bot);
-                console.log('Stop Jackpot');
-                await bot.commands.get("jackpot").execute(null, null, bot, 0); // run jackpot.js with a state of 0, telling it to stop
-                //await sleep(20000);
-            } else {
-                //await sleep(20000);
-            }
+    for(i=0;i<cusGuildCache.length;i++){
+        curGuild = cusGuildCache[i];
+        jackpotData = await UpdateJackpotData(curGuild);
+        if(typeof jackpotData === 'undefined'){
+            return;
         }
-    } 
-    jackpotData = UpdateJackpotData(); // update jackpotData to constatly check if a raffle is active or not
-    if (forced == 1 ) { // because the forceraffle function runs the function again and creates essenatilly another instance of it, if the jackpot function was forced stop it, this does not interupt the naturally ran jackpot function
-        console.log(`Stopping Forced Raffle Run`);
-        return;
+        console.log(jackpotData);
+        var [day, hour] = UpdateDate(); // set a var day and hour from the return from UpdateDate()
+        console.log(day, hour);
+        if (forced == 1 || RaffleValid(jackpotData, day)) { // if the Jackpot function was forced or the Raffle is Valid to start
+            if (jackpotData.raffleactive == 0){ // if a raffle is not active
+                console.log(hour, day);
+                console.log(`Raffle Not Active Might Start One`);
+                if ((forced == 1) && jackpotData.raffleactive == 0 || hour >= 12 && hour <= 21 && jackpotData.raffleactive == 0) { // the Jackpot function was forced and their is no raffle active OR its 12pm and their is no raffle active
+                    pglibrary.ChannelLog(`Starting Jackpot`, 'Automated Function', bot);
+                    console.log(`Starting Jackpot`);
+                    await bot.commands.get("jackpot").execute(null, null, bot, 1); // run jackpot.js with a state of 1
+                    //await sleep(20000); // wait 20 seconds
+                } else { // if neither of those conditions is true
+                    //await sleep(20000);
+                }
+            } else { // else if there is a raffle active
+                jackpotData = await UpdateJackpotData(curGuild);
+                console.log(`Raffle Currently Active`);
+                console.log(hour, day);
+                if ((forced == 1) && jackpotData.raffleactive == 1 || hour >= 22 && jackpotData.raffleactive == 1) { // the Jackpot function was forced and their is a raffle active OR its 10pm and their is a raffle active
+                    pglibrary.ChannelLog(`Stopping Jackpot`, 'Automated Function', bot);
+                    console.log('Stop Jackpot');
+                    if(jackpotData.users.length >= 5){
+                        randomPick = pglibrary.getRandomInt(jackpotData.users.length);
+                        console.log(`Pick: ${randomPick}`);
+                        winner = data.users[randomPick];
+                        points_manager.giveUserPoints(winner.id,jackpotData.rafflepot,cash,true,curGuild);
+                        winEmbed = new MessageEmbed()
+                        .setTitle("Raffle")
+                        .setAuthor(`${winner.username}`, winner.displayAvatarURL)
+                        .setColor("#2bff00")
+                        .setDescription(`<@&${jackpotid}>, <@${winner.id}> has won the raffle and has gained ${gain} points!`)
+                        bot.guilds.cache.get(curGuild).channels.cache.get("").send({ content: `<@&${jackpotid}>`, embeds: [embed] }); 
+                        // add raffle channel id to per server config
+                        console.log("Resetting Jackpot.JSON");
+                        ResetRaffleJson(data);
+                    }
+                    //await sleep(20000);
+                } else {
+                    //await sleep(20000);
+                }
+            }
+        } 
+        jackpotData = await UpdateJackpotData(curGuild); // update jackpotData to constatly check if a raffle is active or not
+        if (forced == 1 ) { // because the forceraffle function runs the function again and creates essenatilly another instance of it, if the jackpot function was forced stop it, this does not interupt the naturally ran jackpot function
+            console.log(`Stopping Forced Raffle Run`);
+            return;
+        }
     }
     //await sleep(20000); // wait 20 seconds to keep this from running every possible tick
+}
+
+async function ResetRaffleJson(data,guildId) {
+    var jsonupdate = {raffleactive: 0, rafflepot: 0, lastraffleday: SetLastRaffleDay(data), users: []}; // empty and reset our json file
+    masterdb.writeGuildJsonFile(guildId,jackpot,jsonupdate).then(()=>{
+        console.log(`Finished Writing to ${guildId}'s Jackpot File`);
+        return true;
+    }).catch(()=>{
+        console.error(`Couldnt Write to Guild ${guildId} Jackpot File, ID could be wrong or file doesnt exist`);
+    });
+    
 }
 
 function RaffleValid(json, day) { // a simple function that checks if the current day is equal to the last day found in jackpot.json
@@ -329,31 +384,41 @@ function UpdateDate(){ // update the date
     return [day, hour];
 }
 
-function UpdateJackpotData(){ // update the jackpot data array
-    jackpot = fs.readFileSync(`jackpot.json`, 'utf-8');
-    data = JSON.parse(jackpot);
-    return data;
-}
-
 // Stock Market Related Functions
 
 async function StockMarket() {
     console.log("Starting Stock Market");
     var stockmarket = GrabStockMarketData();
-    console.log(stockmarket);
+    console.log(`Adding Guilds to Stockmarket`);
+    for(i=0;i<cusGuildCache.length;i++){
+        curGuild = cusGuildCache[i];
+        guildConfig = await masterdb.getGuildJson(curGuild,"config");
+        if(typeof guildConfig.stockname !== 'undefined'){
+            svrStkName = guildConfig.stockname;
+            for(y=0;y<stockmarket.stocks.length;y++){
+                if(stockmarket.stocks[i].name == svrStkName){
+                    return;
+                } else {
+                    stockmarket.stocks.push({"name":svrStkName,"price": 2000,"owners":[]});
+                }
+            }
+        } else {
+            console.log(`${bot.guilds.cache.get(curGuild).name} Does not have their stock name set`);
+            pglibrary.ChannelLog(`Warning Server Stock Name is Not Set, Use ${guildConfig.prefix}stockname to set it`,'Unset Config Value',bot,curGuild);
+        }
+    }
+    pglibrary.WriteToJson(stockmarket, './stockmarket.json');
+    await pglibrary.sleep(500);
     if (stockmarket.stockmarketactive == 1) {
-        pglibrary.ChannelLog(`Updating Stock Market`, 'Automated Function', bot);
         console.log(`Updating Stock Market`);
         var finalstocks = [];
-        for (var i = 0, l = stockmarket.stocks.length; i < l; i++) {
+        for (i=0;i<stockmarket.stocks.length;i++) {
             console.log(`Running Calculations for Stock: ${stockmarket.stocks[i].name}`);
-            stocks = stockmarket.stocks[i];
-            console.log(stocks);
             var stock = stockmarket.stocks[i];
             console.log(`Calculating Stock price for ${stock.name}`);
             newstockprice = await CalculateStockPrice(stock);
             console.log(`Final Stock Price: ${newstockprice}`);
-            owners = stocks.owners;
+            owners = stock.owners;
             var companystock = {"name": stock.name, "price": Math.round(newstockprice), "owners": owners};
             console.log(`Stock for: ${stock}`);
             console.log(companystock);
@@ -370,7 +435,7 @@ async function StockMarket() {
         console.log(`Setting Up timer for reenable`);
         let stockTimeout = setTimeout(EnableStockMarket, 3600000 * stockmarket.updateinterval);
         console.log(stockTimeout);
-        pglibrary.sleep(100);
+        await pglibrary.sleep(100);
         console.log(`End of StockMarket func`);
     } else {
         if(typeof stockmarket.lastupdate === 'undefined'){
@@ -399,30 +464,25 @@ function EnableStockMarket(){
 }
 
 async function CalculateStockPrice(stock) {
-    var possibleIncrements= [0, 100, 200, 250, 500, 1000, 1250, 1500];
+    var possibleIncrements= [0, 100, 200, 250, 500, 1000, 1250, 1500, 2000];
     incrementamountIndex = pglibrary.getRandomInt(possibleIncrements.length); // pick a random number ranging from 0 to the amount of entry's in our startingAmounts array
     console.log(`Increment Amount Index: ${incrementamountIndex}`);
-    var chance = Math.random();
-    console.log(`P/N Chance: ${chance}`);
-    if (chance <= 0.5) {
-        console.log(`Increment amount is positive`);
-        incrementamount = possibleIncrements[incrementamountIndex];
-    } else {
-        console.log(`Increment amount is negative`);
-        incrementamount = possibleIncrements[incrementamountIndex] * - 1;
-    }
-    console.log(`Increment Amount: ${incrementamount}`);
-    
     stocksinService = GrabStocksinOwnership(stock);
     console.log(`Stocks in Service for stock ${stock.name}: ${stocksinService}`);
     if (stocksinService <= 0) {
         stocksinService = 1
-    } 
-    ownerfactor = Math.round(stocksinService * 0.65);
-    if (ownerfactor >= 5) {
-        ownerfactor = 5;
     }
-    newstockprice = stock.price + incrementamount * ownerfactor * pglibrary.getRandomInt(2);
+    var chance = Math.random();
+    console.log(`P/N Chance: ${chance}`);
+    if (chance + (stocksinService/100) <= 0.5) {
+        console.log(`Increment amount is positive`);
+        incrementamount = possibleIncrements[incrementamountIndex];
+    } else {
+        console.log(`Increment amount is negative`);
+        incrementamount = possibleIncrements[incrementamountIndex] * -1;
+    }
+    console.log(`Increment Amount: ${incrementamount}`);
+    newstockprice = stock.price + incrementamount
     console.log(`Final Stock Price: ${newstockprice}`);
     if (newstockprice >= 1000000) {
         console.log(`Stock hit is market cap`);
@@ -530,10 +590,12 @@ async function HeistLocationToggle(){
     date = new Date();
     day = date.getDay();
     console.log(`Current Date: ${date}, Day: ${day}.`);
+    for(i=0;i<cusGuildCache.length;i++){
+    }
     for(i=0;i<locations.locations.length;i++){
         location = locations.locations[i];
         console.log(location);
-        skip = 0;
+        skip = false;
         heists.forEach(heist => {
             console.log(`Checking Heist: ${heist}`);
             console.log(heist);
@@ -541,7 +603,7 @@ async function HeistLocationToggle(){
             heistData = JSON.parse(heistDataRaw);
             if(heistData.location.name == location.name){
                 console.log(`${location.name} has a heist on going, skipping toggle`);
-                skip = 1;
+                skip = true;
             }
         })   
         if(typeof location.madeunavailable === 'undefined'){
@@ -555,13 +617,11 @@ async function HeistLocationToggle(){
         console.log(`Location ${location.name}'s Date: ${locationDate}, Day: ${locationDay}`);
         if(day > locationDay && skip == 0){
             console.log(`Day is greater than the location date`);
-            if(location.available == 0){
-                pglibrary.ChannelLog(`Heist Location ${locations.locations[i].name} is now disabled.`, 'Automated Function', bot);
+            if(location.available == false){
                 console.log(`Location is disabled`);
                 locations.locations[i].available = 1;
                 locations.locations[i].madeunavailable = date;
             } else {
-                pglibrary.ChannelLog(`Heist Location ${locations.locations[i].name} is now enabled.`, 'Automated Function', bot);
                 console.log(`Location is available`);
                 locations.locations[i].available = 0;
                 locations.locations[i].madeunavailable = date;
