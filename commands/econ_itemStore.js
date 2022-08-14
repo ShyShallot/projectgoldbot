@@ -2,7 +2,6 @@ const config = require('../config.json'); // basic load of config file
 const fs = require('fs'); // File System for JS
 const pglibrary = require("../libraryfunctions.js");
 const points_manager = require('../points/manager');
-const item_handler = require('../points/item_handler');
 const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discord.js');
 module.exports = {
     name: 'store',
@@ -10,15 +9,15 @@ module.exports = {
     args: 'None',
     active: true,
     econ: true,
-    async execute(message, args, bot){
-        items = item_handler.fetchItems();
+    async execute(message, args, bot,guildId){
+        items = await points_manager.fetchItems(guildId);
         if(items.length <= 0){
             message.channel.send(`<@${message.author.id}>, This server doesn't have any Items`);
             return;
         }
         start = 0;
         const fit = items.length <= 10;
-        const embed = await message.channel.send({embeds:[await createItemEmbed(0, message)], components: fit ? []: [new MessageActionRow({components: [forwardButton]})]});
+        const embed = await message.channel.send({embeds:[await createItemEmbed(0, message,guildId)], components: fit ? []: [new MessageActionRow({components: [forwardButton]})]});
         if(fit) return;
         const interactCollect = embed.createMessageComponentCollector({
             filter: ({user}) => user.id = message.author.id
@@ -40,11 +39,12 @@ module.exports = {
     }
 }
 
-function createItemEmbed(start,message){
+async function createItemEmbed(start,message,guildId){
     if(!start){
         start = 0;
     }
-    items = item_handler.fetchItems();
+    items = await points_manager.fetchItems(guildId);
+    dB = await points_manager.fetchData(guildId);
     startArray = items.slice(start, start+10);
     itemEmbed = new MessageEmbed()
     .setTitle(`${message.guild.name}'s Item Store - Items: ${start+1}-${start+startArray.length} out of ${items.length} Items`)

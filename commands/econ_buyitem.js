@@ -2,7 +2,6 @@ const config = require('../config.json'); // basic load of config file
 const fs = require('fs'); // File System for JS
 const pglibrary = require("../libraryfunctions.js");
 const points_manager = require('../points/manager');
-const item_handler = require('../points/item_handler');
 const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discord.js');
 module.exports = {
     name: 'buy-item',
@@ -23,7 +22,7 @@ module.exports = {
         }
         itemName = args[0].replaceAll("_"," ");
         console.log(itemName)
-        item = await item_handler.fetchItem(itemName, true,guildId);
+        item = await points_manager.fetchItem(itemName, true,guildId);
         if(typeof item === 'string'){
             message.channel.send(item);
             return;

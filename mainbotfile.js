@@ -39,6 +39,11 @@ bot.on('ready', async () => { // Runs everything inside when the bot has success
         }).catch((err) => {
             console.error(err);
         });
+        await points_manager.ItemsSetup(curGuild).then(()=>{
+            console.log(`Finished Item Setup for ${bot.guilds.cache.get(curGuild).name}`);
+        }).catch((err) => {
+            console.error(err);
+        });
         await levels.setup(false,curGuild).then(() => {
             console.log("Level Manager Setup Done");
         }).catch((err) => {

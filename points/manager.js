@@ -38,12 +38,26 @@ var manager = module.exports = {
         
     },
     fetchItems: async function(guildId){
-        data = await masterdb.getGuildJson(guildId,"items");
+        //console.log(`Guild ID TO GRAB: ${guildId}`);
+        fileExists = await masterdb.DoesFileExist(guildId,"items").catch((err) => {
+            console.log(err);
+            fileExists = false;
+        });
+        //console.log(`Points Database File Status: ${fileExists}`);
+        if(fileExists){
+            data = await masterdb.getGuildJson(guildId,"items").catch((err)=>{console.error(err)});
+        } else {
+            data = undefined;
+        }
         return data;
     },
     async saveDB(newData,guildId){
         //console.log(newData);
         await masterdb.writeGuildJsonFile(guildId,"points-db",newData).then(()=>{console.log(`Saved Points Database File for Guild ID: ${guildId}`)}).catch((err)=>{console.error(err)});
+    },
+    async saveItemsDB(newData,guildId){
+        //console.log(newData);
+        await masterdb.writeGuildJsonFile(guildId,"items",newData).then(()=>{console.log(`Saved Points Database File for Guild ID: ${guildId}`)}).catch((err)=>{console.error(err)});
     },
     async fetchUser(id,bool,guildId){ // if true just return the user Data point, used for Read only instances
         let dB = await this.fetchData(guildId);
@@ -359,52 +373,48 @@ var manager = module.exports = {
             users[userIndex].inv.push(item);
         }
         dB.users = users;
-        await this.saveDB(db,guildId);
+        await this.saveDB(dB,guildId);
     },
     async useItem(id, item, message,guildId){
-        return new Promise(async function(res,rej){
-            dB = await manager.fetchData(guildId);
-            [users, userIndex] = manager.fetchUser(id,false,guildId);
-            if(users[userIndex].inv.length <= 0){
-                rej('Your Inventory is Empty!');
-                return;
+        dB = await this.fetchData(guildId);
+        [users, userIndex] = await this.fetchUser(id,false,guildId);
+        if(users[userIndex].inv.length <= 0){
+            return Promise.reject('Your Inventory is Empty!');
+        }
+        for(i=0;i<users[userIndex].inv.length;i++){
+            console.log(`User Inv Index: ${i}`);
+            console.log(users[userIndex].inv[i]);
+            if(users[userIndex].inv[i].name == item.name){
+                users[userIndex].inv.splice(i, 1);
+            } else {
+                return Promise.reject(`Your Inventory Does not contain ${item.name}`);
             }
-            for(i=0;i<users[userIndex].inv.length;i++){
-                console.log(`User Inv Index: ${i}`);
-                console.log(users[userIndex].inv[i]);
-                if(users[userIndex].inv[i].name == item.name){
-                    users[userIndex].inv.splice(i, 1);
-                } else {
-                    rej(`Your Inventory Does not contain ${item.name}`);
-                    return;
-                }
-            }
-            switch(item.type){
-                case 'role':
-                    roleId = item.typeParam.replace(/[^0-9\.]+/g,"");
-                    let guild = message.guild;
-                    let userList = await guild.members.fetch().then(members =>{ // since the cache doesnt get EVERY user we manually ask for each user in the server
-                        members.forEach(member => {
-                            if(member.id == users[userIndex].id){
-                                let role = guild.roles.cache.find(r => r.id === roleId);
-                                console.log(role);
-                                if(typeof role !== 'object'){
-                                    console.error(`Could Not Find Role: ${roleId}`);
-                                    rej('Could Not Find Role associated with this Item, if you not an Admin please let this be known.');
-                                    return;
-                                }
-                                member.roles.add(role);
-                                res('done');
+        }
+        switch(item.type){
+            case 'role':
+                roleId = item.typeParam.replace(/[^0-9\.]+/g,"");
+                let guild = message.guild;
+                let userList = await guild.members.fetch().then(members =>{ // since the cache doesnt get EVERY user we manually ask for each user in the server
+                    members.forEach(member => {
+                        if(member.id == users[userIndex].id){
+                            let role = guild.roles.cache.find(r => r.id === roleId);
+                            console.log(role);
+                            if(typeof role !== 'object'){
+                                console.error(`Could Not Find Role: ${roleId}`);
+                                rej('Could Not Find Role associated with this Item, if you not an Admin please let this be known.');
+                                return;
                             }
-                        });
+                            member.roles.add(role);
+                            return Promise.resolve('done');
+                        }
                     });
-                case 'points':
-                    users[userIndex].balance.cash += item.typeParam;
-                    res('done');
-            }
-            dB.users = users;
-            manager.saveDB(dB,guildId);
-        });
+                });
+            case 'points':
+                users[userIndex].balance.cash += item.typeParam;
+                return Promise.resolve('done');
+        }
+        dB.users = users;
+        this.saveDB(dB,guildId);
     },
     async work(id,amount,guildId){
         dB = await this.fetchData(guildId);
@@ -480,5 +490,99 @@ var manager = module.exports = {
     async symbol(guildId){ // read only thing
         dB = await this.fetchData(guildId);
         return dB.pointSymbol;
+    },
+    async fetchItem(name,bool,guildId){
+        if(!name){
+            err = "Not Name Provided";
+            return err;
+        }
+        dB = await this.fetchItems(guildId);
+        console.log(dB.length);
+        for(i=0;i<dB.length;i++){
+            console.log(i);
+            if(dB[i].name == name){
+                if(bool){
+                    return dB[i];
+                } else{
+                    return [dB, i];
+                }
+            } else if (i == dB.length){
+                err ='Could Not Find Item';
+                return err;
+            }
+        }
+    },
+    async createItem(message,args,guildId){
+        dB = await this.fetchItems(guildId);
+        if(args[0] && args[1]){
+            itemName =  args[0].replaceAll('_', " ");
+            for(i=0;i<dB.length;i++){
+                if(dB[i].name == itemName){
+                    err = "An Item with this name already exists";
+                    return err;
+                }
+            }
+            cost = parseInt(args[1]);
+            item = {
+                "name": itemName,
+                "price": cost
+            }
+            if(args[2]){
+                switch(args[2]){
+                    case 'Role':
+                    case 'role':
+                        item.type = 'role';
+                        item.typeParam = args[3];
+                        break;
+                    case 'Points':
+                    case 'points':
+                        pointsNum = parseInt(args[3]);
+                        if(isNaN(pointsNum)){
+                            err = 'Given Argument is not a valid number'
+                            return err;
+                        } else if(pointsNum == 0){
+                            err = 'Given Number cannot be 0';
+                            return err;
+                        }
+                        item.type ='points';
+                        item.typeParam = pointsNum;
+                        break;
+                }
+            }
+            dB.push(item);
+            await this.saveItemsDB(dB,guildId);
+            return item;
+        } else {
+            err = "Valid Args: Name | Cost | Type (Optional) | Type Option (Optional)";
+            return err;
+        }
+    },
+    async deleteItem(message,args,guildId){
+        if(args[0]){
+            itemName =  args[0].replaceAll('_', " ");
+            err = await this.fetchItem(itemName,true,guildId);
+            console.log(err);
+            if(typeof err === 'string'){
+                return err;
+            }
+            [items, index] = await this.fetchItem(itemName,false,guildId);
+            console.log(items, index)
+            if(typeof items === 'object'){
+                console.log(items[index], itemName);
+                if(items[index].name == itemName){
+                    console.log(`Item to Delete: ${itemName}`);
+                    items.splice(i, 1);
+                    await this.saveItemsDB(items,guildId);
+                }
+            }
+        }
+    },
+    async ItemsSetup(guildId){
+        items = await this.fetchItems(guildId);
+        if(typeof items === 'undefined'){
+            items = [];
+            await this.saveItemsDB(items,guildId);
+        }
+        return Promise.resolve(`Finished Creating Items DB File`);
     }
 }
