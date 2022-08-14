@@ -3,6 +3,7 @@ const config = require('../config.json'); // basic config file read
 const pglibrary = require("../libraryfunctions.js"); // load our custom library functions.
 const fs = require('fs'); // File System for JS 
 const points_manager = require('../points/manager');
+const masterdb = require('../master-db/masterdb');
 // this file handles buying, selling and price check of stocks
 module.exports = {
     name: 'stocks',
@@ -24,7 +25,7 @@ module.exports = {
     }
 }
 
-function StockHandler(message, args) {
+async function StockHandler(message, args) {
     console.log(`Buying Stock(s)`);
     stockfile = fs.readFileSync(`./stockmarket.json`, 'utf-8'); // pause everthing and read the contents of stockmarket.json to a var
     stockdata = JSON.parse(stockfile); // parse the data into a JS array
@@ -52,7 +53,7 @@ function StockHandler(message, args) {
                         message.channel.send(`<@${user.id}>, you cannot buy over the max allowed amount of stocks which is ${stockdata.maxownedstocks}.`);
                         return;
                     }
-                    [cash,bank] = points_manager.getUserBalance(user.id);
+                    [cash,bank] = await points_manager.getUserBalance(user.id,message.guild.id);
                     if (stock.price * args[2] <= cash) { // check if the user has enough money for the amount of stocks they want to buy.
                         var stockprice = stock.price; // define the stock price to a var to prevent some wacky issues.
                         console.log(stockprice);
@@ -63,7 +64,7 @@ function StockHandler(message, args) {
                             message.channel.send(`<@${user.id}>, stock ${stock.name} is under the minimum buy allowed cost. Stock Price: ${stock.price}.`);
                             return;
                         } else if (stockprice >= 500) {
-                            points_manager.giveUserPoints(user.id, stockprice*-1,'cash');
+                            points_manager.giveUserPoints(user.id, stockprice*-1,'cash',true,message.guild.id);
                         } 
                         WriteToStocks(user, stock, args[2]); // run our function to add the user and the requested amount of stock to our stockmarket.json.
                         message.channel.send(`<@${message.author.id}>, you have bought ${args[2]} of ${stock.name} for ${stock.price * args[2]} points.`);
@@ -96,7 +97,7 @@ function StockHandler(message, args) {
                         let stockprice = stock.price;
                         let finalprice = stock.price*args[2];
                         if(stockprice > 0){
-                            points_manager.giveUserPoints(user.id,finalprice,'cash');
+                            points_manager.giveUserPoints(user.id,finalprice,'cash',true,message.guild.id);
                         }
                         WriteToStocks(user,stock,negativeAmount);
                         message.channel.send(`<@${message.author.id}>, you have sold ${args[2]} of ${stock.name} for ${stock.price * args[2]} points.`);
@@ -134,17 +135,17 @@ function FindStock(requestedstock) { // return a stock array from a name
 
 
 function IsUserAlreadyInArray(array, userID){ // check if the user already exists in the given array.
-    console.log(`Checking if ${userID} is in the array`);
+    //console.log(`Checking if ${userID} is in the array`);
     stockfile = fs.readFileSync(`./stockmarket.json`, 'utf-8');
     stockdata = JSON.parse(stockfile);
-    console.log(array);
+    //console.log(array);
     if (!(array.length == 0)) { // if the length of the Users object array in our original array is not empty
-        console.log(array.length);
+        //console.log(array.length);
         for (var i = 0, l = array.length; i < l; i++) { // initially i is set to 0, then l is set to the amount of entry's in data.users, and if I is less than L add 1 to I.
             curUser = array[i].id; // get the ID for the current user 
-            console.log(curUser);
+            //console.log(curUser);
             if (userID == curUser) { // if the userID we want to check is equal to the curUser in the arrray return true
-                console.log(`User ${userID} is already in the array`);
+                //console.log(`User ${userID} is already in the array`);
                 return true;
             } 
         }
@@ -238,12 +239,12 @@ function ListStock(bot, args, message){
         .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
         .addField(`Stock Price Website`, "https://www.projectgold.dev/stocks/")
         stockdata.stocks.forEach(stock => {
-            console.log(stock);
+            //console.log(stock);
             if(stock.owners.length > 0 && IsUserAlreadyInArray(stock.owners, message.author.id)) {
-                console.log(stock.owners);
+                //console.log(stock.owners);
                 user = stock.owners.find(({id}) => id === message.author.id);
-                console.log(`User to find stock for: ${user.name}`);
-                console.log(`The user owns ${user.amount} stock for ${stock.name}`);
+                //console.log(`User to find stock for: ${user.name}`);
+                //console.log(`The user owns ${user.amount} stock for ${stock.name}`);
                 userAmount = user.amount;
             } else {
                 userAmount = 0;

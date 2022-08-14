@@ -3,6 +3,7 @@ const fs = require('fs'); // File System for JS
 const pglibrary = require("../libraryfunctions.js");
 const points_manager = require('../points/manager');
 const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discord.js');
+const masterdb = require('../master-db/masterdb');
 module.exports = {
     name: 'give',
     description: 'Give a User your points if you can afford it',
@@ -10,11 +11,13 @@ module.exports = {
     active: true,
     econ: true,
     async execute(message, args, bot){
-        if(message.member.roles.cache.find(role => role.name === config.modrole) && args[3] == `false`){
+        guildconfig = await masterdb.getGuildJson(message.guild.id,"config");
+        dB = await points_manager.fetchData(message.guild.id);
+        if(message.member.roles.cache.find(role => role.name === guildconfig.modrole) && args[3] == `false`){
             if(args[0] && args[1] && args[2]){
                 target = message.mentions.members.first();
                 amount = parseInt(args[1]);
-                err = points_manager.giveUserPoints(target.id, amount, args[2], true);
+                err = await points_manager.giveUserPoints(target.id, amount, args[2], true, message.guild.id);
                 if(err){
                     message.channel.send(err);
                     return;
@@ -27,7 +30,8 @@ module.exports = {
             if(args[0] && args[1] && args[2]){
                 target = message.mentions.members.first();
                 amount = parseInt(args[1]);
-                err = points_manager.donatePoints(message.author.id, target.id, amount, args[2],true);
+                location = args[2];
+                err = await points_manager.donatePoints(message.author.id, target.id, amount, location ,message.guild.id);
                 if(err){
                     message.channel.send(err);
                     return;

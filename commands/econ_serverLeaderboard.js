@@ -11,7 +11,7 @@ module.exports = {
     econ: true,
     async execute(message, args, bot){
         start = 0;
-        leaderboardArray = points_manager.sortForLeaderboard();
+        leaderboardArray = await points_manager.sortForLeaderboard(message.guild.id);
         const fit = leaderboardArray.length <= 10;
         const embed = await message.channel.send({embeds:[await createLeaderboardEmbed(0, message)], components: fit ? []: [new MessageActionRow({components: [forwardButton]})]});
         if(fit) return;
@@ -35,22 +35,25 @@ module.exports = {
     }
 }
 
-function createLeaderboardEmbed(start,message){
+async function createLeaderboardEmbed(start,message){
     if(!start){
         start = 0;
     }
-    leaderboardArray = points_manager.sortForLeaderboard();
+    leaderboardArray = await points_manager.sortForLeaderboard(message.guild.id);
     startArray = leaderboardArray.slice(start, start+10);
     leaderEmbed = new MessageEmbed()
     .setTitle(`${message.guild.name}'s Server Leaderboard - Users: ${start+1}-${start+startArray.length} out of ${leaderboardArray.length} Users`)
     .setTimestamp()
     .setColor(0x00AE86);
+    console.log(startArray, startArray.length);
     for(i=0;i<startArray.length;i++){
+        console.log(i);
         user = startArray[i];
         if(start == 0){
             start = 1
         }
-        dB = points_manager.fetchData();
+        dB = await points_manager.fetchData(message.guild.id);
+        console.log(start,i);
         leaderEmbed.addField(`${start+i}. ${user.username}`, `${dB.pointSymbol}${pglibrary.commafy(user.total)}`);
     }
     return leaderEmbed;

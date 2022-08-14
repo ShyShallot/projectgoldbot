@@ -46,7 +46,9 @@ var manager = module.exports = {
         await masterdb.writeGuildJsonFile(guildId,"points-db",newData).then(()=>{console.log(`Saved Points Database File for Guild ID: ${guildId}`)}).catch((err)=>{console.error(err)});
     },
     async fetchUser(id,bool,guildId){ // if true just return the user Data point, used for Read only instances
-        let users = await this.fetchData(guildId).users;
+        let dB = await this.fetchData(guildId);
+        //console.log(dB);
+        users = dB.users;
         if(users.length >= 1){
             for(i=0;i<users.length;i++){
                 let user = users[i];
@@ -56,8 +58,6 @@ var manager = module.exports = {
                     } else {return [users, i];}
                 }
             }
-        } else {
-            return false;
         }
     },
     setupUser: async function(user,guildId){ // this is just the user data template
@@ -149,12 +149,22 @@ var manager = module.exports = {
         if(typeof dB === "undefined"){
             dB = {setup: false,users:[],pointSymbol:"💰",earnCooldown:10000,workCooldownTime:86400000,crimeCooldownTime:86400000,pointsPerMessage:5,pointsMulti:1,pointsTax:5,startingBalance:1000,maxInventorySize:10}
         }
+        itemStatus = await masterdb.DoesFileExist(guildId,"items");
+        if(!itemStatus){
+            items = [];
+            await masterdb.writeGuildJsonFile(guildId,"items",items).then((status)=>{
+                console.log(status);
+            }).catch((err)=>{console.error(err)});
+        }
         if(dB.setup && !bool){
             return;
         } else if(bool){
             dB.users = []; // when forced restart
             await this.saveDB(db,guildId); 
             pglibrary.sleep(10);
+        }
+        if(!dB.setup){
+            dB.users = [];
         }
         let guild = this.bot.guilds.cache.get(guildId);
         let userList = await guild.members.fetch()
@@ -179,6 +189,7 @@ var manager = module.exports = {
         return Promise.resolve(`Finished Setup for ${this.bot.guilds.cache.get(guildId).name}`);
     },
     giveUserPoints: async function(id, amount, location,taxFree, guildId){
+        console.log(guildId);
         let [users, userIndex] = await this.fetchUser(id,false,guildId);
         let dB = await this.fetchData(guildId);
         if(location == "bank"){
@@ -203,8 +214,8 @@ var manager = module.exports = {
             return;
         }
         dB.users = users;
-        await this.saveDB(db,guildId);
-        pglibrary.EconChannelLog(`User ${id} has been given/removed ${pglibrary.commafy(amount)} points`, 'Command', this.bot);
+        await this.saveDB(dB,guildId);
+        //pglibrary.EconChannelLog(`User ${id} has been given/removed ${pglibrary.commafy(amount)} points`, 'Command', this.bot);
     },
     setUserPoints: async function(id, points, location,guildId){
         let [users, userIndex] = await this.fetchUser(id,false,guildId);
@@ -221,10 +232,11 @@ var manager = module.exports = {
         await this.saveDB(db,guildId);
         pglibrary.EconChannelLog(`User ${id} points have been set to ${pglibrary.commafy(points)}.`, `Admin Command`, this.bot);
     },
-    async donatePoints(patronId, targetID, amount,guildId){
+    async donatePoints(patronId, targetID, amount,location,guildId){
         let dB = await this.fetchData(guildId);
         let [users, patronIndex] = await this.fetchUser(patronId,false,guildId);
         let [_, targetIndex] = await this.fetchUser(targetID,false,guildId);
+        console.log(location);
         if(users[patronIndex].balance < amount){
             if(location == "bank"){
                 users[patronIndex].balance.bank -= amount;
@@ -242,9 +254,10 @@ var manager = module.exports = {
             err = "You do not have enough points";
             return err;
         }
-        pglibrary.EconChannelLog(`User ${patronId} has given ${targetID} ${pglibrary.commafy(amount)} points.`, `Command`, this.bot);
+        //pglibrary.EconChannelLog(`User ${patronId} has given ${targetID} ${pglibrary.commafy(amount)} points.`, `Command`, this.bot);
     },
     async messagePoints(id,guildId){
+        console.log(`Guild: ${guildId}`);
         dB = await this.fetchData(guildId);
         try{
             [users, userIndex] = await this.fetchUser(id,false,guildId);
@@ -254,11 +267,11 @@ var manager = module.exports = {
                 users[userIndex].balance.cash = Math.round(users[userIndex].balance.cash*100)/100;
                 users[userIndex].cooldown = true;
                 dB.users = users;
-                await this.saveDB(db,guildId);
-                setTimeout(()=> this.removeUserCooldown(id), dB.earnCooldown);
+                await this.saveDB(dB,guildId);
+                setTimeout(()=> this.removeUserCooldown(id,guildId), dB.earnCooldown);
             }
-        } catch{
-            console.log(`Whoops`);
+        } catch(err){
+            console.log(err);
         }
     },
     async removeUserCooldown(id,guildId){
@@ -317,7 +330,8 @@ var manager = module.exports = {
         pglibrary.EconChannelLog(`User ${id} has Withdrew ${pglibrary.commafy(amount)} points`, `Command`, this.bot);
     },
     async sortForLeaderboard(guildId){
-        userDB = await this.fetchData(guildId).users;
+        dB = await this.fetchData(guildId);
+        userDB = dB.users;
         allTotalArray = [];
         startTime = Date.now();
         userDB.forEach(user => {

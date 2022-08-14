@@ -1,11 +1,14 @@
 const {MessageEmbed} = require('discord.js'); // required for Rich Message Embeds
 const config = require('../config.json');
+const masterdb = require('../master-db/masterdb');
 module.exports = {
     name: 'help',
     description: 'prints help',
     args: '[Command Name]',
-    execute(message, args, bot){
+    active: true,
+    async execute(message, args, bot){
         commands = bot.commands;
+        guildConfig = await masterdb.getGuildJson(message.guild.id,"config");
         console.log(args);
         if(args[0]){
             command = commands.get(args[0]);
@@ -28,7 +31,7 @@ module.exports = {
         .setTitle("Project Gold Help Menu")
         .setAuthor(`${bot.user.username}`, `${bot.user.avatarURL()}`)
         .setColor(0xFF4500)
-        .addField("Bot Info: ", `My Prefix: **${config.prefix}**. You can find my source code at: https://github.com/ShyShallot/projectgoldbot`)
+        .addField("Bot Info: ", `Server Prefix: **${guildConfig.prefix}**. You can find my source code at: https://github.com/ShyShallot/projectgoldbot`)
         .addField("Commands", "1")
         .addField("Economy Commands", '1')
         .addField("Level Commands", '1')
@@ -51,7 +54,7 @@ module.exports = {
                 }
             } else {
                 if(command[1].active){
-                    console.log(i, commands.size);
+                    //console.log(i, commands.size);
                     helpembed.fields[field].value += `${command[1].name}, `;
                 }
             }

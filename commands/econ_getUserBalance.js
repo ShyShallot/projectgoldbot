@@ -10,8 +10,8 @@ module.exports = {
     active: true,
     econ: true,
     async execute(message, args, bot){
-        dB = points_manager.fetchData();
-        leaderboardArray = points_manager.sortForLeaderboard();
+        dB = await points_manager.fetchData(message.guild.id);
+        leaderboardArray = await points_manager.sortForLeaderboard(message.guild.id);
         balanceEmbed = new MessageEmbed()
         .setTitle(message.author.username)
         .setDescription(`Leaderboard Ranking: Not Yet`)
@@ -22,7 +22,7 @@ module.exports = {
         .addField('Total:', '1', true);
         target = message.mentions.members.first();
         if(target){
-            [cash,bank] = points_manager.getUserBalance(target.id);
+            [cash,bank] = await points_manager.getUserBalance(target.id,message.guild.id);
             for(i=0;i<leaderboardArray.length;i++){
                 if(leaderboardArray[i].username === target.user.username){
                     position = i;
@@ -35,7 +35,7 @@ module.exports = {
             balanceEmbed.fields[2].value = `${dB.pointSymbol}${pglibrary.commafy(cash+bank)}`;
             message.channel.send({embeds:[balanceEmbed]});
         } else {
-            [cash,bank] = points_manager.getUserBalance(message.author.id);
+            [cash,bank] = await points_manager.getUserBalance(message.author.id,message.guild.id);
             for(i=0;i<leaderboardArray.length;i++){
                 if(leaderboardArray[i].username === message.author.username){
                     position = i;

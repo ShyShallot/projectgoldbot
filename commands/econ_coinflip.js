@@ -8,8 +8,8 @@ module.exports = {
     args: 'Heads/Tails | Bet Amount',
     active: true,
     econ: true,
-    execute(message, args, bot){
-        [cash,bank] = points_manager.getUserBalance(message.author.id);
+    async execute(message, args, bot,guildId){
+        [cash,bank] = await points_manager.getUserBalance(message.author.id,guildId);
         console.log(cash, bank);
         console.log(args[0]); // grab the arguments from the command
         if (args[0] == "heads" || args[0] == "tails"){ // only accept heads or tails as the first argument 
@@ -38,7 +38,7 @@ module.exports = {
         }
   }
 }
-function IncomeGain(land, args, message) {
+function IncomeGain(land, args, message,guildId) {
     var multi = CalculateMultiplier(args[1]); // calculate a multiplier from the users bet
     console.log(`Bet Multiplier: ${multi}`);
     var gain = Math.round(args[1] * multi); // round their bet times the calculated mutliplier 
@@ -88,21 +88,21 @@ function FlipCoin(cash, args, message) {
             if (landing <= 0.5 && args[0] == "heads"){ // if the landing is less than or equal to 0.5 and the user chose heads
                 console.log("Landed on heads and won");
                 var land = "heads";
-                IncomeGain(land, args, message); // give them their points as they won
+                IncomeGain(land, args, message,guildId); // give them their points as they won
             } else if (landing >= 0.5 && args[0] == "tails"){ // case for a win on tails
                 console.log("Landed on tails and won");
                 var land = "tails";
-                IncomeGain(land, args, message);
+                IncomeGain(land, args, message,guildId);
             } else if (landing >= 0.5 && args[0] == "heads"){ // loss for picking heads and landing on tails
                 console.log("Landed on heads and lose");
                 land = "tails";
                 pick = "heads";
-                IncomeLoss(land, pick, args, message);
+                IncomeLoss(land, pick, args, message,guildId);
             } else if (landing <= 0.5 && args[0] == "tails") { // loss for picking heads and landing on tails
                 console.log("Landed on tails and lost");
                 pick = "tails";
                 land = "heads";
-                IncomeLoss(land, pick, args, message);
+                IncomeLoss(land, pick, args, message),guildId;
             }
         } else {
             message.channel.send(`<@${message.author.id}>, The bet given is below the minimum bet of: ` + config.mincoinbet); // tell the user their bet is below minimum

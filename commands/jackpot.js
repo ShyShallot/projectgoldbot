@@ -12,7 +12,7 @@ module.exports = {
     args: 'No Arguments',
     active: true,
     econ:true,
-    execute(message, args, bot, jackpotState){
+   * execute(message, args, bot, jackpotState){
         if (!message && jackpotState == 1) { // hacky solution for starting the jackpot from our mainbotfile.js
             StartJackpot(bot);
         } else if(!message && jackpotState == 0) { // pretty much the same for starting it
@@ -162,11 +162,7 @@ async function JackpotEnd(bot){
 }
 
 
-async function ResetRaffleJson(data) {
-    var jsonupdate = {raffleactive: 0, rafflepot: 0, lastraffleday: SetLastRaffleDay(data), users: []}; // empty and reset our json file
-    pglibrary.WriteToJson(jsonupdate, `./jackpot.json`);
-    return true;
-}
+
 
 function SetLastRaffleDay(data) {
     var date = new Date();
