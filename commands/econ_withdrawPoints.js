@@ -10,14 +10,16 @@ module.exports = {
     active: true,
     econ: true,
     async execute(message, args, bot){
+        guildId = message.guild.id;
+        dB = await points_manager.fetchData(guildId);
         if(args[0]){
             console.log(args[0]);
             if(args[0] == "all"){
                 console.log(`Provided Arg is all of users balance`);
-                [cash,bank] = points_manager.getUserBalance(message.author.id);
+                [cash,bank] = await points_manager.getUserBalance(message.author.id,guildId);
                 amount = bank;
             } else if(args[0] == 'half'){
-                [cash,bank] = points_manager.getUserBalance(message.author.id);
+                [cash,bank] = await points_manager.getUserBalance(message.author.id,guildId);
                 amount = Math.round(bank/2);
             } else {
                 amount = parseInt(args[0]);
@@ -27,7 +29,7 @@ module.exports = {
                 }
             }
             console.log(amount);
-            err = points_manager.withdrawPoints(message.author.id, amount);
+            err = await points_manager.withdrawPoints(message.author.id, amount,guildId);
             if(err){
                 message.channel.send(err);
             } else {

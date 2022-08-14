@@ -32,7 +32,7 @@ const handler = module.exports = {
                 return 'No Type';
         }
     },
-    replacePlaceholder(type,amount){
+    replacePlaceholder(type,amount,guildId){
         return new Promise(async function (res,rej){
             strings = handler.fetchStrings(type);
             if(strings == 'No Type'){
@@ -57,7 +57,7 @@ const handler = module.exports = {
                     console.log(randomString);
                 }
             }
-            dB = point_handler.fetchData();
+            dB = await point_handler.fetchData(guildId);
             console.log(dB.pointSymbol);
             randomString = randomString.replace('$symbol', dB.pointSymbol.toString());
             console.log(randomString);

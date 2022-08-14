@@ -264,7 +264,7 @@ async function StartHeist(user, message, bot){
         userHeist.started = false;
         pglibrary.WriteToJson(userHeist, file);
         return;
-    } else {
+    } else {SetupHeistt
         console.log(`Found Channel`);
     }
     pglibrary.ChannelLog(`${user.username} has started a heist.`, 'User Command', bot);

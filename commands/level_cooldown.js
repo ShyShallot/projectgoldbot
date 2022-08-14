@@ -13,9 +13,8 @@ module.exports = {
     level: true,
     async execute(message, args, bot){
         if(typeof parseInt(args[0]) === 'number'){
-            lvl_mng.setCooldown(parseInt(args[0]));
-            db = lvl_mng.fetchData();
-            message.channel.send(`<@${message.author.id}>, Successfully set the Message XP Cooldown to: ${db.messageCooldownTime/1000} Seconds`);
+            await lvl_mng.setCooldown(parseInt(args[0]),message.guild.id);
+            message.channel.send(`<@${message.author.id}>, Successfully set the Message XP Cooldown to: ${args[0]/1000} Seconds`);
         }
     }
 }

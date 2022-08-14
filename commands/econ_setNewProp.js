@@ -12,34 +12,31 @@ module.exports = {
     admin: true,
     econ: true,
     async execute(message, args, bot){
-        if(message.member.roles.cache.find(role => role.name === config.modrole)){
-            if(!args[0]){
-                message.channel.send(`<@${message.author.id}>, missing First args`);
-                return;
+        guildId = message.guild.id;
+        if(!args[0]){
+            message.channel.send(`<@${message.author.id}>, missing First args`);
+            return;
+        }
+        if(!args[1]){
+            returnStats = await point_handler.removePropGlobal(args[0],guildId);
+            message.channel.send(`${message.author.id}, ${returnStats}`);
+        } else {
+            switch (args[1]){
+                case 'true':
+                case 'True':
+                    args[1] = true;
+                    break;
+                case 'false':
+                case 'False':
+                    args[1] = false;
+                    break;
+                case 'null':
+                case 'Null':
+                    args[1] = null;
+                    break;
             }
-            if(!args[1]){
-                returnStats = point_handler.removePropGlobal(args[0]);
-                message.channel.send(`${message.author.id}, ${returnStats}`);
-            } else {
-                switch (args[1]){
-                    case 'true':
-                    case 'True':
-                        args[1] = true;
-                        break;
-                    case 'false':
-                    case 'False':
-                        args[1] = false;
-                        break;
-                    case 'null':
-                    case 'Null':
-                        args[1] = null;
-                        break;
-                }
-                returnStats = point_handler.addNewPropGlobal(args[0], args[1]);
-                message.channel.send(`${message.author.id}, ${returnStats}`);
-            }
-        } else {   
-            message.channel.send(`<@${message.author.id}>, You Do not have perms for such an action`);
+            returnStats = await point_handler.addNewPropGlobal(args[0], args[1],guildId);
+            message.channel.send(`${message.author.id}, ${returnStats}`);
         }
     }
 }

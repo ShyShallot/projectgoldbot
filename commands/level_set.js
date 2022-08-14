@@ -12,6 +12,7 @@ module.exports = {
     admin: true,
     level: true,
     async execute(message, args, bot){
+        guildId = message.guild.id;
         if(!message.mentions.users.first()){message.channel.send(`<@${message.author.id}>, Please Target a Valid User.`); return;}
         if(!args[1]){message.channel.send(`<@${message.author.id}>, Please select xp or level to give`); return;}
         if(!args[2]){message.channel.send(`<@${message.author.id}>, Please provide a valid argument`); return;}
@@ -23,7 +24,7 @@ module.exports = {
             bool = false;
             string = `set <@${message.mentions.users.first().id}> to Level ${args[2]}`;
         }
-        lvl_mng.setUserData(message.mentions.users.first().id, parseInt(args[2]), bool);
+        await lvl_mng.setUserData(message.mentions.users.first().id, parseInt(args[2]), bool,guildId);
         message.channel.send(`<@${message.author.id}>, Successfully ${string}`);
     }
 }

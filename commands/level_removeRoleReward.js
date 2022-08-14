@@ -14,7 +14,8 @@ module.exports = {
     async execute(message, args, bot){
         if(!args[0]){message.channel.send(`<@${message.author.id}>, Please provide a valid argument.`); return;}
         if(isNaN(parseInt(args[0]))){message.channel.send(`<@${message.author.id}>, Please provide a valid number.`); return;}
-        lvl_mng.removeRoleReward(args[0]);
+        guildId = message.guild.id;
+        lvl_mng.removeRoleReward(args[0],guildId);
         message.channel.send(`<@${message.author.id}>, Successfully removed Reward for Level ${args[0]}`);
     }
 }

@@ -10,12 +10,11 @@ module.exports = {
     args: 'None',
     active: true,
     econ: true,
-    async execute(message, args, bot){
-        dB = point_handler.fetchData();
+    async execute(message, args, bot,guildId){
+        dB = await point_handler.fetchData(guildId);
         amount = pglibrary.getRandomInt(35000);
         amount *= dB.pointsMulti;
-        [users,userIndex] = point_handler.fetchUser(message.author.id);
-        db = point_handler.fetchData();
+        [users,userIndex] = await point_handler.fetchUser(message.author.id,false,guildId);
         if(users[userIndex].workCooldown){
             timeDiff = pglibrary.convertMS(Math.abs(users[userIndex].lastCrime+db.workCooldownTime));
             timeDisplay = `${timeDiff.hour} hour(s).`;
@@ -25,8 +24,8 @@ module.exports = {
             message.channel.send(`<@${message.author.id}>, You are too damn tired, you can work in ${timeDisplay}`);
             return;
         }
-        point_handler.work(message.author.id,amount);
-        string_handler.replacePlaceholder('work', amount).then((result) => {
+        point_handler.work(message.author.id,amount,guildId);
+        string_handler.replacePlaceholder('work', amount,guildId).then((result) => {
             console.log(result);
             message.channel.send(`<@${message.author.id}>, ${result}`);
         }).catch((result) => {

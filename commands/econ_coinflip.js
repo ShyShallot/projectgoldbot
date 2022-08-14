@@ -1,5 +1,6 @@
 const {MessageEmbed} = require('discord.js');
 const config = require('../config.json');
+const masterdb = require('../master-db/masterdb');
 const points_manager = require('../points/manager');
 // this file handles the coinflip command
 module.exports = {
@@ -9,6 +10,7 @@ module.exports = {
     active: true,
     econ: true,
     async execute(message, args, bot,guildId){
+        guildConfig = await masterdb.getGuildJson(guildId,"config");
         [cash,bank] = await points_manager.getUserBalance(message.author.id,guildId);
         console.log(cash, bank);
         console.log(args[0]); // grab the arguments from the command
@@ -34,7 +36,7 @@ module.exports = {
                 }
             }
         } else { // if no argument is given and only the command is sent tell the user
-            message.channel.send(`<@${message.author.id}>, no args have been given, to use coinflip do ${config.econprefix}coinflip [heads/tails] [bet/all/half].`);
+            message.channel.send(`<@${message.author.id}>, no args have been given, to use coinflip do ${guildConfig.econprefix}coinflip [heads/tails] [bet/all/half].`);
         }
   }
 }
@@ -43,7 +45,7 @@ function IncomeGain(land, args, message,guildId) {
     console.log(`Bet Multiplier: ${multi}`);
     var gain = Math.round(args[1] * multi); // round their bet times the calculated mutliplier 
     var gaininPlace = commafy(gain); // create string var of their gained points with every three digits being seperated by a ,
-    points_manager.giveUserPoints(message.author.id, gain, 'cash',true);
+    points_manager.giveUserPoints(message.author.id, gain, 'cash',true,guildId);
     const embed = new MessageEmbed()
     .setTitle("Coin Flip")
     .setAuthor(`${message.author.username}`, message.author.displayAvatarURL)
@@ -75,14 +77,16 @@ function CalculateMultiplier(bet) {
     return multiplier + digits;
 }
 
-function FlipCoin(cash, args, message) {
+async function FlipCoin(cash, args, message) {
+    guildId = message.guild.id;
+    guildConfig = await masterdb.getGuildJson(guildId,"config");
     if (args[1] <= cash) { // check if the user has enough cash to place a bet
         console.log("User has enough money in cash");
-        var parsedMinBet = parseInt(config.mincoinbet); // turn the minimum bet found in config.json 
+        var parsedMinBet = parseInt(guildConfig.mincoinbet); // turn the minimum bet found in config.json 
         if (args[1] >= parsedMinBet){ // if the given bet is over the minimum required bet
             console.log("Bet is over min");
             console.log(cash);
-            points_manager.giveUserPoints(message.author.id, -args[1], "cash", true);
+            points_manager.giveUserPoints(message.author.id, -args[1], "cash", true,guildId);
             var landing = Math.random() * 1.15; // the landing of the coin * 1.15, this makes it so it doesn't constantly land on 1 side to many times
             console.log(landing);
             if (landing <= 0.5 && args[0] == "heads"){ // if the landing is less than or equal to 0.5 and the user chose heads
@@ -97,15 +101,15 @@ function FlipCoin(cash, args, message) {
                 console.log("Landed on heads and lose");
                 land = "tails";
                 pick = "heads";
-                IncomeLoss(land, pick, args, message,guildId);
+                IncomeLoss(land, pick, args, message);
             } else if (landing <= 0.5 && args[0] == "tails") { // loss for picking heads and landing on tails
                 console.log("Landed on tails and lost");
                 pick = "tails";
                 land = "heads";
-                IncomeLoss(land, pick, args, message),guildId;
+                IncomeLoss(land, pick, args, message);
             }
         } else {
-            message.channel.send(`<@${message.author.id}>, The bet given is below the minimum bet of: ` + config.mincoinbet); // tell the user their bet is below minimum
+            message.channel.send(`<@${message.author.id}>, The bet given is below the minimum bet of: ` + guildConfig.mincoinbet); // tell the user their bet is below minimum
         }
     } else {
         message.channel.send(`<@${message.author.id}>, you do not have enough cash in hand to do that.`); // tell the user their fucking broke

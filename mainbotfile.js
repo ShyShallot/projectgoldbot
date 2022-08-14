@@ -30,6 +30,7 @@ bot.on('ready', async () => { // Runs everything inside when the bot has success
     }
     console.log(`Added Commands to Array`);
     points_manager.setBot(bot);
+    levels.setBot(bot);
     //console.log(cusGuildCache, cusGuildCache.length);
     for(const curGuild of cusGuildCache){
         //console.log(curGuild);
@@ -37,6 +38,11 @@ bot.on('ready', async () => { // Runs everything inside when the bot has success
             console.log(`Finished Point Setup for ${bot.guilds.cache.get(curGuild).name}`);
         }).catch((err) => {
             console.error(err);
+        });
+        await levels.setup(false,curGuild).then(() => {
+            console.log("Level Manager Setup Done");
+        }).catch((err) => {
+            console.error(err)
         });
         await masterdb.getGuildJson(curGuild,"config").then(() => {
             console.log("Guild Has A Config");
@@ -50,12 +56,8 @@ bot.on('ready', async () => { // Runs everything inside when the bot has success
             console.log(status);
         })
     }
-    levels.setBot(bot);
-    //await levels.setup().then(() => {
-    //    console.log("Level Manager Setup Done");
-    //});
     console.log(`PG Bot Ready Which took: ${Date.now() - startTime}ms`);
-    Economy() // handle our encomy functions for stuff that has to calculate every so often
+    //Economy() // handle our encomy functions for stuff that has to calculate every so often
 });
 
 

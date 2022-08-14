@@ -4,7 +4,8 @@ const pglibrary = require("../libraryfunctions.js"); // load our custom library 
 const fs = require('fs'); // File System for JS 
 const path = require('path');
 const os = require('os');
-const masterdb = require('../master-db/masterdb')
+const masterdb = require('../master-db/masterdb');
+const { fetchData, removeUser, addUser } = require('../points/manager');
 var manager = module.exports = {
     bot: null,
     dir: null,
@@ -22,13 +23,22 @@ var manager = module.exports = {
     getBot(){ // trying to access the var directly has some weird issues sometimes
         return this.bot;
     },
-    fetchData: async function(){ // Fetch data from points-db.json
-        data = await masterdb.getGuildJson(guildID,"level-db");
+    async fetchData(guildId){ // Fetch data from level-db.json
+        //console.log(`Guild ID TO GRAB: ${guildId}`);
+        fileExists = await masterdb.DoesFileExist(guildId,"level-db").catch((err) => {
+            console.log(err);
+            fileExists = false;
+        });
+        //console.log(`Points Database File Status: ${fileExists}`);
+        if(fileExists){
+            data = await masterdb.getGuildJson(guildId,"level-db").catch((err)=>{console.error(err)});
+        } else {
+            data = undefined;
+        }
         return data;
     },
-    saveDB(newData){
-        this.dir = __dirname;
-        pglibrary.WriteToJson(newData, `${this.dir + this.folderDirection()}level-db.json`);
+    async saveDB(newData,guildId){
+        await masterdb.writeGuildJsonFile(guildId,"level-db",newData).then(()=>{console.log(`Saved Level Database File for Guild ID: ${guildId}`)}).catch((err)=>{console.error(err)});
     },
     /**
     * Writes JS Object data to a JSON File
@@ -36,8 +46,12 @@ var manager = module.exports = {
     * @param {boolean} true_false If True returns the user Object for read only purposes else returns the users Array with the users Index
     * @returns {number|Object}  Returns user Object if true_false is true else returns [userArray, userIndex];
     */
-    fetchUser(id,bool){ // if true just return the user Data point, used for Read only instances
-        let users = this.fetchData().users;
+    async fetchUser(id,bool,guildId){ // if true just return the user Data point, used for Read only instances
+        let dB = await this.fetchData(guildId);
+        users = dB.users;
+        if(typeof users === 'undefined'){
+            return;
+        }
         if(users.length >= 1){
             for(i=0;i<users.length;i++){
                 let user = users[i];
@@ -52,7 +66,6 @@ var manager = module.exports = {
         }
     },
     setupUser: function(user){ // this is just the user data template
-        let dbData = this.fetchData();
         let newUserData = {
             "xp": 0,
             "level":1,
@@ -62,29 +75,40 @@ var manager = module.exports = {
         }
         return newUserData;
     },
-    removeUser: function(id){ // remove a user from the points-db for whatever reason
-        let dbData = this.fetchData();
+    async removeUser(id,guildId){ // remove a user from the points-db for whatever reason
+        let dbData = await this.fetchData(guildId);
         for(i=0;i<dbData.users.length;i++){
             if(dbData.users[i].id == id){
                 dbData.users.splice(i, 1);
             }
         }
-        this.saveDB(dbData);
+        await this.saveDB(dbData,guildId);
     },
-    addUser: function(user){ // used for when a user joins the server
-        let dbData = this.fetchData();
+    async addUser(user,guildId){ // used for when a user joins the server
+        let dbData = await this.fetchData(guildId);
         let newUserData = this.setupUser(user);
         dbData.users.push(newUserData);
-        this.saveDB(dbData);
+        await this.saveDB(dbData,guildId);
     },
-    resetUser(user){
-        console.log(user)
-        this.removeUser(user.id);
+    async resetUser(user,guildId){
+        console.log(user,guildId)
+        await this.removeUser(user.id,guildId);
         pglibrary.sleep(10);
-        this.addUser(user.user);
+        await this.addUser(user.user,guildId);
     },
-    firstSetup: async function(bool){ // if the bool is true it overrides everything and force restarts points-db.json
+    /**
+    * Runs Setup for Level Manager for a guild, goes through each user in a guild and adds them to the servers json file, Also on Startup even if already done before it catches everything up by adding Levels if the user already has a Role for that Level Reward
+    * @param {boolean} Force If true forces the setup, useful for when restarting the Database from a command
+    * @param {string} GuildId The Guild ID (Has to be String) to setup for
+    * @returns {boolean} Return True when done
+    */
+    setup: async function(bool,guildId){ // if the bool is true it overrides everything and force restarts points-db.json
         dB = await this.fetchData();
+        if(typeof dB === 'undefined'){
+            deafultConfig = {"setup":true,"xpPerMessage":50,"messageCooldownTime":10000,"xpMultiplier":1,"nextLevelXpMulti":3,"lastupdated":undefined,"levelsRewards":[],"users":[]}
+            await this.saveDB(deafultConfig,guildId);
+            dB = deafultConfig;
+        }
         if(typeof dB.lastupdated !== 'undefined'){
             if(Date.now() < dB.lastupdated+60000){
                 console.log(`Cannot Update Yet`);
@@ -99,12 +123,12 @@ var manager = module.exports = {
             users = dB.users;
             if(users.length <= 0){return;}
             for(i=0;i<users.length;i++){
-                this.removeUserCooldown(users[i].id);
+                this.removeUserCooldown(users[i].id,guildId);
             }
             if(dB.levelsRewards.length == 0){return};
             rewards = dB.levelsRewards.sort((a,b) => b.level-a.level);
             //console.log(rewards);
-            let guild = this.bot.guilds.cache.get(config.serverid);
+            let guild = this.bot.guilds.cache.get(guildID);
             let userList = await guild.members.fetch().then(members =>{ // since the cache doesnt get EVERY user we manually ask for each user in the server
                 console.log(`Checking for existing Levels`);
                 members.forEach(member => {
@@ -127,7 +151,7 @@ var manager = module.exports = {
             });
             console.log(`Done, took: ${Date.now()-startTime}ms`);
             dB.lastupdated = Date.now();
-            this.saveDB(dB);
+            await this.saveDB(dB,guildId);
         }
         if(dB.setup && !bool){
             return;
@@ -136,7 +160,7 @@ var manager = module.exports = {
             this.saveDB(dB); 
             pglibrary.sleep(10);
         }
-        let guild = this.bot.guilds.cache.get(config.serverid);
+        let guild = this.bot.guilds.cache.get(guildId);
         let startTime = Date.now();
         let userList = await guild.members.fetch().then(members =>{ // since the cache doesnt get EVERY user we manually ask for each user in the server
             members.forEach(member => {
@@ -151,17 +175,17 @@ var manager = module.exports = {
         console.log(`Finished Task in: ${Date.now() - startTime}ms`);
         dB.lastupdated = Date.now();
         dB.setup = true;
-        this.saveDB(dB);
+        await this.saveDB(dB,guildId);
         if(bool){
-            pglibrary.EconChannelLog('The Server Levelonomy has been reset', 'Admin Forced', this.bot);
+            //glibrary.EconChannelLog('The Server Levelonomy has been reset', 'Admin Forced', this.bot);
         } else {
-            pglibrary.EconChannelLog('Server Levelonomy has been setup', 'Automated On Start Up', this.bot);
+            //pglibrary.EconChannelLog('Server Levelonomy has been setup', 'Automated On Start Up', this.bot);
         }
-        return true;
+        return Promise.resolve("Finished Level Setup");
     },
-    giveUserData: function(id, amount, bool){
-        let [users, userIndex] = this.fetchUser(id);
-        let dB = this.fetchData();
+    async giveUserData(id, amount, bool,guildId){
+        let [users, userIndex] = await this.fetchUser(id,false,guildId);
+        let dB = await this.fetchData(guildId);
         if(isNaN(amount)){
             err = 'Given XP/Level is not a number';
             return err;
@@ -170,66 +194,67 @@ var manager = module.exports = {
             users[userIndex].xp += amount;
         } else {
             users[userIndex].level += amount;
-            this.giveRole(message.member, users[userIndex].level++);
+            await this.giveRole(message.member, users[userIndex].level++,guildId).then((status) => {console.log(status)}).catch((err) => {console.error(err); return;});
         }
-        if(users[userIndex].xp >= this.calculateNextLevel(id) && bool){
-            this.giveRole(message.member, users[userIndex].level++);
-            this.levelUpUser(id);
+        if(users[userIndex].xp >= await this.calculateNextLevel(id,guildId) && bool){
+            await this.giveRole(message.member, users[userIndex].level++).then((status) => {console.log(status)}).catch((err) => {console.error(err); return;});;
+            await this.levelUpUser(id);
             message.channel.send(`<@${message.author.id}>, You have leveled up to Level ${users[userIndex].level++}!`);
         }
         dB.users = users;
-        this.saveDB(dB);
-        pglibrary.EconChannelLog(`User ${id} has been given/removed ${pglibrary.commafy(amount)} points`, 'Command', this.bot);
+        await this.saveDB(dB,guildId);
+        //pglibrary.EconChannelLog(`User ${id} has been given/removed ${pglibrary.commafy(amount)} points`, 'Command', this.bot);
     },
-    setUserData: function(id, amount, bool){
-        let [users, userIndex] = this.fetchUser(id);
-        let dB = this.fetchData();
+    async setUserData(id, amount, bool,guildId){
+        let [users, userIndex] = await this.fetchUser(id,false,guildId);
+        let dB = await this.fetchData(guildId);
         if(isNaN(amount)){
             err = 'Given XP/Level is not a number';
             return err;
         }
         if(bool){
             users[userIndex].xp += amount;
-            pglibrary.EconChannelLog(`User ${id} xp has been set to ${pglibrary.commafy(users[userIndex].xp += amount)}.`, `Admin Command`, this.bot);
+            //pglibrary.EconChannelLog(`User ${id} xp has been set to ${pglibrary.commafy(users[userIndex].xp += amount)}.`, `Admin Command`, this.bot);
         } else {
             users[userIndex].level = amount;
             users[userIndex].xp = 500 * dB.nextLevelXpMulti * amount;
-            pglibrary.EconChannelLog(`User ${id} level has been set to ${pglibrary.commafy(amount)}.`, `Admin Command`, this.bot);
+            //pglibrary.EconChannelLog(`User ${id} level has been set to ${pglibrary.commafy(amount)}.`, `Admin Command`, this.bot);
         }
         dB.users = users;
-        this.saveDB(dB);
+        await this.saveDB(dB,guildId);
     },
-    messageXP(id,message){
-        dB = this.fetchData();
-        [users, userIndex] = this.fetchUser(id);
+    async messageXP(id,message){
+        guildId = message.guild.id;
+        dB = await this.fetchData(guildId);
+        [users, userIndex] = await this.fetchUser(id,guildId);
         console.log(users[userIndex]);
         if(!users[userIndex].cooldown){
             console.log(`Giving User: ${id}, ${dB.xpPerMessage} xp`);
             users[userIndex].xp += dB.xpPerMessage * dB.xpMultiplier;
             users[userIndex].cooldown = true;
-            if(users[userIndex].xp >= this.calculateNextLevel(id)){
-                this.giveRole(message.member, users[userIndex].level++);
-                this.levelUpUser(id);
+            if(users[userIndex].xp >= await this.calculateNextLevel(id,guildId)){
+                await this.giveRole(message.member, users[userIndex].level++).then((status) => {console.log(status)}).catch((err) => {console.error(err); return;});
+                await this.levelUpUser(id,guildId);
                 message.channel.send(`<@${message.author.id}>, You have leveled up to Level ${users[userIndex].level++}!`);
             }
             dB.users = users;
-            this.saveDB(dB);
-            setTimeout(() => this.removeUserCooldown(id), dB.messageCooldownTime);
+            await this.saveDB(dB,guildId);
+            setTimeout(() => this.removeUserCooldown(id,guildId), dB.messageCooldownTime);
         } else {
             console.log(`${id} is on cooldown`);
             return;
         }
     },
-    removeUserCooldown(id){
-        dB = this.fetchData();
-        [users, userIndex] = this.fetchUser(id);
+    async removeUserCooldown(id,guildId){
+        dB = await this.fetchData(guildId);
+        [users, userIndex] = await this.fetchUser(id,false,guildId);
         users[userIndex].cooldown = false;
         dB.users = users;
-        this.saveDB(dB);
+        await this.saveDB(dB,guildId);
     },
-    getServerStats(){
+    async getServerStats(guildId){
         startTime = Date.now();
-        dB = this.fetchData();
+        dB = await this.fetchData(guildId);
         let xp = 0;
         dB.users.forEach(user =>{
             xp += user.xp;
@@ -237,8 +262,9 @@ var manager = module.exports = {
         console.log(`Time to Complete: ${Date.now() - startTime}ms`);
         return xp;
     },
-    sortForLeaderboard(){
-        userDB = this.fetchData().users;
+    async sortForLeaderboard(guildId){
+        dB = await this.fetchData(guildId);
+        userDB = dB.users;
         allTotalArray = [];
         startTime = Date.now();
         userDB.forEach(user => {
@@ -251,29 +277,29 @@ var manager = module.exports = {
         console.log(`Took ${Date.now()-startTime}ms`)
         return finalArray;
     },
-    calculateNextLevel(id){
-        dB = this.fetchData();
-        user = this.fetchUser(id,true);
+    async calculateNextLevel(id,guildId){
+        dB = await this.fetchData(guildId);
+        user = await this.fetchUser(id,true,guildId);
         startingXp = 500 * dB.nextLevelXpMulti;
         console.log(startingXp);
         nextLevelXPReq = startingXp * user.level;
         return nextLevelXPReq;
     },
-    levelUpUser(id){
-        dB = this.fetchData();
-        [users,userIndex] = this.fetchUser(id);
+    async levelUpUser(id,guildId){
+        dB = await this.fetchData(guildId);
+        [users,userIndex] = await this.fetchUser(id,guildId);
         users[userIndex].level++;
         dB.users = users;
-        this.saveDB(dB);
+        await this.saveDB(dB,guildId);
     },
-    getUserLevel(id){
-        user = this.fetchUser(id,true);
+    async getUserLevel(id,guildId){
+        user = this.fetchUser(id,true,guildId);
         console.log(user);
-        nextLevel = this.calculateNextLevel(id);
+        nextLevel = await this.calculateNextLevel(id,guildId);
         return [user.level, user.xp, nextLevel];   
     },
-    setMultiplier(xpMulti,op){
-        db = this.fetchData();
+    async setMultiplier(xpMulti,op,guildId){
+        db = await this.fetchData(guildId);
         if(typeof op === 'undefined' || typeof op !== 'string'){
             op = "=";
         }
@@ -295,20 +321,20 @@ var manager = module.exports = {
                 db.xpMultiplier = xpMulti;
                 break;
         }
-        this.saveDB(db);
+        await this.saveDB(db,guildId);
     },
-    setCooldown(seconds){
-        db = this.fetchData();
+    async setCooldown(seconds,guildId){
+        db = await this.fetchData(guildId);
         secondsToMS = seconds*1000;
         db.messageCooldownTime = secondsToMS;
-        this.saveDB(db);
+        await this.saveDB(db,guildId);
     },
-    giveRole(user,level){
+    async giveRole(user,level,guildId){
         console.log(user);
-        dB = this.fetchData();
+        dB = await this.fetchData(guildId);
         levelRoles = dB.levelsRewards;
         if(levelRoles.length == 0){
-            return;
+            return Promise.reject("No Level Reward Roles");
         }
         for(i=0;i<levelRoles.length;i++){
             if(levelRoles[i].level <= level){
@@ -319,11 +345,12 @@ var manager = module.exports = {
                 }
                 if(user.roles.cache.some(r => r.id === role.id)){console.log(`${user.user.username} already has that role`); return;}
                 user.roles.add(role);
+                return Promise.resolve(`Gave User: ${user.user.username} the role: ${role.name}`)
             }
         }
     },
-    setRoleReward(roleID,level){
-        db = this.fetchData();
+    async setRoleReward(roleID,level,guildId){
+        db = await this.fetchData(guildId);
         filled = false;
         for(i=0;i<db.levelsRewards.length;i++){
             if(db.levelsRewards[i].level == level){
@@ -333,15 +360,15 @@ var manager = module.exports = {
         if(!filled){
             db.levelsRewards.push({"roleID":roleID,"level": level});
         }
-        this.saveDB(db);
+        await this.saveDB(db, guildId);
     },
-    removeRoleReward(level){
-        db = this.fetchData();
+    async removeRoleReward(level,guildId){
+        db = await this.fetchData(guildId);
         for(i=0;i<db.levelsRewards.length;i++){
             if(db.levelsRewards[i].level = level){
                 db.levelsRewards.splice(i,1);
             }
         }
-        this.saveDB(db);
+        await this.saveDB(db,guildId);
     }
 }

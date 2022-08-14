@@ -10,6 +10,7 @@ module.exports = {
     active: true,
     econ: true,
     async execute(message, args, bot){
+        guildId = message.guild.id;
         target = message.mentions.members.first();
         if(target){
             userObject = target;
@@ -17,7 +18,7 @@ module.exports = {
         } else {
             userObject = message.author;
         }  
-        user = points_manager.fetchUser(userObject.id, true);
+        user = await points_manager.fetchUser(userObject.id, true,guildId);
         if(!user){
             message.channel.send(`<@${message.author.id}>, That user does not exist in the Database`);
             return;

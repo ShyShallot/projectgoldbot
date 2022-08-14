@@ -115,8 +115,9 @@ async function ChannelLog(content, reason, bot,guildId){
     logchannel.send({embeds: [logEmbed]});
 }
 
-function EconChannelLog(content,reason,bot){
-    logchannel = bot.channels.cache.get(config.econLogChannel);
+async function EconChannelLog(content,reason,bot,guildId){
+    guildConfig = await masterdb.getGuildJson(guildId,"config");
+    logchannel = bot.channels.cache.get(guildId.econLogChannel);
     if(!logchannel){
         console.error(`INVALID LOG CHANNEL CANCELING!`);
         return;

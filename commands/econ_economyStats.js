@@ -10,7 +10,8 @@ module.exports = {
     active: true,
     econ: true,
     async execute(message, args, bot){
-        [cash,bank,total] = points_manager.getServerStats();
+        guildId = message.guild.id;
+        [cash,bank,total] = await points_manager.getServerStats(guildId);
         balanceEmbed = new MessageEmbed()
         .setTitle(`Server Total Stats`)
         .setTimestamp()

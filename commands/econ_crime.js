@@ -11,8 +11,9 @@ module.exports = {
     active: true,
     econ: true,
     async execute(message, args, bot){
-        [users,userIndex] = points_manager.fetchUser(message.author.id);
-        db = points_manager.fetchData();
+        guildId = message.guild.id;
+        [users,userIndex] = await points_manager.fetchUser(message.author.id,false,guildId);
+        db = await points_manager.fetchData(guildId);
         if(users[userIndex].crimeCooldown){
             timeDiff = pglibrary.convertMS(Math.abs(users[userIndex].lastCrime+db.crimeCooldownTime));
             timeDisplay = `${timeDiff.hour} hour(s).`;
@@ -27,8 +28,8 @@ module.exports = {
         let randomChance = Math.random();
         console.log(randomChance);
         if(failChance >= randomChance) {
-            points_manager.crime(message.author.id, -failAmount);
-            string_handler.replacePlaceholder('fail', failAmount).then((result) => {
+            points_manager.crime(message.author.id, -failAmount,guildId);
+            string_handler.replacePlaceholder('fail', failAmount,guildId).then((result) => {
                 sendResult(result,message);
             }).catch((result)=>{
                 sendResult(result,message);
@@ -36,8 +37,8 @@ module.exports = {
             return;
         } 
         amount = pglibrary.getRandomInt(85000);
-        string_handler.replacePlaceholder('crime',amount).then((result) => {
-            points_manager.crime(message.author.id, amount);
+        string_handler.replacePlaceholder('crime',amount,guildId).then((result) => {
+            points_manager.crime(message.author.id, amount,guildId);
             sendResult(result,message);
         }).catch((result) => {
             sendResult(result,message);

@@ -12,12 +12,14 @@ module.exports = {
     admin: true,
     level: true,
     async execute(message, args, bot){
+        guildId = message.guild.id;
         if(args[0] == "server"){
-            lvl_mng.firstSetup(true);
+            
+            lvl_mng.setup(true,guildId);
         } else {
             target = message.mentions.members.first();
             if(typeof target !== 'undefined'){
-                lvl_mng.resetUser(target);
+                lvl_mng.resetUser(target,guildId);
             } else {
                 message.channel.send(`<@${message.author.id}>, please provide a valid argument`);
             }

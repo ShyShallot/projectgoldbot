@@ -1,22 +1,23 @@
 const {MessageEmbed} = require('discord.js'); // required for Rich Message Embeds
 const config = require('../config.json');
 const pglibrary = require("../libraryfunctions");
+const masterdb = require('../master-db/masterdb');
 module.exports = {
     name: 'welcomemsgs',
     description: `Set the Join and Leave Messages, leave/join message has to be in quotes like "Welcome to the Server"`,
     args: 'join/leave "Message Content"',
     active: true,
     admin: true,
-    execute(message, args, bot){
+    async execute(message, args, bot,guildId){
         switch (args[0]){
             case 'W':
             case 'w':
             case 'Welcome':
             case 'welcome':
-                console.log(message);
                 if(args[1]){
-                    config.newUserMessages.Welcome = message.content.split('"')[1];
-                    pglibrary.WriteToJson(config, './config.json');
+                    guildConfig = await masterdb.getGuildJson(guildId,"config");
+                    guildConfig.newUserMessages.Welcome = message.content.split('"')[1];
+                    await masterdb.writeGuildJsonFile(guildId,"config",guildConfig);
                     message.channel.send(`Successfully Set Welcome Message to: ${message.content.split('"')[1]}`);
                 }
                 break;
@@ -24,10 +25,10 @@ module.exports = {
             case 'l':
             case 'leave':
             case 'Leave':
-                console.log(message);
                 if(args[1]){
-                    config.newUserMessages.Leave = message.content.split('"')[1];
-                    pglibrary.WriteToJson(config, './config.json');
+                    guildConfig = await masterdb.getGuildJson(guildId,"config");
+                    guildConfig.newUserMessages.Leave = message.content.split('"')[1];
+                    await masterdb.writeGuildJsonFile(guildId,"config",guildConfig);
                     message.channel.send(`Successfully Set Leave Message to: ${message.content.split('"')[1]}`);
                 }
                 break;

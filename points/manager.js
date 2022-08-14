@@ -215,6 +215,7 @@ var manager = module.exports = {
         }
         dB.users = users;
         await this.saveDB(dB,guildId);
+        return Promise.resolve(`Gave User: ${id} ${amount} points`);
         //pglibrary.EconChannelLog(`User ${id} has been given/removed ${pglibrary.commafy(amount)} points`, 'Command', this.bot);
     },
     setUserPoints: async function(id, points, location,guildId){
@@ -230,7 +231,7 @@ var manager = module.exports = {
         }
         dB.users = users;
         await this.saveDB(db,guildId);
-        pglibrary.EconChannelLog(`User ${id} points have been set to ${pglibrary.commafy(points)}.`, `Admin Command`, this.bot);
+        //pglibrary.EconChannelLog(`User ${id} points have been set to ${pglibrary.commafy(points)}.`, `Admin Command`, this.bot);
     },
     async donatePoints(patronId, targetID, amount,location,guildId){
         let dB = await this.fetchData(guildId);
@@ -302,32 +303,30 @@ var manager = module.exports = {
     },
     async depositPoints(id,amount,guildId){
         dB = await this.fetchData(guildId);
-        [users, userIndex] = await this.fetchUser(id,false,guildId);
-        if(amount <= users[userIndex].balance.cash){
-            users[userIndex].balance.cash -= amount;
-            users[userIndex].balance.bank += amount;
-            users[userIndex].balance.bank = Math.round(users[userIndex].balance.bank*100)/100;
-            dB.users = users;
+        [usersData, userIndex] = await this.fetchUser(id,false,guildId);
+        if(amount <= dB.users[userIndex].balance.cash){
+            dB.users[userIndex].balance.cash -= amount;
+            dB.users[userIndex].balance.bank += amount;
+            console.log(dB.users[userIndex]);
             await this.saveDB(dB,guildId);
         } else {
             err = "Not Enough Points to Deposit";
             return err;
         }
-        pglibrary.EconChannelLog(`User ${id} has deposited ${pglibrary.commafy(amount)} points`, `Command`, this.bot);
+        //pglibrary.EconChannelLog(`User ${id} has deposited ${pglibrary.commafy(amount)} points`, `Command`, this.bot);
     },
     async withdrawPoints(id,amount, guildId){
-        dB = this.fetchData(guildId);
-        [users, userIndex] = await this.fetchUser(id,false,guildId);
-        if(amount <= users[userIndex].balance.bank){
-            users[userIndex].balance.bank -= amount;
-            users[userIndex].balance.cash += amount;
-            dB.users = users;
+        dB = await this.fetchData(guildId);
+        [usersData, userIndex] = await this.fetchUser(id,false,guildId);
+        if(amount <= dB.users[userIndex].balance.bank){
+            dB.users[userIndex].balance.bank -= amount;
+            dB.users[userIndex].balance.cash += amount;
             await this.saveDB(dB,guildId);
         } else {
             err = "Not Enough Points to Withdraw";
             return err;
         }
-        pglibrary.EconChannelLog(`User ${id} has Withdrew ${pglibrary.commafy(amount)} points`, `Command`, this.bot);
+        //pglibrary.EconChannelLog(`User ${id} has Withdrew ${pglibrary.commafy(amount)} points`, `Command`, this.bot);
     },
     async sortForLeaderboard(guildId){
         dB = await this.fetchData(guildId);
@@ -420,7 +419,7 @@ var manager = module.exports = {
         dB.users = users;
         await this.saveDB(dB,guildId);
         setTimeout(()=> this.removeWorkCooldown(id), dB.workCooldownTime);
-        pglibrary.EconChannelLog(`User ${id} has worked and earned ${pglibrary.commafy(amount)} points`, `Command`, this.bot);
+        //pglibrary.EconChannelLog(`User ${id} has worked and earned ${pglibrary.commafy(amount)} points`, `Command`, this.bot);
     },
     async crime(id,amount,guildId){
         dB = await this.fetchData(guildId);
@@ -435,7 +434,7 @@ var manager = module.exports = {
         dB.users = users;
         await this.saveDB(dB,guildId);
         setTimeout(()=> this.removeCrimeCooldown(id,guildId), dB.crimeCooldownTime);
-        pglibrary.EconChannelLog(`User ${id} has committed a crime and earned ${pglibrary.commafy(amount)} points`, `Command`, this.bot);
+        //pglibrary.EconChannelLog(`User ${id} has committed a crime and earned ${pglibrary.commafy(amount)} points`, `Command`, this.bot);
     },
     async removeWorkCooldown(id,guildId){
         dB = await this.fetchData(guildId);
@@ -443,7 +442,7 @@ var manager = module.exports = {
         users[userIndex].workCooldown = false;
         dB.users = users;
         await this.saveDB(dB,guildId);
-        pglibrary.EconChannelLog(`Removed Work Cooldown for user ${id}`, `Automated Timer`, this.bot);
+        //pglibrary.EconChannelLog(`Removed Work Cooldown for user ${id}`, `Automated Timer`, this.bot);
     },
     async removeCrimeCooldown(id,guildId){
         dB = await this.fetchData(guildId);
@@ -451,7 +450,7 @@ var manager = module.exports = {
         users[userIndex].crimeCooldown = false;
         dB.users = users;
         await this.saveDB(dB,guildId);
-        pglibrary.EconChannelLog(`Removed Crime Cooldown for user ${id}`, `Automated Timer`, this.bot);
+        //pglibrary.EconChannelLog(`Removed Crime Cooldown for user ${id}`, `Automated Timer`, this.bot);
     },
     async setEconSymbol(input,guildId){
         dB = await this.fetchData(guildId);

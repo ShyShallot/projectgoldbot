@@ -10,19 +10,20 @@ module.exports = {
     active: true,
     econ: true,
     async execute(message, args, bot){
+        guildId = message.guild.id;
         target = message.mentions.members.first();
         if(!target){
             message.channel.send(`<@${message.author.id}>, Please Mention a Valid User`);
             return;
         }
-        [targetCash,targetBank] = points_manager.getUserBalance(target.id);
+        [targetCash,targetBank] = await points_manager.getUserBalance(target.id,guildId);
         if(targetCash <= 1000){
             message.channel.send(`<@${message.author.id}>, That Person is too broke to be robbed`);
             return;
         }
         amountToSteal = pglibrary.getRandomInt(Math.round(targetCash*0.75));
-        points_manager.giveUserPoints(message.author.id,amountToSteal,'cash',true);
-        points_manager.giveUserPoints(target.id,-amountToSteal,'cash',true);
+        await points_manager.giveUserPoints(message.author.id,amountToSteal,'cash',true,guildId);
+        await points_manager.giveUserPoints(target.id,-amountToSteal,'cash',true,guildId);
         message.channel.send(`<@${message.author.id}>, You are quite the evil person but you stole ${points_manager.symbol()}${amountToSteal} from ${target.user.username}!`);
     }
 }

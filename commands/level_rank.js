@@ -10,28 +10,29 @@ module.exports = {
     active: true,
     level: true,
     async execute(message, args, bot){
+        guildId = message.guild.id;
         if(args[1]){
             target = message.mentions.members.first();
             if(typeof target === 'undefined'){
                 //message.channel.send(`<@${message.author.id}>, Mentioned User is not a valid target`)
                 return;
             } else {
-                [level,xp,nextXP] = levels.getUserLevel(target.id);
-                embed = Embed(target,level,xp,nextXP);
+                [level,xp,nextXP] = await levels.getUserLevel(target.id,guildId);
+                embed = await Embed(target,level,xp,nextXP,guildId);
                 message.channel.send({embeds:[embed]});
                 return;
             }
         } else {
-            [level,xp,nextXP] = levels.getUserLevel(message.author.id);
-            embed = Embed(message.author,level,xp,nextXP);
-            console.log(embed);
+            [level,xp,nextXP] = await levels.getUserLevel(message.author.id,guildId);
+            embed = await Embed(message.author,level,xp,nextXP,guildId);
+            //console.log(embed);
             message.channel.send({embeds:[embed]});
         }
     }
 }
 
-function Embed(user,level,xp,nextXP){
-    leaderBoard = levels.sortForLeaderboard();
+async function Embed(user,level,xp,nextXP,guildId){
+    leaderBoard = await levels.sortForLeaderboard(guildId);
     for(i=0;i<leaderBoard.length;i++){
         if(leaderBoard[i].username == user.username){
             position = i;

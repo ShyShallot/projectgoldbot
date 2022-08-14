@@ -12,7 +12,7 @@ module.exports = {
     econ: true,
     async execute(message, args, bot){
         if(message.member.roles.cache.find(role => role.name === config.modrole)){
-            points_manager.firstSetup(true);
+            points_manager.setup(true);
             message.channel.send(`${message.author.id} has reset the economy`);
         } else {   
             message.channel.send(`<@${message.author.id}>, You Do not have perms for such an action`);

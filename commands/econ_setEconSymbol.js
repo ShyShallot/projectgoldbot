@@ -11,11 +11,8 @@ module.exports = {
     admin: true,
     econ: true,
     async execute(message, args, bot){
-        if(!(message.member.roles.cache.find(role => role.name === config.modrole))){
-            message.channel.send(`<@${message.author.id}>, You do Not Have Permission for this Command`);
-        }
         if(args[0]){
-            points_manager.setEconSymbol(args[0]);
+            points_manager.setEconSymbol(args[0], message.guild.id);
         }
     }
 }

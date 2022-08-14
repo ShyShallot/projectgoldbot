@@ -16,8 +16,9 @@ module.exports = {
             if(typeof args[1] === 'undefined'){
                 args[1] == '=';
             }
-            lvl_mng.setMultiplier(parseInt(args[0]), args[1]);
-            db = lvl_mng.fetchData();
+            guildId = message.guild.id;
+            await lvl_mng.setMultiplier(parseInt(args[0]), args[1],guildId);
+            db = await lvl_mng.fetchData(guildId);
             message.channel.send(`<@${message.author.id}>, Successfully set the Level Multiplier to: ${db.xpMultiplier}`)
         }
     }

@@ -12,7 +12,8 @@ module.exports = {
     level: true,
     async execute(message, args, bot){
         start = 0;
-        leaderboardArray = lvl_mng.sortForLeaderboard();
+        guildId = message.guild.id;
+        leaderboardArray = await lvl_mng.sortForLeaderboard(guildId);
         const fit = leaderboardArray.length <= 10;
         const embed = await message.channel.send({embeds:[await createLeaderboardEmbed(0, message)], components: fit ? []: [new MessageActionRow({components: [forwardButton]})]});
         if(fit) return;
@@ -36,11 +37,12 @@ module.exports = {
     }
 }
 
-function createLeaderboardEmbed(start,message){
+async function createLeaderboardEmbed(start,message){
     if(!start){
         start = 0;
     }
-    leaderboardArray = lvl_mng.sortForLeaderboard();
+    guildId = message.guild.id;
+    leaderboardArray = await lvl_mng.sortForLeaderboard(guildId);
     startArray = leaderboardArray.slice(start, start+10);
     leaderEmbed = new MessageEmbed()
     .setTitle(`${message.guild.name}'s Server Leaderboard - Users: ${start+1}-${start+startArray.length} out of ${leaderboardArray.length} Users`)
