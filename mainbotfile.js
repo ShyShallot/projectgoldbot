@@ -12,7 +12,7 @@ const SQL = require('mssql');
 const points_manager = require('./points/manager');
 const levels = require('./levels/level_handler');
 const masterdb = require('./master-db/masterdb');
-const async = require('async');
+const maths = require('mathjs');
 bot.commands = new Map(); // New Array for our commands
 const cusGuildCache = [];
 bot.on('ready', async () => { // Runs everything inside when the bot has successfully logged in and is active
@@ -62,7 +62,7 @@ bot.on('ready', async () => { // Runs everything inside when the bot has success
         })
     }
     console.log(`PG Bot Ready Which took: ${Date.now() - startTime}ms`);
-    //Economy() // handle our encomy functions for stuff that has to calculate every so often
+    Economy() // handle our encomy functions for stuff that has to calculate every so often
 });
 
 
@@ -276,12 +276,12 @@ bot.login(hostconfig.token);
 async function Economy(){ // Janky as fuck but works
     await pglibrary.sleep(1000);
     while (true) {
-        await Heists().then((status)=>{
-            console.log(status);
-        }).catch((err) => {console.error(err);});
-        await Jackpot(false).then((status)=>{
-            console.log(status);
-        }).catch((err) => {console.error(err);}); 
+        //await Heists().then((status)=>{
+        //   console.log(status);
+        //}).catch((err) => {console.error(err);});
+        //await Jackpot(false).then((status)=>{
+        //    console.log(status);
+        //}).catch((err) => {console.error(err);}); 
         await StockMarket().then(()=>{
             console.log(`Finished Stock Market Function`);
         }).catch((err) => {console.error(err);});
@@ -350,7 +350,7 @@ async function Jackpot(forced) { // Changed to a raffle but am too lazy to updat
                     if(!guildConfig.jackpotrole){
                         guildConfig.jackpotrole = "PLEASE SET JACKPOT ROLE"
                     }
-                    if(typeof guildConfig.econchannel === 'undefined'){
+                    if(typeof guildConfig.econchannel === 'undefined' || !guildConfig.econchannel){
                         jackpotData.raffleactive = false
                         return;
                     }
@@ -359,7 +359,7 @@ async function Jackpot(forced) { // Changed to a raffle but am too lazy to updat
                         .setAuthor(`${bot.user.username}`, bot.user.displayAvatarURL)
                         .setColor("#2bff00")
                         .setDescription(`<@&${guildConfig.jackpotrole}>, a Raffle has been started, Raffle Pot is: ${Math.round(startingamount * startingMultiplier)} points.`);
-                    bot.guilds.cache.get(curGuild).channels.cache.get("").send({ content: `<@&${guildConfig.jackpotrole}>`, embeds: [embed] }); 
+                    bot.guilds.cache.get(curGuild).channels.cache.get(guildConfig.econchannel).send({ content: `<@&${guildConfig.jackpotrole}>`, embeds: [embed] }); 
                     jackpotData.raffleactive = true;
                 }
             } else { // else if there is a raffle active
@@ -386,7 +386,7 @@ async function Jackpot(forced) { // Changed to a raffle but am too lazy to updat
                         .setAuthor(`${winner.username}`, winner.displayAvatarURL)
                         .setColor("#2bff00")
                         .setDescription(`<@&${jackpotid}>, <@${winner.id}> has won the raffle and has gained ${gain} points!`)
-                        bot.guilds.cache.get(curGuild).channels.cache.get("").send({ content: `<@&${jackpotid}>`, embeds: [embed] }); 
+                        bot.guilds.cache.get(curGuild).channels.cache.get(guildConfig.econchannel).send({ content: `<@&${jackpotid}>`, embeds: [embed] }); 
                         // add raffle channel id to per server config
                         console.log("Resetting Jackpot.JSON");
                         ResetRaffleJson(data);
@@ -442,62 +442,58 @@ async function StockMarket() {
     console.log("Starting Stock Market");
     var stockmarket = GrabStockMarketData();
     console.log(`Adding Guilds to Stockmarket`);
-    for(i=0;i<cusGuildCache.length;i++){
+    var expectedStockNames = [];
+    for(let i = 0; i < cusGuildCache.length;i++){
+        console.log(i);
         curGuild = cusGuildCache[i];
+        console.log(curGuild);
         guildConfig = await masterdb.getGuildJson(curGuild,"config");
         //console.log(guildConfig);
         if(typeof guildConfig.stockname !== 'undefined'){
-            svrStkName = guildConfig.stockname;
-            for(y=0;y<stockmarket.stocks.length;y++){
-                if(stockmarket.stocks[y].name == svrStkName){
-                    return;
-                } else {
-                    stockmarket.stocks.push({"name":svrStkName,"price": 2000,"owners":[]});
-                }
+            if(!stockmarket.stocks.some(stock => stock.name === guildConfig.stockname)){
+                stockmarket.stocks.push({"name":guildConfig.stockname,value:[2000],"owners":[]});
             }
         } else {
             console.log(`${bot.guilds.cache.get(curGuild).name} Does not have their stock name set`);
             pglibrary.ChannelLog(`Warning Server Stock Name is Not Set, Use ${guildConfig.prefix}stockname to set it`,'Unset Config Value',bot,curGuild);
         }
     }
-    pglibrary.WriteToJson(stockmarket, './stockmarket.json');
-    await pglibrary.sleep(500);
-    if (stockmarket.stockmarketactive == 1) {
-        console.log(`Updating Stock Market`);
-        var finalstocks = [];
-        for (i=0;i<stockmarket.stocks.length;i++) {
-            console.log(`Running Calculations for Stock: ${stockmarket.stocks[i].name}`);
-            var stock = stockmarket.stocks[i];
-            console.log(`Calculating Stock price for ${stock.name}`);
-            newstockprice = await CalculateStockPrice(stock);
-            console.log(`Final Stock Price: ${newstockprice}`);
-            owners = stock.owners;
-            var companystock = {"name": stock.name, "price": Math.round(newstockprice), "owners": owners};
-            console.log(`Stock for: ${stock}`);
-            console.log(companystock);
-            finalstocks.push(companystock); 
-            console.log(`Final Stock Array`);
-            console.log(finalstocks);
-        }
-        console.log(`Logging final stock array`);
-        console.log(finalstocks);
-        stockmarket.stockmarketactive = 0;
-        stockmarket.lastupdate = Date.now();
-        stockmarket.stocks = finalstocks; 
-        pglibrary.WriteToJson(stockmarket, './stockmarket.json');
-        console.log(`Setting Up timer for reenable`);
-        let stockTimeout = setTimeout(EnableStockMarket, 3600000 * stockmarket.updateinterval);
-        console.log(stockTimeout);
-        await pglibrary.sleep(100);
-        console.log(`End of StockMarket func`);
-    } else {
+    await pglibrary.WriteToJson(stockmarket, './stockmarket.json').then((status) => {console.log(status)});
+    if (stockmarket.stockmarketactive == 0) {
         if(typeof stockmarket.lastupdate === 'undefined'){
             return;
         }
         if(Date.now() >= stockmarket.lastupdate + (stockmarket.updateinterval * 3600000) && stockmarket.active == 0){
             EnableStockMarket();
         }
+        return;
     }
+    console.log(`Updating Stock Market`);
+    var finalstocks = [];
+    for (i=0;i<stockmarket.stocks.length;i++) {
+        console.log(`Running Calculations for Stock: ${stockmarket.stocks[i].name}`);
+        var stock = stockmarket.stocks[i];
+        console.log(`Calculating Stock price for ${stock.name}`);
+        newstockprice = await CalculateStockPrice(stock);
+        console.log(`Final Stock Price: ${newstockprice}`);
+        owners = stock.owners;
+        stock.value.push(newstockprice)
+        var companystock = {"name": stock.name, "value":stock.value, "owners": owners};
+        console.log(`Stock for: ${stock.name}`);
+        console.log(companystock);
+        finalstocks.push(companystock); 
+        console.log(`Final Stock Array`);
+        console.log(finalstocks);
+    }
+    console.log(`Logging final stock array`);
+    console.log(finalstocks);
+    stockmarket.stockmarketactive = 0;
+    stockmarket.lastupdate = Date.now();
+    stockmarket.stocks = finalstocks; 
+    await pglibrary.WriteToJson(stockmarket, './stockmarket.json').then((status) => {console.log(status)});
+    console.log(`Setting Up timer for reenable`);
+    setTimeout(EnableStockMarket, 3600000 * stockmarket.updateinterval);
+    console.log(`End of StockMarket func`);
 }
 
 function GrabStockMarketData(){
@@ -506,47 +502,30 @@ function GrabStockMarketData(){
     return data;
 }
 
-function EnableStockMarket(){
+async function EnableStockMarket(){
     var stockmarket = GrabStockMarketData();
     if(stockmarket.stockmarketactive == 1){
         return;
     }
     console.log(`Stock Market ready to update`);
     stockmarket.stockmarketactive = 1;
-    pglibrary.WriteToJson(stockmarket, './stockmarket.json');
+    await pglibrary.WriteToJson(stockmarket, './stockmarket.json').then((status) => {console.log(status)});
 }
 
 async function CalculateStockPrice(stock) {
-    var possibleIncrements= [0, 100, 200, 250, 500, 1000, 1250, 1500, 2000];
-    incrementamountIndex = pglibrary.getRandomInt(possibleIncrements.length); // pick a random number ranging from 0 to the amount of entry's in our startingAmounts array
-    console.log(`Increment Amount Index: ${incrementamountIndex}`);
-    stocksinService = GrabStocksinOwnership(stock);
-    console.log(`Stocks in Service for stock ${stock.name}: ${stocksinService}`);
-    if (stocksinService <= 0) {
-        stocksinService = 1
+    console.log(stock.value, stock.value[stock.value.length-1]);
+    mean = maths.mean(stock.value);
+    console.log(`Mean ${mean}`);
+    randomShock = Math.round(mean*Math.random()/10);
+    if(randomShock == 0){
+        randomShock = 1;
     }
-    var chance = Math.random();
-    console.log(`P/N Chance: ${chance}`);
-    if (chance + (stocksinService/100) <= 0.5) {
-        console.log(`Increment amount is positive`);
-        incrementamount = possibleIncrements[incrementamountIndex];
-    } else {
-        console.log(`Increment amount is negative`);
-        incrementamount = possibleIncrements[incrementamountIndex] * -1;
+    finalValue = Math.round(stock.value[stock.value.length-1] + randomShock);
+    console.log(`Final Value: ${finalValue}, Random Shock: ${randomShock}`);
+    if(finalValue < 0 || !isFinite(finalValue)){
+        finalValue = 0;
     }
-    console.log(`Increment Amount: ${incrementamount}`);
-    newstockprice = stock.price + incrementamount
-    console.log(`Final Stock Price: ${newstockprice}`);
-    if (newstockprice >= 1000000) {
-        console.log(`Stock hit is market cap`);
-        newstockprice = 1000000;
-    }
-    if (newstockprice < 0) {
-        await StockCrash(stock);
-        return 2000;
-    }
-    console.log(newstockprice);
-    return newstockprice;
+    return finalValue;
 }
 
 async function StockCrash(stock) {
@@ -566,7 +545,7 @@ async function StockCrash(stock) {
             console.log(`Pushing new stock info to array`);
             stockmarket.stocks.push(newstockinfo);
             console.log(`Writing to Stockmarket`);
-            pglibrary.WriteToJson(stockmarket, './stockmarket.json');
+            await pglibrary.WriteToJson(stockmarket, './stockmarket.json').then((status) => {console.log(status)});
             return true;
         }
     }

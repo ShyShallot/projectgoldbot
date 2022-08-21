@@ -54,7 +54,7 @@ function IsUserAlreadyInJackpot(userID){
     }
 }   
 
-function UpdateJsonFile(state, bet, user) { // this function is a bit of a mess 
+async function UpdateJsonFile(state, bet, user) { // this function is a bit of a mess 
     console.log(`Updating Json File`);
     var jackpot = fs.readFileSync('./jackpot.json', 'utf-8'); // update the jackpot var array
     var data = JSON.parse(jackpot); // parse it
@@ -83,7 +83,7 @@ function UpdateJsonFile(state, bet, user) { // this function is a bit of a mess
     var totalpot = rafflepotT + bet; // add the given bet to our raffle pot
     console.log(`Total Bet ${totalpot}`);
     var jsonupdate = {raffleactive: state, rafflepot: totalpot, lastraffleday: data.lastraffleday, users: jsonuA}; // recreate our JSON file here so we can then write to the file
-    pglibrary.WriteToJson(jsonupdate, './jackpot.json') // run our custom WritetoJson function with the given Json'd format of our array
+    await pglibrary.WriteToJson(jsonupdate, './jackpot.json').then((status) => {console.log(status)});
 }
 
 function StartJackpot(bot) {
