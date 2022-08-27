@@ -1,41 +1,45 @@
-const {MessageEmbed} = require('discord.js'); // required for Rich Message Embeds
+const {MessageEmbed, MessageActionRow, MessageButton, ButtonInteraction} = require('discord.js'); // required for Rich Message Embeds
 const config = require('../config.json'); // basic config file read
 const pglibrary = require("../libraryfunctions.js"); // load our custom library functions.
 const fs = require('fs'); // File System for JS 
 const heisttimers = require('../heists/heisttimers');
 const points_manager = require('../points/manager');
+const masterdb = require('../master-db/masterdb');
+const { arg } = require('mathjs');
+const bot = require('../mainbotfile');
 module.exports = {
     name: 'heist',
     description: 'Setup and Start or Join Heists to earn large amounts of money',
     args: 'Possible First Args: list/l | setup | join/j | split | status | start | cancel | equipment | give | inv/inventory',
     active: true,
     econ: true,
-    async execute(message, args, bot){
+    async execute(message, args, bot,guildId){
         console.log(args);
+        userStat = await IsUserOnCooldown(message.author.id,guildId);
+        InHeist = false //await IsUserAlreadyInAHeist(message.author.id,guildId);
         switch (args[0]){ // check the first argument of the command 
             case 'l':
             case 'list':
-                ListHeistLocations(message, args, bot);
+                ListHeistLocations(message, args, bot, guildId);
                 break;
             case 'setup':
-                if(IsUserOnCooldown(message.author.id)){
+                if(userStat){
                     message.channel.send(`<@${message.author.id}>, you are on cooldown, you cant start a heist.`);
                     return;
                 }
-                if(IsUserAlreadyInAHeist(message.author.id)){
+                if(InHeist){
                     message.channel.send(`<@${message.author.id}>, you already have a heist going, canceling request.`);
                     return;
                 }
-                message.channel.send(`<@${message.author.id}>, respond to select a location to get started.`);
-                GetLocationFromName(message.author, message, bot);
+                HeistLocationSelect(message,args,bot,guildId);
                 break;
             case 'j':
             case 'join':
-                if(IsUserOnCooldown(message.author.id)){
+                if(userStat){
                     message.channel.send(`<@${message.author.id}>, you are on cooldown, you cant start a heist.`);
                     return;
                 }
-                if(IsUserAlreadyInAHeist(message.author.id)){
+                if(InHeist){
                     message.channel.send(`<@${message.author.id}>, you are already in a heist you cannot join another`);
                     return;
                 }
@@ -66,20 +70,19 @@ module.exports = {
             case 'equip':
             case 'equipment':
                 if(args[1] == "list"){ // second arg
-                    ListEquipment(message, bot);
+                    await ListEquipment(message, bot);
                     break;
                 } else if (args[1] == "buy"){
-                    if(IsUserAlreadyInAHeist(message.author.id)){
+                    if(InHeist){
                         message.channel.send(`<@${message.author.id}>, you are in a heist, how tf would by equipment?`);
                         return;
                     }
-                    BuyEquipment(message, bot, args);
+                    BuyEquipment(message, args,bot,guildId);
                     break;
                 } else {
                     message.channel.send(`<@${message.author.id}>, Valid Equipment Args: list/buy`);
                     break;
                 }
-                break;
             case 'give':
                 modRole = config.modrole;
                 if(message.member.roles.cache.find(role => role.name === modRole)){ // check if the user has mod
@@ -90,7 +93,7 @@ module.exports = {
                 break;
             case 'inventory':
             case 'inv':
-                ListUsersInventory(message, message.author, bot);
+                ListUsersInventory(message.author.id, message, guildId);
                 break;
             case 'cancel':
                 if(fs.existsSync(`./heists/heist${message.author.id}.json`)){
@@ -107,29 +110,32 @@ module.exports = {
     }
 }
 
-// Basic Data Loading
+// --- DATA FUNCTIONS --- \\
 
-function HeistLocationData(){
-    heistlocationdata = fs.readFileSync('./heists/locations.json');
-    heistlocations = JSON.parse(heistlocationdata);
-    return heistlocations;
+async function HeistLocationData(guildId){
+    locations = await masterdb.getGuildJson(guildId,'locations');
+    return locations;
 }
 
 function HeistItemData(){
-    heistequipsdata = fs.readFileSync('./heists/items.json');
-    heistequipment = JSON.parse(heistequipsdata);
-    return heistequipment;
+    return JSON.parse(fs.readFileSync('./heists/items.json'));
 }
 
-function HeistInvData(){
-    heistinvdata = fs.readFileSync('./heists/usersinventory.json');
-    heistinv = JSON.parse(heistinvdata);
-    return heistinv;
+async function HeistInvData(guildId){
+    fileStat = await masterdb.DoesFileExist(guildId,'usersinventory');
+    if(fileStat){
+        data = await masterdb.getGuildJson(guildId,'usersinventory');
+        return data;
+    } else {
+        emptArr = [];
+        await masterdb.writeGuildJsonFile(guildId,'usersinventory',emptArr);
+        return emptArr;
+    }
 }
 
-function CoolDownData(){
-    cooldownRaw = fs.readFileSync(`./heists/usersoncooldown.json`);
-    return JSON.parse(cooldownRaw);
+async function CoolDownData(guildId){
+    cooldown = await masterdb.getGuildJson(guildId,'heistcooldowns');
+    return cooldown;
 }
 
 function UserHesitInfo(file){
@@ -138,402 +144,425 @@ function UserHesitInfo(file){
     return userheistinfo;
 }
 
-function IsUserOnCooldown(userID){
-    cooldownData = CoolDownData();
-    if(cooldownData.users.length <= 0){
+async function IsUserOnCooldown(userID,guildId){
+    cooldownData = await CoolDownData(guildId);
+    if(cooldownData.length <= 0){
         return false;
     }
-    if(cooldownData.users.some(u => u.id == userID)){
+    if(cooldownData.some(u => u.id == userID)){
         return true;
     } else {
         return false;
     }
 }
 
-function StatusforUserInHeist(user, message, bot){
-    console.log(`Reading DIR`);
-    var host;
-    fs.readdir('./heists/', (err, files) => {
-        files.forEach(file =>{
-            if(file.startsWith('heist') && file.endsWith('.json')){
-                console.log(file);
-                filedata = UserHesitInfo(`./heists/${file}`);
-                if(filedata.users){
-                    userids = [];
-                    for(i=0;i<filedata.users.length;i++){
-                        curUser = filedata.users[i];
-                        userids.push(curUser.id);
-                        if(curUser.host){
-                            host = curUser;
-                        }
-                    }
-                    if(userids.includes(user.id) && host.host){
-                        hostNew = host;
-                        hostNew.username = host.name;
-                        HeistStatus(hostNew, message, bot);
-                    } else {
-                        message.channel.send(`<@${message.author.id}>, you do not have a heist going, canceling request.`);
-                        return;
-                    }
-                }
-            }
-        });
-    });
-}
+// ---- HEIST EQUIPMENT FUNCTIONS ---- \\
 
-// Main Heist Related Functions
-
-async function GetLocationFromName(user, message, bot){
-    collector = message.channel.createMessageCollector(message.channel, {time: 5000});
-    heistlocations = HeistLocationData();
-    collector.on('collect', m => {
-        
-        if (m.author.bot) return;
-        if (m.author.id != user.id) return;
-        if (m.channel.id != message.channel.id) return;
-        if(typeof m === 'undefined') return;
-        console.log(m.content);
-        rLocation = m.content;
-        for (i=0;i<heistlocations.locations.length;i++){
-            curLocation = heistlocations.locations[i];
-            console.log(curLocation);
-            if(curLocation.name.toLowerCase() == m.content.toLowerCase()){
-                if(curLocation.available == 0){
-                    m.channel.send(`<@${m.author.id}>, That location is not available for a heist.`);
-                    return;
-                }
-                m.channel.send(`<@${m.author.id}>, You have selected ${curLocation.name}.`);
-                SetupHeist(message.author, message, curLocation, bot);
-                collector.stop();
-                return;
-            }
-        }
-        collector.stop("Could Not Find Location");
-    });
-    collector.on('end', (collected, reason) => {
-        if(reason){
-            message.channel.send(` <@${message.author.id}>, ${reason}`);
-        }
-        if(collected.size == 0){
-            message.channel.send(`<@${message.author.id}>, you did not reply in time, cancelling.`);
-            return;
-        }
-    });
-}
-
-function IsUserAlreadyInAHeist(userID){
-    if(fs.existsSync(`./heists/heist${userID}.json`)){
-        return true;
-    } else {
-        fs.readdir('./heists/', (err, files) => {
-            files.forEach(file =>{
-                if(file.startsWith('heist') && file.endsWith('.json')){
-                    console.log(file);
-                    filedata = UserHesitInfo(`./heists/${file}`);
-                    userids = [];
-                    if(!filedata.users) return;
-                    for(i=0;i<filedata.users.length;i++){
-                        curUser = filedata.users[i];
-                        if(curUser.id == userID){
-                            return true;
-                        }
-                    }
-                }
-            });
-        });
-    }
-}
-
-async function StartHeist(user, message, bot){
-    file = `./heists/heist${user.id}.json`;
-    userHeist = UserHesitInfo(file);
-    if(userHeist.started){
-        message.channel.send(`<@${user.id}>, The heist has already started started, run ${config.prefix}heist status instead.`);
-        return;
-    }
-    server = message.guild;
-    console.log(server);
-    userHeist.started = true;
-    date = new Date();
-    userHeist.hourStarted = date.getHours;
-    console.log(userHeist);
-    pglibrary.WriteToJson(userHeist, file);
-    hChannel = server.channels.cache.find(c => c.id === userHeist.channelid);
-    if(typeof hChannel === 'undefined'){
-        console.log(`Could not find channel, stopping heist`);
-        userHeist.started = false;
-        pglibrary.WriteToJson(userHeist, file);
-        return;
-    } else {SetupHeistt
-        console.log(`Found Channel`);
-    }
-    pglibrary.ChannelLog(`${user.username} has started a heist.`, 'User Command', bot);
-    heisttimers.execute(userHeist, bot);
-    hChannel.send(`<@${user.id}>, you have started the Heist, Time until Heist is done: ${userHeist.location.timetocomplete} Hour(s).`);
-}
-
-
-async function ToggleLocation(locationName){
-    locationData = HeistLocationData();
-    for(let i=0; i < locationData.locations.length; i++){
-        if(locationData.locations[i].name == locationName){
-            locationData.locations[i].available = 0;
-        }
-    }
-    await pglibrary.sleep(1);
-    pglibrary.WriteToJson(locationData, `./heists/locations.json`);
-}
-
-async function SetupHeist(user, message, location, bot){
-    if(location.available == 0){
-        message.channel.send(`<@${message.author.id}>, that location is unavailable for a heist, please wait.`);
-        return;
-    }
-    invData = HeistInvData();
-    for(i=0;i<invData.users.length;i++){
-        curUser = invData.users[i];
-        if(curUser.id == user.id){
-            totalmatching = 0
-            curUser.inv.forEach(item => {
-                if(location.reqs.includes(item)){
-                    totalmatching++;
-                }
-            });
-            if(totalmatching != location.reqs.length){
-                message.channel.send(`<@${user.id}>, You do not have the equipment requirements for this location.`);
-                return;
-            }
-        }
-    }
-    newfile = `./heists/heist${user.id}.json`;
-    userinfo = {"name": user.username, "id": user.id, "host": true, "split":100}
-    users = [];
-    users.push(userinfo);
-    channelid = await createHeistChannel(message, user);
-    console.log(channelid);
-    fileinfo = {"users":users, "location": location, "started": false, "serverid": message.guild.id, "channelid": channelid};
-    pglibrary.WriteToJson(fileinfo, newfile);
-    console.log(location);
-    ToggleLocation(location.name);
-    pglibrary.ChannelLog(`${user.username} has setup a heist at ${location.name}.`, 'User Command', bot);
-}
-
-async function createHeistChannel(message, user){
-    server = message.guild;
-    let channelid;
-    await server.channels.create(`${user.username}'s Heist`).then(channel =>{
-        console.log(channel);
-        let catergory = server.channels.cache.find(c => c.name == "Heists")
-        if(!catergory) throw new Error("Category cannot be found");
-        channel.setParent(catergory.id);
-        channel.send(`<@${user.id}>, You have successfuly setup your heist, you can wait for users to join or you can start it.`);
-        channelid = parseInt(channel.id);
-        console.log(channelid);
-    }).catch(console.error);
-    return channelid;
-}
-
-function JoinHeist(user, message, bot){
-    if(!message.mentions.users.first()){
-        message.channel.send(`<@${user.id}>, please provide a valid user mention.`);
-        return;
-    }
-    target = message.mentions.users.first().id;
-    file = `./heists/heist${target}.json`;
-    requestedHeist = UserHesitInfo(file);
-    if(IsUserAlreadyInArray(requestedHeist.users, user.id)){
-        message.channel.send(`<@${user.id}>, you are already apart of this heist.`);
-        return;
-    }
-    if(requestedHeist.users.length >= 4){
-        message.channel.send(`<@${user.id}>, You cannot join this heist as the max Amount of users in heist has been met.`);
-        return;
-    }  
-    console.log(target);
-    if(requestedHeist.started){
-        message.channel.send(`<@${user.id}>, This heist has already started, cancelling request.`);
-        return;
-    }
-    invData = HeistInvData();
-    for(i=0;i<invData.users.length;i++){
-        curUser = invData.users[i];
-        if(curUser.id == user.id){
-            totalmatching = 0
-            curUser.inv.forEach(item => {
-                if(requestedHeist.location.reqs.includes(item)){
-                    totalmatching++;
-                }
-            });
-            if(totalmatching != requestedHeist.location.reqs.length){
-                message.channel.send(`<@${user.id}>, You do not have the equipment requirements to join this heist.`);
-                return;
-            }
-        }
-    }
-    console.log(requestedHeist);
-    usersInHeist = requestedHeist.users.length + 1;
-    userinfo = {"name": user.username, "id": user.id, "host": false, "split": 100 / usersInHeist }
-    console.log(userinfo);
-    requestedHeist.users.push(userinfo);
-    pglibrary.WriteToJson(requestedHeist, file);
-    UpdateUserSplits(target);
-    message.channel.send(`<@${user.id}>, you have successfuly joined ${requestedHeist.users.find(user => user.host == true).name}'s heist.`);
-    pglibrary.ChannelLog(`${user.username} has joined ${requestedHeist.users.find(user => user.host == true).name} heist.`, 'User Command', bot);
-}
-
-function CancelHeist(user, message){
-    file = `./heists/heist${user.id}.json`;
-    userHeist = UserHesitInfo(file);
-    if(userHeist.started){
-        message.channel.send(`<@${user.id}>, The heist has already started started, run ${config.prefix}heist status instead.`);
-        return;
-    }
-    server = message.guild;
-    console.log(server);
-    hChannel = server.channels.cache.find(c => c.id == userHeist.channelid);
-    if(typeof hChannel === 'undefined'){
-        console.log(`Could not find channel, stopping heist`);
-        return;
-    } else {
-        console.log(`Found Channel`);
-    }
-    hChannel.delete();
-    fs.unlinkSync(file, function(err){
-        if(err){
-            console.log(`There was an error when trying to delete file, make sure it exists.`);
-            return;
-        }
-    });
-}
-
-function UpdateUserSplits(userID){
-    file = `./heists/heist${userID}.json`;
-    requestedHeist = UserHesitInfo(file);
-    newusers = [];
-    console.log(newusers);
-    for(i=0;i<requestedHeist.users.length;i++){
-        curUser = requestedHeist.users[i];
-        console.log(`Updating Split for user ${curUser.name}`);
-        console.log(curUser);
-        requestedHeist.users[i].split =  Math.round(100 / usersInHeist);
-        newusers.push(requestedHeist.users[i]);
-        console.log(newusers);
-    }
-    requestedHeist.users = newusers;
-    pglibrary.WriteToJson(requestedHeist, file);
-}
-
-function ChooseSplit(user, message){
-    collector = message.channel.createMessageCollector(message.channel, {time: 5000});
-    file = `./heists/heist${user.id}.json`;
-    if(!fs.existsSync(file)){
-        message.channel.send(`<@${user.id}>, you do not have a heist going, cancelling.`);
-        return;
-    }
-    userheistinfo = UserHesitInfo(file);
-    for(i=0;i<userheistinfo.users.length;i++){
-        curUser = userheistinfo.users[i];
-        if(curUser.id == user.id){
-            if(!curUser.host){
-                message.channel.send(`<@${user.id}>, you are not the host of heist and cannot set the split.`);
-            } else {
-                message.channel.send(`<@${message.author.id}>, choose a split for each user in your heist. Format: 70/25/5. User 1 Gets 70%, User 2 gets 25%, and User 3 gets 5%. Total Split must be less than 100%.`);
-            }
-        }
-    }
-    if(userheistinfo.users.length <= 1){
-        message.channel.send(`<@${user.id}>, you lack the required amount of users to set a split`);
-    }
-    collector.on('collect', m => {
-        if (m.author.bot) return;
-        if (m.author.id != user.id) return;
-        if (m.channel.id != message.channel.id) return;
-        if(typeof m === 'undefined') return;
-        console.log(m.content);
-        split = m.content;
-        splitN = split.split("/");
-        console.log(splitN);
-        totalsplitpercent = 0
-        for(i=0;i<splitN.length;i++){
-            console.log(splitN[i]);
-            currentSplit = splitN[i]
-            console.log(currentSplit);
-            currentSplit = parseInt(currentSplit);
-            console.log(currentSplit);
-            if(typeof currentSplit !== `number`) {
-                m.channel.send(`<@${user.id}>, a givin split was not a number, please provid a valid number.`);
-                return;
-            }
-            if(i>userheistinfo.users.length){
-                splitN.splice(i, 1);
-            }
-            if(currentSplit >= 100){
-                m.channel.send(`<@${user.id}>, any split cannot be greater than or equal to 100.`);
-                return;
-            }
-            totalsplitpercent += currentSplit;
-        }
-        if(totalsplitpercent != 100){
-            m.channel.send(`<@${user.id}>, the total split has to be a total 100%, your split is less or greater than 100%.`);
-        } 
-        newusers = [];
-        console.log(newusers);
-        for(i=0;i<userheistinfo.users.length;i++){
-            curUser = userheistinfo.users[i];
-            console.log(curUser);
-            curSplit = splitN[i];
-            console.log(`Current Split in String: ${curSplit}`);
-            curSplit = parseInt(curSplit);
-            console.log(`Current Split in Int: ${curSplit}`);
-            userheistinfo.users[i].split = curSplit;
-            newusers.push(userheistinfo.users[i]);
-            console.log(newusers);
-        }
-        userheistinfo.users = newusers;
-        pglibrary.WriteToJson(userheistinfo, file);
-        collector.stop();
-        displaySplit = ""
-        splitN.forEach(split =>{
-            displaySplit += `${split}/`
-        })
-        console.log(displaySplit.length);
-        if(displaySplit.endsWith('/')){
-            displaySplit = displaySplit.substring(0, displaySplit.length - 1);
-        }
-        message.channel.send(`<@${user.id}>, you have set the split to ${displaySplit}`);
-    });
-}
-
-function HeistStatus(user, message, bot){
-    file = `./heists/heist${user.id}.json`;
-    userheistinfo = UserHesitInfo(file);
-    if(userheistinfo.started) {
-        status = "Started"
-    } else {
-        status = "Has Not been Started"
-    }
-    date = new Date();
-    console.log(date);
-    let embed = new MessageEmbed()
-    .setTitle(`Heist Information for ${user.username}`)
-    .setAuthor(bot.user.username, bot.user.displayAvatarURL)
+async function ListEquipment(message, bot){
+    equipment = HeistItemData();
+    guildPntDB = await points_manager.fetchData(message.guild.id);
+    const embed = new MessageEmbed()
+    .setTitle(`Heists Equipment Store`)
+    .setAuthor(bot.user.username,bot.user.displayAvatarURL())
     .setColor(`#87a9ff`)
-    .setDescription(`Current Heist Information.`)
     .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
-    .addField(`Heist Location`, userheistinfo.location.name)
-    .addField(`Heist Start Status`, `${status}`)
-    .addField(`Max Return per user`, `$${pglibrary.commafy(userheistinfo.location.maxreward)} points.`);
-    if(userheistinfo.started){
-        embed.addField(`Time Left:`, `${new Date().getHours - userheistinfo.hourStarted} hour(s) left`);
-    } else {
-        embed.addField(`Time Left:`, `${userheistinfo.location.timetocomplete} hour(s) left`);
-    }
-    
-    userheistinfo.users.forEach(user => {
-        console.log(user);
-        embed.addField(user.name, `Slot: ${userheistinfo.users.indexOf(user) + 1} \n Is Host: ${user.host} \n Reward Cut: ${user.split}%`);
+    .addFields(
+        {name: 'Tier 1 Equipment', value: `1`, inline:true},
+        {name: 'Tier 2 Equipment', value: `1`, inline:true},
+        {name: `Tier 3 Equipment`, value: `1`, inline:true}
+    )
+    equipment.forEach(item => {
+        if(item.name.includes(`Tier 1`) || item.name.includes(`Small`)){
+            if(embed.fields[0].value.startsWith(`1`)){
+                embed.fields[0].value = ``;
+            }
+            embed.fields[0].value += `${item.name}, \n Cost: ${guildPntDB.pointSymbol}${pglibrary.commafy(item.cost)} \n \n`;
+        }
+        if(item.name.includes(`Tier 2`) || item.name.includes(`Medium`)){
+            if(embed.fields[1].value.startsWith(`1`)){
+                embed.fields[1].value = ``;
+            }
+            embed.fields[1].value += `${item.name}, \n Cost: ${guildPntDB.pointSymbol}${pglibrary.commafy(item.cost)} \n \n`;
+        }
+        if(item.name.includes(`Tier 3`) || item.name.includes(`Large`)){
+            if(embed.fields[2].value.startsWith(`1`)){
+                embed.fields[2].value = ``;
+            }
+            embed.fields[2].value += `${item.name}, \n Cost: ${guildPntDB.pointSymbol}${pglibrary.commafy(item.cost)} \n \n`;
+        }
     });
     message.channel.send({content: `<@${message.author.id}>`, embeds: [embed]});
+}
+
+async function BuyEquipment(message,args,bot,guildId){
+    if(!args[2]){
+        message.channel.send(`<@${message.author.id}>, Please Provide a valid Tier Argument`);
+        return;
+    }
+    equipment = HeistItemData();
+    UserData = await points_manager.fetchUser(message.author.id,true,guildId);
+    guildDb = await masterdb.getGuildJson(guildId,'config');
+    guildPntDB = await points_manager.fetchData(guildId);
+    tieredList = {tier1items:[],tier2items:[],tier3items:[]}
+    for(i=0;i<equipment.length;i++){
+        if(equipment[i].name.includes("Tier 1") || equipment[i].name.includes("Small")){
+            tieredList.tier1items.push(equipment[i]);
+        }
+        if(equipment[i].name.includes("Tier 2") || equipment[i].name.includes("Medium")){
+            tieredList.tier2items.push(equipment[i]);
+        }
+        if(equipment[i].name.includes("Tier 3") || equipment[i].name.includes("Large")){
+            tieredList.tier3items.push(equipment[i]);
+        }
+    }
+    const embed = new MessageEmbed()
+    .setColor(`#87a9ff`)
+    .setTitle(`Heist Equipment Store`)
+    .setAuthor(bot.user.username,bot.user.displayAvatarURL())
+    .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
+    switch(args[2].toLowerCase()){
+        case 'light':
+            start = 0;
+            finalList = tieredList.tier1items;
+            embed.addField(`Tier 1 Equipment`,`1`,true);
+            break;
+        case 'medium':
+            start = 1;
+            finalList = tieredList.tier2items;
+            embed.addField(`Tier 2 Equipment`,`1`,true);
+            break;
+        case 'heavy':
+            start = 2;
+            finalList = tieredList.tier3items;
+            embed.addField(`Tier 3 Equipment`,`1`,true);
+            break;
+    }
+    buttons = await createEquipmentButtons(start,tieredList);
+    finalList.forEach(item => {
+        for(i=0;i<embed.fields.length;i++){
+            switch(embed.fields[i].name){
+                case 'Tier 1 Equipment':
+                    if(item.name.includes(`Tier 1`) || item.name.includes(`Small`)){
+                        if(embed.fields[i].value.startsWith(`1`)){
+                            embed.fields[i].value = ``;
+                        }
+                        embed.fields[i].value += `${item.name}, \n Cost: ${guildPntDB.pointSymbol}${pglibrary.commafy(item.cost)} \n \n`;
+                    }
+                    break;
+                case 'Tier 2 Equipment':
+                    if(item.name.includes(`Tier 2`) || item.name.includes(`Medium`)){
+                        if(embed.fields[i].value.startsWith(`1`)){
+                            embed.fields[i].value = ``;
+                        }
+                        embed.fields[i].value += `${item.name}, \n Cost: ${guildPntDB.pointSymbol}${pglibrary.commafy(item.cost)} \n \n`;
+                    }
+                    break;
+                case 'Tier 3 Equipment':
+                    if(item.name.includes(`Tier 3`) || item.name.includes(`Large`)){
+                        if(embed.fields[i].value.startsWith(`1`)){
+                            embed.fields[i].value = ``;
+                        }
+                        embed.fields[i].value += `${item.name}, \n Cost: ${guildPntDB.pointSymbol}${pglibrary.commafy(item.cost)} \n \n`;
+                    }
+                    break;
+            }
+        }
+    });
+    equipInter = await message.channel.send({content:`<@${message.author.id}>`,embeds:[embed], components:[buttons]});
+    const interactCollect = equipInter.createMessageComponentCollector({
+        filter: ({user}) => user.id = message.author.id
+    });
+    interactCollect.on('collect', async interaction => {
+        console.log(`INTERACTION FROM: ${interaction.user.id}`)
+        for(i=0;i<finalList.length;i++){
+            console.log(finalList[i], i);
+            if(finalList[i].name == interaction.customId){
+                curItm = finalList[i];
+                if(curItm.cost <= UserData.balance.cash){
+                    fileStat = await masterdb.DoesFileExist(guildId,`heistinventories`);
+                    console.log(fileStat);
+                    if(!fileStat){
+                        fileStruct = [{user:message.author.id,inv:[curItm.name]}];
+                        await masterdb.writeGuildJsonFile(guildId,`heistinventories`,fileStruct);
+                        interaction.message.delete();
+                        message.channel.send(`<@${message.author.id}>, You have successfully purchased a ${curItm.name}`);
+                        return;
+                    }
+                    guildInv = await masterdb.getGuildJson(guildId,'heistinventories');
+                    found = false;
+                    index = 0;
+                    for(y=0;y<guildInv.length;y++){
+                        if(guildInv[y].user == message.author.id){
+                            found = true;
+                            index = y;
+                        }
+                    }
+                    if(!found){
+                        guildInv.push({user:message.author.id,inv:[curItm.name]});
+                    } else {
+                        if(guildInv[index].inv.includes(curItm.name)){
+                            interaction.message.delete();
+                            message.channel.send(`<@${message.author.id}>, You already own a ${curItm.name}`);
+                            return;
+                        }
+                        guildInv[index].inv.push(curItm.name);
+                    }
+                    await masterdb.writeGuildJsonFile(guildId,'heistinventories',guildInv);
+                    interaction.message.delete();
+                    message.channel.send(`<@${message.author.id}>, You have successfully purchased a ${curItm.name} for ${guildPntDB.pointSymbol}${pglibrary.commafy(curItm.cost)}`);
+                    points_manager.giveUserPoints(message.author.id,-curItm.cost,'cash',true,guildId);
+                    return;
+                } else {
+                    interaction.message.delete();
+                    message.channel.send(`<@${message.author.id}>, You do Not have Enough Cash In Hand to buy this item`);
+                    return;
+                }
+            }
+        }
+    });
+}
+
+async function createEquipmentButtons(start,list){
+    if(!start){
+        start = 0;
+    }
+    const buttons = new MessageActionRow();
+    switch(start){
+        case 0: 
+            finalList = list.tier1items;
+            break;
+        case 1:
+            finalList = list.tier2items;
+            break;
+        case 2:
+            finalList = list.tier3items;
+            break;
+    }
+    for(i=0;i<finalList.length;i++){
+        buttons.addComponents(
+            new MessageButton()
+            .setCustomId(`${finalList[i].name}`)
+            .setLabel(`${finalList[i].name}`)
+            .setStyle('PRIMARY')
+        )
+    }
+    return buttons;
+}
+
+async function ListUsersInventory(user,message,guildid){
+    guildConfig = await masterdb.getGuildJson(guildid,'config');
+    fileStat = await masterdb.DoesFileExist(guildid,'heistinventories');
+    if(!fileStat){
+        message.channel.send(`<@${message.author.id}>, Your Inventory is Currently Empty, to buy an item use: ${guildid.prefix}heist equipment buy [Light, Medium , Heavy]`);
+        return;
+    }
+    guildInv = await masterdb.getGuildJson(guildid,'heistinventories');
+    if(!guildInv.some(usr => usr.user === user)){
+        message.channel.send(`<@${message.author.id}>, Your Inventory is Currently Empty, to buy an item use: ${guildid.prefix}heist equipment buy [Light, Medium , Heavy]`);
+        return;
+    }
+    for(i=0;i<guildInv.length;i++){
+        if(guildInv[i].user === user){
+            const embed = new MessageEmbed()
+            .setTitle(`${message.author.username}`)
+            .setAuthor(message.author.username,message.author.displayAvatarURL())
+            .setColor(`#87a9ff`)
+            .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
+            .addFields(
+                {name: 'Tier 1 Equipment', value: `1`, inline:true},
+                {name: 'Tier 2 Equipment', value: `1`, inline:true},
+                {name: `Tier 3 Equipment`, value: `1`, inline:true}
+            )
+            guildInv[i].inv.forEach(item => {
+                if(item.includes(`Tier 1`) || item.includes(`Small`)){
+                    if(embed.fields[0].value.startsWith(`1`)){
+                        embed.fields[0].value = ``;
+                    }
+                    embed.fields[0].value += `${item} \n`;
+                }
+                if(item.includes(`Tier 2`) || item.includes(`Medium`)){
+                    if(embed.fields[1].value.startsWith(`1`)){
+                        embed.fields[1].value = ``;
+                    }
+                    embed.fields[1].value += `${item} \n`;
+                }
+                if(item.includes(`Tier 3`) || item.includes(`Large`)){
+                    if(embed.fields[2].value.startsWith(`1`)){
+                        embed.fields[2].value = ``;
+                    }
+                    embed.fields[2].value += `${item} \n`;
+                }
+            });
+            for(i=0;i<embed.fields.length;i++){
+                if(embed.fields[i].value == `1`){
+                    embed.fields.splice(i,1);
+                    i--;
+                }
+            }
+            message.channel.send({content:`<@${message.author.id}>`,embeds:[embed]});
+        }
+    }
+}
+
+// --- HEIST MAIN FUNCTIONS --- \\
+
+async function HeistLocationSelect(message,args,bot,guildId){
+    locations = await HeistLocationData(guildId);
+    const buttons = new MessageActionRow();
+    for(i=0;i<locations.length;i++){
+        buttons.addComponents(
+            new MessageButton()
+            .setCustomId(`${locations[i].name}`)
+            .setLabel(`${locations[i].name}`)
+            .setStyle('PRIMARY')
+            .setDisabled(locations[i].available)
+        );
+    }
+    const embed = new MessageEmbed()
+    .setColor(`#87a9ff`)
+    .setTitle(`Select Heist Location`)
+    .setAuthor(bot.user.username,bot.user.displayAvatarURL())
+    .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot");
+    const interact = await message.channel.send({content:`<@${message.author.id}>`,embeds:[embed], components:[buttons]});
+    const interactCollect = interact.createMessageComponentCollector({
+        filter: ({user}) => user.id = message.author.id
+    });
+    interactCollect.on('collect', async interact => {
+        if(!interact.isButton()){return;}
+        guildInv = await masterdb.getGuildJson(interact.guildId,`heistinventories`).catch(async (err)=>{
+            console.error(err);
+            await interact.message.delete();
+            await interact.message.channel.send(`<@${message.author.id}>, You Do Not Have Items for this Heist`);
+            return;
+        });
+        if(typeof guildInv !== 'object'){return;}
+        for(i=0;i<locations.length;i++){
+            if(locations[i] == LocationName){
+                location = locations[i];
+            }
+        }
+        for(i=0;i<guildInv.length;i++){
+            if(guildInv[i].id !== authorId){continue};
+            match = 0;
+            for(y=0;y<guildInv[i].inv.length;y++){
+                if(location.reqs.includes(guildInv[i].inv[y])){
+                    match++;
+                }
+            }
+        }
+        const buttons = new MessageActionRow();
+        for(i=0;i<locations.length;i++){
+            buttons.addComponents(
+                new MessageButton()
+                .setCustomId(`${locations[i].name}`)
+                .setLabel(`${locations[i].name}`)
+                .setStyle('PRIMARY')
+                .setDisabled(true)
+            );
+        }
+        const embed = new MessageEmbed()
+            .setColor(`#87a9ff`)
+            .setTitle(`You Have Selected: ${LocationName}`)
+            .setAuthor(bot.user.username,bot.user.displayAvatarURL())
+            .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot");
+
+        if(match !== locations.reqs.length){await interact.message.delete(); await interact.message.channel.send(`<@${message.author.id}>, You Do Not Have Items for this Heist`);return;}
+        await interact.update({content: `<@${message.author.id}>`,embeds:[embed], components:[buttons]});
+        HeistSetup(message.author.id,LocationName,interact.guild.id);
+    })
+    // Any Further Function is Then Handled to the bot.on
+}
+
+async function HeistSetup(userId,locationName,guildId,Interaction){
+    locations = await HeistLocationData(guildId);
+    for(i=0;i<locations.length;i++){
+        if(locations[i] == locationName){
+            location = locations[i];
+        }
+    }
+    userStruct = {userid:userId,host:true};
+    heistFileStruct = {server:guildId,location:location,users:[userStruct],started:false,dateStarted:undefined};
+    heistFileName = `heist-${userId}-${guildId}`;
+    await saveHeistFile(heistFileName,heistFileStruct).then((status)=>{console.log(status)});
+}
+
+async function saveHeistFile(fileName,data){
+    await pglibrary.WriteToJson(data,`./heists/${fileName}`).then((status) => {
+        console.log(status);
+    }).catch((err)=>{
+        console.error(err);
+        return;
+    });
+    return Promise.resolve(`Saved File: ${fileName}`);
+}
+
+async function ListHeistLocations(message,args,bot,guildId){
+    locations = await HeistLocationData(guildId);
+    equipment = HeistItemData();
+    guildConfig = await masterdb.getGuildJson(guildId,'config');
+    if(!args[1]){
+        const embed = new MessageEmbed()
+        .setTitle(`Heist Locations for ${message.guild.name}`)
+        .setAuthor(bot.user.username, bot.user.displayAvatarURL())
+        .setColor(`#87a9ff`)
+        .setDescription(`Type ${guildConfig.prefix}heist list [Location Name] for Exact Details`)
+        .addField(`Additional Information`, "Starting A Heist With Optional Equipment Increases your Chance of Success")
+        .setFooter(`Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot`);
+        locations.forEach(location => {
+            if(location.available){
+                avail = `Available For Heist`;
+            } else {avail = `Unavailable for Heist`}
+            embed.addField(location.name, `Availability: ${avail}`);
+        });
+        message.channel.send({content: `<@${message.author.id}>`, embeds: [embed]});
+    } else {
+        for(i=2;i<args.length;i++){
+            args[1] += ` ${args[i]}`;
+        }
+        for(i=0;i<locations.length;i++){
+            curLoc = locations[i];
+            if(curLoc.name.toLowerCase() == args[1].toLowerCase()){
+                reqEqpCost = 0;
+                optEqpCost = 0;
+                if(curLoc.available){
+                    avail = `Available For Heist`;
+                } else {avail = `Unavailable for Heist`}
+                for(y=0;y<equipment.length;y++){
+                    curItm = equipment[y];
+                    if(curLoc.reqs.includes(curItm.name)){
+                        reqEqpCost += curItm.cost;
+                    }
+                    if(curLoc.optionalreqs.includes(curItm.name)){
+                        optEqpCost += curItm.cost;
+                    }
+                }
+                // Embed
+                reqs = "";
+                curLoc.reqs.forEach(item => {
+                    reqs += `${item}, `;
+                });
+                optReqs = "";
+                curLoc.optionalreqs.forEach(item => {
+                    optReqs += `${item}, `;
+                });
+                diff = DifficultyDisplay(curLoc.difficulty);
+                const embed = new MessageEmbed()
+                .setTitle(`${curLoc.name} Heist Information`)
+                .setAuthor(bot.user.username, bot.user.displayAvatarURL())
+                .setColor(`#87a9ff`)
+                .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
+                .addField(`Description`, `${curLoc.description}`)
+                .addField(`Location Difficulty`, `${diff}`)
+                .addField(`Max Possible Reward Outcome Per User`, `$${pglibrary.commafy(curLoc.maxreward)}`)
+                .addField('Required Equipment', `${reqs}`)
+                .addField(`Optional Equipment`, `${optReqs}`)
+                .addField(`Location Availability`, `${avail}`)
+                .addField(`Time to Complete`, `Takes ${curLoc.timetocomplete} hour(s) to finish`)
+                .addField(`Total Cost of Equipment`, `Required Equipment Cost: $${pglibrary.commafy(reqEqpCost)}, Optional Equipment Cost: $${pglibrary.commafy(optEqpCost)}`);
+                message.channel.send({content: `<@${message.author.id}>`, embeds: [embed]});
+            }
+        }
+    }
 }
 
 function DifficultyDisplay(diff){
@@ -559,415 +588,4 @@ function DifficultyDisplay(diff){
             break;
     }
     return display;
-}
-
-function ListHeistLocations(message, args, bot){
-    heistlocations = HeistLocationData();
-    heistequipmentData = HeistItemData();
-    if (!args[1]){
-        let embed = new MessageEmbed()
-        .setTitle(`Heist Location Information`)
-        .setAuthor(bot.user.username, bot.user.displayAvatarURL)
-        .setColor(`#87a9ff`)
-        .setDescription(`Current Heist Location Information.`)
-        .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
-        heistlocations.locations.forEach(location => {
-            console.log(location);
-            if(location.available == 1){
-                locationavail = "Available for Heist"
-            } else {
-                locationavail = "Not Available for Heist"
-            }
-            embed.addField(location.name, `Availability: ${locationavail}, \n Run the List Command with the name of the location for more info`);
-        });
-        message.channel.send({content: `<@${message.author.id}>`, embeds: [embed]});
-    } else {
-        for(i=2;i<args.length;i++){ // hacky solution for combining our args
-            if(typeof args[i] === 'undefined') return;
-            args[1] += " " + args[i];
-        }
-        console.log(args[1]);
-        
-        for (i = 0; i < heistlocations.locations.length; i++){
-            curlocation = heistlocations.locations[i];
-            if(curlocation.name.toLowerCase() == args[1].toLowerCase()) {
-                if(curlocation.available == 1){
-                    locationavail = "Available for Heist"
-                } else {
-                    locationavail = "Not Available for Heist"
-                }
-                requiredEquipCost = 0;
-                optionalEquipCost = 0;
-                for(l = 0; l<heistequipmentData.items.length;l++){
-                    curItem = heistequipmentData.items[l];
-                    if(curlocation.reqs.includes(curItem.name)){
-                        requiredEquipCost += curItem.cost;
-                    }
-                    if(curlocation.optionalreqs.includes(curItem.name)){
-                        optionalEquipCost += curItem.cost;
-                    }
-                }
-                diffDisplay = DifficultyDisplay(curlocation.difficulty);
-                let embed = new MessageEmbed()
-                .setTitle(`Heist Location Information`)
-                .setAuthor(bot.user.username, bot.user.displayAvatarURL)
-                .setColor(`#87a9ff`)
-                .setDescription(`Current Heist Location Information.`)
-                .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
-                .addField(`Name`, `${curlocation.name}`)
-                .addField(`Description`, `${curlocation.description}`)
-                .addField(`Location Difficulty`, `${diffDisplay}`)
-                .addField(`Max Possible Reward Outcome Per User`, `$${pglibrary.commafy(curlocation.maxreward)}`)
-                .addField('Required Equipment', `${curlocation.reqs}`)
-                .addField(`Optional Equipment`, `${curlocation.optionalreqs}`)
-                .addField(`Location Availability`, `${locationavail}`)
-                .addField(`Time to Complete`, `Takes ${curlocation.timetocomplete} hour(s) to finish`)
-                .addField(`Total Cost of Equipment`, `Required Equipment Cost: $${pglibrary.commafy(requiredEquipCost)}, Optional Equipment Cost: $${pglibrary.commafy(optionalEquipCost)}`);
-                message.channel.send({content: `<@${message.author.id}>`, embeds: [embed]});
-            }
-        }
-    }
-}
-
-// Equipment Related Functions
-
-function ListEquipment(message, bot){
-    heistequipment = HeistItemData();
-    let embed = new MessageEmbed()
-    .setTitle(`Heist Equipment Information`)
-    .setAuthor(bot.user.username, bot.user.displayAvatarURL)
-    .setColor(`#87a9ff`)
-    .setDescription(`Current Heist Equipment Information.`)
-    .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
-    .addFields(
-        {name: 'Tier 1 Equipment', value: `1`},
-        {name: 'Tier 2 Equipment', value: `1`},
-        {name: `Tier 3 Equipment`, value: `1`}
-    )
-    console.log(embed);
-    console.log(embed.fields);
-    for (i=0; i<heistequipment.items.length; i++){
-        curItem = heistequipment.items[i];
-        console.log(curItem);
-        for (l=0; l<embed.fields.length;l++){
-            curField = embed.fields[l];
-            console.log(curField);
-            if((curItem.name.includes('Tier 1') || curItem.name.includes('Small')) && curField.name.includes('Tier 1')){
-                if(curField.value.startsWith('1')){
-                    curField.value = ``;
-                }
-                curField.value += `${curItem.name}, Cost: $${pglibrary.commafy(curItem.cost)} \n`
-            } else if ((curItem.name.includes('Tier 2') || curItem.name.includes('Medium')) && curField.name.includes('Tier 2')){
-                if(curField.value.startsWith('1')){
-                    curField.value = ``;
-                }
-                curField.value += `${curItem.name}, Cost: $${pglibrary.commafy(curItem.cost)} \n`
-            } else if ((curItem.name.includes('Tier 3') || curItem.name.includes('Large')) && curField.name.includes('Tier 3')){
-                if(curField.value.startsWith('1')){
-                    curField.value = ``;
-                }
-                curField.value += `${curItem.name}, Cost: $${pglibrary.commafy(curItem.cost)} \n`
-            }
-        }
-    }
-    message.channel.send({content: `<@${message.author.id}>`, embeds: [embed]});
-}
-
-function ListUsersInventory(message, user, bot){
-    inv = HeistInvData();
-    userPronoun = "Your";
-    if(message.mentions.users.first()){
-        user = message.mentions.users.first();
-        userPronoun = `${user.username}'s `;
-    }
-    for(i=0;i<inv.users.length;i++){
-        curUser = inv.users[i];
-        if(curUser.id == user.id){
-            console.log(curUser);
-            console.log(curUser.inv);
-            let embed = new MessageEmbed()
-            .setTitle(`${user.username}'s Invetory`)
-            .setAuthor(bot.user.username, bot.user.displayAvatarURL)
-            .setColor(`#87a9ff`)
-            .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
-            .addField(`${userPronoun} Inventory`, `1`);
-            if(curUser.inv.length <= 0){
-                embed.fields[0].value = `This inventory is currently empty.`;
-            }
-            curUser.inv.forEach(item => {
-                if(embed.fields[0].value.startsWith('1')){
-                    embed.fields[0].value = ``;
-                }
-                embed.fields[0].value += `${item} \n`;
-            });
-            message.channel.send({content: `<@${message.author.id}>`, embeds: [embed]});
-            return;
-        }
-    }
-    message.channel.send(`<@${message.author.id}>, that users inventory is empty`);
-    return;
-}
-
-function BuyEquipment(message, bot, args){
-    console.log(`User ${message.author.username} is buying equipment`);
-    heistequipment = HeistItemData();
-    message.channel.send(`<@${message.author.id}>, Select an item to buy by replying to this message with the item name, to buy multiple do Item Name 1, Item Name 2, Item Name 3 and so on.`);
-    collector = message.channel.createMessageCollector(message.channel, {time: 5000});
-
-    collector.on('collect', async m => {
-        if (m.author.bot) return;
-        if (m.author.id != message.author.id) return;
-        if (m.channel.id != message.channel.id) return;
-        if(typeof m === 'undefined') return;
-        console.log(m.content);
-        items = m.content.split(',');
-        for(i=0;i<items.length;i++){
-            items[i] = items[i].trim();
-        }
-        console.log(items, `Length: ${items.length}`);
-        requestedItems = FindEquipment(items);
-        console.log(requestedItems);
-        if(typeof requestedItems === 'undefined'){
-            m.channel.send(`<@${m.author.id}>, Could not find the Requested item(s)`);
-            collector.stop();
-            return;
-        }
-        console.log(requestedItems);
-        requestedItems = RemoveDuplicateItems(m.author.id, requestedItems);
-        console.log(requestedItems);
-        if(requestedItems.length == 0){
-            message.channel.send(`<@${m.author.id}>, You already own all those items. To check your inventory use ${config.prefix}heist equipment inv`);
-            collector.stop();
-            return;
-        }
-        console.log(requestedItems);
-        [cash,bank] = points_manager.getUserBalance();
-        console.log(`Checking if user has enough cash`);
-        cost = 0;
-        requestedItems.forEach(item => {
-            cost += item.cost;
-        });
-        if(cash >= cost){
-            points_manager.giveUserPoints(m.author.id,cost*-1,'cash');
-            await HeistInventoryMain(m.author, requestedItems);
-            string = ""
-            for(i=0;i<requestedItems.length;i++){
-                item = requestedItems[i];
-                console.log(`Item: ${item.name}`);
-                if(i == requestedItems.length - 2){ // i starts at 0, so the 2nd to last index would be -2
-                    console.log(`Item is 2nd to Last, adjusting string`);
-                    if(item.name.includes('Drill') || item.name.includes('Medkit')){
-                        string += `${item.name} and a `;
-                    } else {
-                        string += `${item.name} and `;
-                    }
-                    console.log(string);
-                } else {
-                    console.log(`String is not 2nd to last`);
-                    string += `${item.name}, `;
-                    console.log(string);
-                }
-            }
-            if(string.endsWith(', ')){
-                string = string.substring(0, string.length - 2); 
-            }
-            sPrefix = stringPrefix(string);
-            message.channel.send(`<@${m.author.id}>, You have bought ${sPrefix} ${string} for ${pglibrary.commafy(cost)} points.`);
-            collector.stop();
-            return;
-        } else {
-            message.channel.send(`<@${m.author.id}>, You do not have enough cash in hand for that action.`);
-            collector.stop();
-            return;
-        }
-        collector.stop();
-    });
-
-    collector.on('end', (collected, reason) => {
-        if(collected.size == 0){
-            message.channel.send(`<@${message.author.id}>, you did not reply in time, cancelling.`);
-            return;
-        }
-    });
-}
-
-function GiveEquipment(message){
-    if(!message.mentions.users.first()){
-        message.channel.send(`<@${message.author.id}>, please provide a valid user mention.`);
-        return;
-    }
-    target = message.mentions.users.first();
-    message.channel.send(`<@${message.author.id}>, please type the items below to give`);
-    collector = message.channel.createMessageCollector(message.channel, {time: 5000});
-    collector.on('collect', m => {
-        if (m.author.bot) return;
-        if (m.author.id != message.author.id) return;
-        if (m.channel.id != message.channel.id) return;
-        if(typeof m === 'undefined') return;
-        console.log(m.content);
-        items = m.content.split(',');
-        for(i=0;i<items.length;i++){
-            items[i] = items[i].trim();
-        }
-        console.log(items, `Length: ${items.length}`);
-        requestedItems = FindEquipment(items);
-        console.log(requestedItems);
-        if(typeof requestedItems === 'undefined'){
-            m.channel.send(`<@${m.author.id}>, Could not find the Requested item(s)`);
-            collector.stop();
-            return;
-        }
-        console.log(requestedItems);
-        requestedItems = RemoveDuplicateItems(target.id, requestedItems);
-        console.log(requestedItems);
-        if(requestedItems.length == 0){
-            message.channel.send(`<@${m.author.id}>, that user already owns those items.. To check yours or others inventory use ${config.prefix}heist inv`);
-            collector.stop();
-            return;
-        }
-        HeistInventoryMain(target, requestedItems);
-        string = ""
-        for(i=0;i<requestedItems.length;i++){
-            item = requestedItems[i];
-            console.log(`Item: ${item.name}`);
-            if(i == requestedItems.length - 2){ // i starts at 0, so the 2nd to last index would be -2
-                console.log(`Item is 2nd to Last, adjusting string`);
-                if(item.name.includes('Drill') || item.name.includes('Medkit')){
-                    string += `${item.name} and a `;
-                } else {
-                    string += `${item.name} and `;
-                }
-                console.log(string);
-            } else {
-                console.log(`String is not 2nd to last`);
-                string += `${item.name}, `;
-                console.log(string);
-            }
-        }
-        if(string.endsWith(', ')){
-            string = string.substring(0, string.length - 2); 
-        }
-        sPrefix = stringPrefix(string);
-        message.channel.send(`<@${m.author.id}>, You have given ${target.username}: ${sPrefix} ${string}.`);
-        collector.stop();
-        return;
-    });
-    collector.on('end', (collected, reason) => {
-        if(collected.size == 0){
-            message.channel.send(`<@${message.author.id}>, you did not reply in time, cancelling.`);
-            return;
-        }
-    });
-}
-
-function stringPrefix(string){
-    stringprefix = "";
-    if(string.startsWith('Tier 1 Drill') || string.startsWith('Tier 1 Medkit')){
-        stringprefix = "a";
-    } else if (!string.startsWith('Medium Dufflebags')){
-        stringprefix = "some";
-    }
-    return stringprefix;
-}
-
-function IsUserAlreadyInArray(array, userID){ // check if the user already exists in the given array.
-    console.log(`Checking if ${userID} is in the array`);
-    console.log(array);
-    if (!(array.length == 0)) { // if the length of the Users object array in our original array is not empty
-        console.log(array.length);
-        for (var i = 0, l = array.length; i < l; i++) { // initially i is set to 0, then l is set to the amount of entry's in data.users, and if I is less than L add 1 to I.
-            curUser = array[i].id; // get the ID for the current user 
-            console.log(curUser);
-            if (userID == curUser) { // if the userID we want to check is equal to the curUser in the arrray return true
-                console.log(`User ${userID} is already in the array`);
-                return true;
-            } 
-        }
-        return false;
-    } else {
-        return false; // return false if the amount of entry's in the Users object array is empty
-    }
-}   
-
-function FindEquipment(items){
-    heistequipment = HeistItemData();
-    itemsReturn = [];
-    console.log(itemsReturn);
-    for (i=0;i<heistequipment.items.length;i++){
-        curItem = heistequipment.items[i];
-        console.log(curItem);
-        for(l=0;l<items.length;l++){
-            curRItem = items[l];
-            console.log(curRItem);
-            if(curItem.name.toLowerCase() == curRItem.toLowerCase()){
-                console.log(`Current Item ${curItem.name} is equal to ${curRItem}`);
-                itemsReturn.push(curItem);
-            }
-        }
-    }
-    console.log(itemsReturn);
-    return itemsReturn;
-}
-
-async function HeistInventoryMain(user, itemArray){
-    heistinventory = HeistInvData();
-    if(IsUserAlreadyInArray(heistinventory.users, user.id)){
-        console.log(heistinventory.users);
-        for (i=0;i<heistinventory.users.length;i++){
-            curUser = heistinventory.users[i];
-            if(curUser.id == user.id){
-                console.log(curUser);
-                itemArray.forEach(item =>{
-                    heistinventory.users[i].inv.push(item.name);
-                })
-                console.log(heistinventory.users);
-            }
-        }
-    } else {
-        invA = [];
-        itemArray.forEach(item =>{
-            invA.push(item.name);
-        })
-        newuser = {"name":user.username,"id":user.id, "inv":invA};
-        heistinventory.users.push(newuser);
-        console.log(newuser);
-    }
-    pglibrary.WriteToJson(heistinventory, './heists/usersinventory.json')
-}
-
-function RemoveDuplicateItems(userID, itemArray){
-    console.log(`Removing Duplicates from ${itemArray}`);
-    console.log(`Checking for Dupes for User ${userID}`);
-    heistinventory = HeistInvData();
-    newItems = [];
-    if(heistinventory.users.length == 0) {
-        return false;
-    }
-    if(!IsUserAlreadyInArray(heistinventory.users, userID)){
-        return itemArray;
-    }
-    for(i=0;i<heistinventory.users.length;i++){
-        curUser = heistinventory.users[i];
-        console.log(`Current User to check for dupes: ${curUser.name}`);
-        console.log(curUser);
-        if(curUser.id == userID){
-            if(curUser.inv.length == 0) {
-                console.log(`Users Inventory is empty`);
-                return itemArray;
-            } else {
-                console.log(`Users inventory is not empty`);
-                for(l=0;l<itemArray.length;l++){
-                    item = itemArray[l];
-                    console.log(`Current Item to check for ${item.name}`);
-                    if(curUser.inv.includes(item.name)){
-                        console.log(`Users inventory already contains ${item.name}`);
-                    } else {
-                        newItems.push(item);
-                        console.log(newItems);
-                    }
-                }
-            }
-        }
-    }
-    return newItems;
 }

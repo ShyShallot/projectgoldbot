@@ -106,7 +106,7 @@ function StartJackpot(bot) {
         console.log(startingMultiplier);
         const embed = new MessageEmbed() // create a new embed var
             .setTitle("Raffle")
-            .setAuthor(`${bot.user.username}`, bot.user.displayAvatarURL)
+            .setAuthor(`${bot.user.username}`, bot.user.displayAvatarURL())
             .setColor("#2bff00")
             .setDescription(`<@&${jackpotid}>, a Raffle has been started, Raffle Pot is: ${Math.round(startingamount * startingMultiplier)} points.`)
         bot.channels.cache.get(rafflechannel).send({ content: `<@&${jackpotid}>`, embeds: [embed] }); // grab the channel with the ID defined above from the bots cache and send a message containing a mention and our embed
@@ -143,7 +143,7 @@ async function JackpotEnd(bot){
             points_manager.giveUserPoints(winner.id, gain, 'cash');
             const embed = new MessageEmbed()
                 .setTitle("Raffle")
-                .setAuthor(`${winner.username}`, winner.displayAvatarURL)
+                .setAuthor(`${winner.username}`, winner.displayAvatarURL())
                 .setColor("#2bff00")
                 .setDescription(`<@&${jackpotid}>, <@${winner.id}> has won the raffle and has gained ${gain} points!`)
             bot.channels.cache.get(rafflechannel).send({ content: `<@&${jackpotid}>`, embeds: [embed] }); 
@@ -152,7 +152,7 @@ async function JackpotEnd(bot){
     } else { // if not enough people entered the raffle end it with no winner
         const embed = new MessageEmbed()
                 .setTitle("Raffle")
-                .setAuthor(`${bot.user.username}`, bot.user.displayAvatarURL)
+                .setAuthor(`${bot.user.username}`, bot.user.displayAvatarURL())
                 .setColor("#2bff00")
                 .setDescription(`<@&${jackpotid}>, Not enough people entered the Raffle in time, ending today's raffle.`)
                 bot.channels.cache.get(rafflechannel).send({ content: `<@&${jackpotid}>`, embeds: [embed] });

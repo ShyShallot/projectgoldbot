@@ -223,7 +223,7 @@ function ListStock(bot, args, message){
     stockdata = JSON.parse(stockfile);
     let embed = new MessageEmbed()
         .setTitle(`Stock Information`)
-        .setAuthor(bot.user.username, bot.user.displayAvatarURL)
+        .setAuthor(bot.user.username, bot.user.displayAvatarURL())
         .setColor(`#87a9ff`)
         .setDescription(`Current Stock Information, Be Mindful this information gets updated every ${stockdata.updateinterval} hour(s).`)
         .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")

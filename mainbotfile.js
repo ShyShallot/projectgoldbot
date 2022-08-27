@@ -15,6 +15,7 @@ const masterdb = require('./master-db/masterdb');
 const maths = require('mathjs');
 bot.commands = new Map(); // New Array for our commands
 const cusGuildCache = [];
+module.exports = bot;
 bot.on('ready', async () => { // Runs everything inside when the bot has successfully logged in and is active
     startTime = Date.now();
     console.log(`Starting Bot`);
@@ -62,7 +63,7 @@ bot.on('ready', async () => { // Runs everything inside when the bot has success
         })
     }
     console.log(`PG Bot Ready Which took: ${Date.now() - startTime}ms`);
-    Economy() // handle our encomy functions for stuff that has to calculate every so often
+    //Economy() // handle our encomy functions for stuff that has to calculate every so often
 });
 
 
@@ -356,7 +357,7 @@ async function Jackpot(forced) { // Changed to a raffle but am too lazy to updat
                     }
                     const embed = new MessageEmbed() // create a new embed var
                         .setTitle("Raffle")
-                        .setAuthor(`${bot.user.username}`, bot.user.displayAvatarURL)
+                        .setAuthor(`${bot.user.username}`, bot.user.displayAvatarURL())
                         .setColor("#2bff00")
                         .setDescription(`<@&${guildConfig.jackpotrole}>, a Raffle has been started, Raffle Pot is: ${Math.round(startingamount * startingMultiplier)} points.`);
                     bot.guilds.cache.get(curGuild).channels.cache.get(guildConfig.econchannel).send({ content: `<@&${guildConfig.jackpotrole}>`, embeds: [embed] }); 
@@ -383,7 +384,7 @@ async function Jackpot(forced) { // Changed to a raffle but am too lazy to updat
                         points_manager.giveUserPoints(winner.id,jackpotData.rafflepot,cash,true,curGuild);
                         winEmbed = new MessageEmbed()
                         .setTitle("Raffle")
-                        .setAuthor(`${winner.username}`, winner.displayAvatarURL)
+                        .setAuthor(`${winner.username}`, winner.displayAvatarURL())
                         .setColor("#2bff00")
                         .setDescription(`<@&${jackpotid}>, <@${winner.id}> has won the raffle and has gained ${gain} points!`)
                         bot.guilds.cache.get(curGuild).channels.cache.get(guildConfig.econchannel).send({ content: `<@&${jackpotid}>`, embeds: [embed] }); 
@@ -633,7 +634,17 @@ async function HeistsLocationsSetup(guildId){
             console.log(status);
         }).catch((err)=>{
             console.error(err);
-            Promise.reject(err);
+            return Promise.reject(err);
+        });
+    }
+    cooldownStat = await masterdb.DoesFileExist(guildId,'heistcooldowns');
+    if(!cooldownStat){
+        emptArr = [];
+        await masterdb.writeGuildJsonFile(guildId,'heistcooldowns',emptArr).then((status) =>{
+            console.log(status);
+        }).catch((err)=>{
+            console.error(err);
+            return Promise.reject(err);
         });
     }
     return Promise.resolve(`Finished Location Setup`);

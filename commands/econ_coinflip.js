@@ -48,7 +48,7 @@ function IncomeGain(land, args, message,guildId) {
     points_manager.giveUserPoints(message.author.id, gain, 'cash',true,guildId);
     const embed = new MessageEmbed()
     .setTitle("Coin Flip")
-    .setAuthor(`${message.author.username}`, message.author.displayAvatarURL)
+    .setAuthor(`${message.author.username}`, message.author.displayAvatarURL())
     .setColor("#2bff00")
     .setDescription(`<@${message.author.id}>, The Coin Landed on ${land}, and you have gained: ${gaininPlace} points.`)
     message.channel.send({ content: `<@${message.author.id}>`, embeds: [embed] });
@@ -59,7 +59,7 @@ function IncomeLoss(land, pick, args, message) { // this function is used to tel
     console.log(loss);
     const embed = new MessageEmbed()
     .setTitle("Coin Flip")
-    .setAuthor(`${message.author.username}`, message.author.displayAvatarURL)
+    .setAuthor(`${message.author.username}`, message.author.displayAvatarURL())
     .setColor("#ff031c")
     .setDescription(`<@${message.author.id}>, the coin landed on ${land}, but you picked: ${pick}. You have lost: ${loss} points.`)
     message.channel.send({ content: `<@${message.author.id}>`, embeds: [embed] });
