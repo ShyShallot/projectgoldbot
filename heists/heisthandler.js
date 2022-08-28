@@ -19,9 +19,20 @@ async function FinishHeist(userId,guildId,bot){
     chance = Math.random()*diffMulti* usersInHeist - extras;
     await HeistPayout(heistFile,chance);
     cooldownData = await CoolDownData(guildId);
-    heistFile.users.forEach(user => {
-        cooldownData.push({"id":user.userid,cooldown:Date.now()});
+    guildInv = await masterdb.getGuildJson(heistFile.server,'heistinventories');
+    heistFile.users.forEach(heistUser => {
+        globalInvUserIndex = guildInv.findIndex(user => user.user == heistUser.userid);
+        cooldownUser = cooldownData.find(usr => usr.id == heistUser.userid);
+        if(typeof cooldownUser !== 'undefined'){return;}
+        cooldownData.push({"id":heistUser.userid,cooldown:Date.now()});
+        allitems = heistFile.location.reqs.concat(heistFile.location.optionalreqs);
+        allitems.forEach(item => {
+            if(guildInv[globalInvUserIndex].inv.includes(item)){
+                guildInv[globalInvUserIndex].inv.splice(guildInv[globalInvUserIndex].inv.indexOf(item),1);
+            }
+        });
     });
+    await masterdb.writeGuildJsonFile(guildId,'heistinventories',guildInv);
     await masterdb.writeGuildJsonFile(guildId,'heistcooldowns',cooldownData);
     heistchannel = bot.guilds.cache.get(heistFile.server).channels.cache.get(heistFile.channel);
     usersString = ``;
@@ -36,6 +47,10 @@ async function FinishHeist(userId,guildId,bot){
         heistchannel.send(usersString + `The Heist was a complete disaster you idiots, you will not only be in cuffs but will lose ${guildPntDB.pointSymbol}${pglibrary.commafy(heistFile.location.maxreward)}, Have fun being in debt.`);
     }
     fs.unlinkSync(`./heists/heist-${userId}-${guildId}.json`);
+    
+    setTimeout(()=> {
+        heistchannel.delete();
+    },20000)
 }
 
 async function checkForOptReqs(data){
@@ -44,7 +59,7 @@ async function checkForOptReqs(data){
     data.users.forEach(user => {
         guildInv.forEach(invUsr => {
             if(user.userid == invUsr.id){
-                data.location.optEqpCost.forEach(itm => {
+                data.location.optionalreqs.forEach(itm => {
                     if(invUsr.inv.includes(itm)){
                         amount++;
                     }

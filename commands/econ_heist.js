@@ -42,17 +42,10 @@ module.exports = {
                     message.channel.send(`<@${message.author.id}>, you are already in a heist you cannot join another`);
                     return;
                 }
-                JoinHeist(message.author, message, bot);
-                break;
-            case 'split':
-                ChooseSplit(message.author, message);
+                JoinHeist(message.author.id, message, bot);
                 break;
             case 'status':
-                if(!fs.existsSync(`./heists/heist${message.author.id}.json`)){
-                    StatusforUserInHeist(message.author, message, bot);
-                    return;
-                } 
-                HeistStatus(message.author, message, bot);
+                HeistStatus(message, bot);
                 break;
             case 'start':
                 if(!InHeist){
@@ -77,14 +70,6 @@ module.exports = {
                     message.channel.send(`<@${message.author.id}>, Valid Equipment Args: list/buy`);
                     break;
                 }
-            case 'give':
-                modRole = config.modrole;
-                if(message.member.roles.cache.find(role => role.name === modRole)){ // check if the user has mod
-                    GiveEquipment(message);
-                } else {    
-                    message.channel.send(`<@${message.author.id}>, you do not have sufficient perms for this command`);
-                }
-                break;
             case 'inventory':
             case 'inv':
                 ListUsersInventory(message.author.id, message, guildId);
@@ -480,7 +465,7 @@ async function HeistSetup(userId,locationName,guildId,Interaction){
     heistchannel = await Interaction.guild.channels.create(`$${Interaction.user.username}s-heist`,{type: 'text'});
     heistchannel.setParent(category.id);
     heistchannel.send(`<@${userId}>, You have successfuly setup your heist, you can wait for users to join or you can start it.`);
-    userStruct = {userid:userId,host:true};
+    userStruct = {userid:userId,host:true,name:Interaction.user.username};
     heistFileStruct = {server:guildId,channel:heistchannel.id,location:location,users:[userStruct],started:false,dateStarted:undefined};
     heistFileName = `heist-${userId}-${guildId}`;
     await saveHeistFile(heistFileName,heistFileStruct).then((status)=>{console.log(status)});
@@ -612,14 +597,104 @@ async function IsUserAlreadyInAHeist(userId,guildId){
 
 async function StartHeist(userId,guildId,message,bot){
     heistFile = JSON.parse(fs.readFileSync(`./heists/heist-${userId}-${guildId}.json`));
-    heistFile.users.forEach(async user => {
-        if(user.user == userId && user.host){
-            heistFile.started = true;
-            heistFile.date = Date.now();
-            hchannel = message.guild.channels.cache.find(c => c.id = heistFile.channel);
-            hchannel.send(`<@${userId}>, You have started the Heist, Time Until Heist is Finished: ${heistFile.location.timetocomplete} Hour(s)`);
-            await saveHeistFile(`heist-${userId}-${guildId}`,heistFile);
-            setTimeout(() => heisthandler.FinishHeist(userId,guildId,bot),3600000 * heistFile.location.timetocomplete)
-        }
+    host = heistFile.users.find(user => user.host);
+    if(typeof host === 'undefined'){return;}
+    heistFile.started = true;
+    heistFile.date = Date.now();
+    hchannel = bot.guilds.cache.get(heistFile.server).channels.cache.get(heistFile.channel);
+    console.log(hchannel);
+    hchannel.send(`<@${userId}>, You have started the Heist, Time Until Heist is Finished: ${heistFile.location.timetocomplete} Hour(s)`);
+    await saveHeistFile(`heist-${userId}-${guildId}`,heistFile);
+    setTimeout(() => heisthandler.FinishHeist(userId,guildId,bot),3600000 * heistFile.location.timetocomplete)
+}
+
+async function HeistStatus(message,bot){
+    file = `heist-${message.author.id}-${message.guild.id}.json`;
+    console.log(file);
+    if(!fs.existsSync(`./heists/${file}`)){
+        heistFiles = fs.readdirSync('./heists');
+        heistFiles.forEach(async file => {
+            if(file.startsWith('heist-') && file.endsWith('.json') && file != 'heist.json'){
+                fileData = JSON.parse(fs.readFileSync(`./heists/${file}`));
+                user = fileData.users.find(usr => usr.userid === message.author.id);
+                if(typeof user === 'undefined'){
+                    message.channel.send(`<@${message.author.id}>, You are not apart of a Heist`);
+                    return;
+                }
+                embed = createStatusEmbed(fileData,bot);
+                message.channel.send({content:`<@${message.author.id}>`, embeds:[embed]});
+                return;
+            }
+        });
+    } else {
+        heistData = JSON.parse(fs.readFileSync(`./heists/${file}`));
+        embed = createStatusEmbed(heistData,bot);
+        message.channel.send({content:`<@${message.author.id}>`, embeds:[embed]});
+        return;
+    }
+    
+}
+
+function createStatusEmbed(data,bot){
+    host = data.users.find(usr => usr.host);
+    users = "";
+    data.users.forEach(user => {
+        users += `${user.name}, `;
     })
+    if(data.users.length == 1){
+        users = host.name;
+    }
+    embed = new MessageEmbed()
+    .setTitle(`Heist at ${data.location.name} by ${host.name}`)
+    .addFields(
+        {name: 'Heist Started', value: `${data.started.toString().charAt(0).toUpperCase() + data.started.toString().slice(1)}`},
+        {name: "Max Payout Per User", value: `$${pglibrary.commafy(data.location.maxreward)}`},
+        {name: "Users in Heist", value:users},
+        {name: "Time for Heist to Complete", value:`${data.location.timetocomplete} hour(s)`}
+    )
+    .setAuthor(bot.user.username, bot.user.displayAvatarURL())
+    .setColor(`AQUA`);
+    return embed;
+}
+
+async function JoinHeist(userId, message ,bot){
+    targetUser = message.mentions.users.first();
+    if(typeof targetUser === 'undefined'){
+        message.channel.send(`<@${userId}>, Please Mention a Host of a Heist to join.`);
+        return;
+    }
+    if(!fs.existsSync(`./heists/heist-${targetUser.id}-${message.guild.id}.json`)){
+        message.channel.send(`<@${userId}>, That user is not in a heist or is not a host.`);
+        return;
+    }
+    targetUserHeist = JSON.parse(fs.readFileSync(`./heists/heist-${targetUser.id}-${message.guild.id}.json`));
+    if(targetUserHeist.started){
+        message.channel.send(`<@${userId}>, That Heist has already started!`);
+        return;
+    }
+    if(targetUserHeist.users.length == 4){
+        message.channel.send(`<@${userId}>, this Heist has reached its max limit for players`);
+        return;
+    }
+    userStruct = {userid:userId,host:false,name:message.author.username};
+    targetUserHeist.users.push(userStruct);
+    message.channel.send(`<@${userId}>, You have joined <@${targetUser.id}>'s Heist`);
+    return;
+}
+
+async function CancelHeist(userId,message,bot){
+    userFile = `heist-${userId}-${message.guild.id}.json`;
+    if(!fs.existsSync(`./heists/${userFile}`)){
+        message.channel.send(`<${userId}>, You are not in a heist or not a host.`);
+        return;
+    }
+    heistData = JSON.parse(fs.readFileSync(`./heists/${userFile}`));
+    if(heistData.started){
+        message.channel.send(`<@${userId}>, This Heist has already started!`);
+        return;
+    }
+    bot.guilds.cache.get(heistData.server).channels.cache.get(heistData.channel).delete();
+    fs.unlinkSync(`./heists/${userFile}`);
+    message.channel.send(`<@${userId}>, You have canceled the heist.`);
+    return;
 }
