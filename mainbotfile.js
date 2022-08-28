@@ -290,9 +290,9 @@ async function Economy(){ // Janky as fuck but works
             await ClearSQLDB(); // Temp thing till i figure out SQL more
             await WritetoSQLDB();
         }
-        for(i=0;i<cusGuildCache.length;i++){
-            points_manager.checkPausedTimers(cusGuildCache[i]);
-        }
+        cusGuildCache.forEach(async guild =>{
+            await points_manager.checkPausedTimers(guild);
+        });
         await pglibrary.sleep(5000);
     }
 }
