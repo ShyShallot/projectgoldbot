@@ -39,6 +39,7 @@ async function WriteToJson(rawdata, location) {
         console.log("The File was saved");
         return Promise.resolve(`File ${location} Was Saved`);
     });
+    return Promise.resolve(`File ${location} Was Saved`);
 }
 
 function ReadJSON(location){

@@ -444,10 +444,7 @@ async function StockMarket() {
     var stockmarket = GrabStockMarketData();
     console.log(`Adding Guilds to Stockmarket`);
     var expectedStockNames = [];
-    for(let i = 0; i < cusGuildCache.length;i++){
-        console.log(i);
-        curGuild = cusGuildCache[i];
-        console.log(curGuild);
+    cusGuildCache.forEach(async curGuild => {
         guildConfig = await masterdb.getGuildJson(curGuild,"config");
         //console.log(guildConfig);
         if(typeof guildConfig.stockname !== 'undefined'){
@@ -458,7 +455,7 @@ async function StockMarket() {
             console.log(`${bot.guilds.cache.get(curGuild).name} Does not have their stock name set`);
             pglibrary.ChannelLog(`Warning Server Stock Name is Not Set, Use ${guildConfig.prefix}stockname to set it`,'Unset Config Value',bot,curGuild);
         }
-    }
+    });
     await pglibrary.WriteToJson(stockmarket, './stockmarket.json').then((status) => {console.log(status)});
     if (stockmarket.stockmarketactive == 0) {
         if(typeof stockmarket.lastupdate === 'undefined'){
