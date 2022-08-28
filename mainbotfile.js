@@ -283,9 +283,9 @@ async function Economy(){ // Janky as fuck but works
         //await Jackpot(false).then((status)=>{
         //    console.log(status);
         //}).catch((err) => {console.error(err);}); 
-        //await StockMarket().then(()=>{
-        //    console.log(`Finished Stock Market Function`);
-        //}).catch((err) => {console.error(err);});
+        await StockMarket().then(()=>{
+            console.log(`Finished Stock Market Function`);
+        }).catch((err) => {console.error(err);});
         if(hostconfig.sql == 1){
             await ClearSQLDB(); // Temp thing till i figure out SQL more
             await WritetoSQLDB();
