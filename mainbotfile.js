@@ -13,9 +13,9 @@ const points_manager = require('./points/manager');
 const levels = require('./levels/level_handler');
 const masterdb = require('./master-db/masterdb');
 const maths = require('mathjs');
+const heisthandler = require('./heists/heisthandler');
 bot.commands = new Map(); // New Array for our commands
 const cusGuildCache = [];
-module.exports = bot;
 bot.on('ready', async () => { // Runs everything inside when the bot has successfully logged in and is active
     startTime = Date.now();
     console.log(`Starting Bot`);
@@ -63,7 +63,7 @@ bot.on('ready', async () => { // Runs everything inside when the bot has success
         })
     }
     console.log(`PG Bot Ready Which took: ${Date.now() - startTime}ms`);
-    //Economy() // handle our encomy functions for stuff that has to calculate every so often
+    Economy() // handle our encomy functions for stuff that has to calculate every so often
 });
 
 
@@ -277,15 +277,15 @@ bot.login(hostconfig.token);
 async function Economy(){ // Janky as fuck but works
     await pglibrary.sleep(1000);
     while (true) {
-        //await Heists().then((status)=>{
-        //   console.log(status);
-        //}).catch((err) => {console.error(err);});
+        await Heists().then((status)=>{
+           console.log(status);
+        }).catch((err) => {console.error(err);});
         //await Jackpot(false).then((status)=>{
         //    console.log(status);
         //}).catch((err) => {console.error(err);}); 
-        await StockMarket().then(()=>{
-            console.log(`Finished Stock Market Function`);
-        }).catch((err) => {console.error(err);});
+        //await StockMarket().then(()=>{
+        //    console.log(`Finished Stock Market Function`);
+        //}).catch((err) => {console.error(err);});
         if(hostconfig.sql == 1){
             await ClearSQLDB(); // Temp thing till i figure out SQL more
             await WritetoSQLDB();
@@ -571,54 +571,36 @@ function GrabStocksinOwnership(stock) { // Modified Max User Stocks function
 // Heist Related Functions
 
 async function Heists(){
-    console.log(`Toggaling Heist Locations`);
-    await HeistLocationToggle().then((status) => {
-        console.log(status);
-    });
+    console.log(`Checking for Ongoing Heists`);
+    await CheckHeists();
     return Promise.resolve(`Finished Heist Handler Function`);
 }
 
-
-async function HeistFiles(){
-    let heists = [];
-    heistsF = fs.readdirSync(`./heists`);
-    //console.log(heistsF);
-    if(!heistsF){
-        console.log(`Reading DIR Failed`);
-        return;
-    }
-    for(i=0;i<heistsF.length;i++){
-        file = heistsF[i];
-        //console.log(`File Found: ${file}`);
-        if(file == 'heist.json'){
-            continue;
+async function CheckHeists(){
+    heistFiles = fs.readdirSync('./heists');
+    heistFiles.forEach(async file => {
+        if(file.startsWith('heist-') && file.endsWith('.json') && file != 'heist.json'){
+            fileData = JSON.parse(fs.readFileSync(`./heists/${file}`));
+            console.log(fileData);
+            if(fileData.started && Date.now() >= (fileData.location.timetocomplete * 3600000) + fileData.date){
+                host = fileData.users.find(usr => usr.host === true);
+                heisthandler.FinishHeist(host.userid,fileData.server,bot);
+            } else if(fileData.started){
+                guildLoc = await masterdb.getGuildJson(fileData.server,'locations');
+                guildLoc.forEach(loc => {
+                    if(loc == fileData.location.name && loc.available){
+                        loc.available = false;
+                    }
+                });
+                masterdb.writeGuildJsonFile(fileData.server,'locations',guildLoc);
+            }
         }
-        if(file.startsWith('heist') && file.endsWith('.json')){
-            console.log(file);
-            console.log(`Found an onging heist file, pushing`);
-            heists.push(file);
-        }
-    }
-    //console.log(`Final Found Files`);
-    //console.log(heists);
-    allheists = [];
-    for(i=0;i<heists.length;i++){
-        heistData = JSON.parse(fs.readFileSync(`./heists/${heists[i]}`));
-        allheists.push(heistData);
-    }
-    return allheists;
-}
-
-function HeistInvData(){
-    heistinvdata = fs.readFileSync('./heists/usersinventory.json');
-    heistinv = JSON.parse(heistinvdata);
-    return heistinv;
+    });
+    return Promise.resolve(`Done`);
 }
 
 function HeistLocationData(){
-    heistlocdata = fs.readFileSync('./heists/locations.json');
-    heistloc = JSON.parse(heistlocdata);
-    return heistloc;
+    return JSON.parse(fs.readFileSync('./heists/locations.json'));
 }
 
 async function HeistsLocationsSetup(guildId){
@@ -650,45 +632,7 @@ async function HeistsLocationsSetup(guildId){
     return Promise.resolve(`Finished Location Setup`);
 }
 
-async function HeistLocationToggle(){
-    heists = await HeistFiles();
-    day = new Date().getUTCDay();
-    console.log(cusGuildCache);
-    for(const guild of cusGuildCache){
-        console.log(guild);
-        fileExists = await masterdb.DoesFileExist(guild,"locations");
-        console.log(fileExists);
-        if(!fileExists){await HeistsLocationsSetup(guild);};
-        guildLocations = await masterdb.getGuildJson(guild,"locations");
-        for(i=0;i<heists.length;i++){
-            if(heists[i].serverid == guild){
-                for(y=0;y<guildLocations.location;y++){
-                    if(heists[i].location.name == guildLocations[y].name && heists[i].started == true){
-                        guildLocations[y].available = 0;
-                        guildLocations[y].heist = true;
-                    }
-                }
-            }
-        }
-        for(i=0;i<guildLocations.location;i++){
-            if(typeof guildLocations[i].madeunavailable === 'undefined'){
-                guildLocations[i].madeunavailable = day;
-                return;
-            }
-            locationDate = new Date(guildLocations[i].madeunavailable).getUTCDay();
-            if(typeof guildLocations[i].heist === 'undefined' && day > locationDate){
-                if(guildLocations[i].available){
-                    guildLocations[i].available = false;
-                } else {
-                    guildLocations[i].available = true;
-                }
-                guildLocations[i].madeunavailable = day;
-            }
-        }
-        await masterdb.writeGuildJsonFile(guild,"locations",guildLocations).then(`Finished Heist Location Date for: ${bot.guilds.cache.get(guild).name}`);
-    }
-    return Promise.resolve("Finished Heist Locations");
-}
+
 
 // Database Related Functions
 

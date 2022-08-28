@@ -2,11 +2,10 @@ const {MessageEmbed, MessageActionRow, MessageButton, ButtonInteraction} = requi
 const config = require('../config.json'); // basic config file read
 const pglibrary = require("../libraryfunctions.js"); // load our custom library functions.
 const fs = require('fs'); // File System for JS 
-const heisttimers = require('../heists/heisttimers');
 const points_manager = require('../points/manager');
 const masterdb = require('../master-db/masterdb');
-const { arg } = require('mathjs');
 const bot = require('../mainbotfile');
+const heisthandler = require('../heists/heisthandler');
 module.exports = {
     name: 'heist',
     description: 'Setup and Start or Join Heists to earn large amounts of money',
@@ -16,7 +15,7 @@ module.exports = {
     async execute(message, args, bot,guildId){
         console.log(args);
         userStat = await IsUserOnCooldown(message.author.id,guildId);
-        InHeist = false //await IsUserAlreadyInAHeist(message.author.id,guildId);
+        InHeist = await IsUserAlreadyInAHeist(message.author.id,guildId);
         switch (args[0]){ // check the first argument of the command 
             case 'l':
             case 'list':
@@ -56,16 +55,11 @@ module.exports = {
                 HeistStatus(message.author, message, bot);
                 break;
             case 'start':
-                if(fs.existsSync(`./heists/heist${message.author.id}.json`)){
-                    heistFile = fs.readFileSync(`./heists/heist${message.author.id}.json`);
-                    heist = JSON.parse(heistFile);
-                } else {
-                    message.channel.send(`<@${message.author.id}>, you are not in a heist, or are not the owner`);
+                if(!InHeist){
+                    message.channel.send(`<@${message.author.id}>, You are not in a heist.`);
                     return;
                 }
-                if(IsUserAlreadyInArray(heist.users, message.author.id)){
-                    StartHeist(message.author, message, bot);
-                }
+                StartHeist(message.author.id,guildId,message,bot);
                 break;
             case 'equip':
             case 'equipment':
@@ -415,7 +409,7 @@ async function HeistLocationSelect(message,args,bot,guildId){
             .setCustomId(`${locations[i].name}`)
             .setLabel(`${locations[i].name}`)
             .setStyle('PRIMARY')
-            .setDisabled(locations[i].available)
+            .setDisabled(!locations[i].available)
         );
     }
     const embed = new MessageEmbed()
@@ -437,12 +431,12 @@ async function HeistLocationSelect(message,args,bot,guildId){
         });
         if(typeof guildInv !== 'object'){return;}
         for(i=0;i<locations.length;i++){
-            if(locations[i] == LocationName){
+            if(locations[i].name == interact.customId){
                 location = locations[i];
             }
         }
         for(i=0;i<guildInv.length;i++){
-            if(guildInv[i].id !== authorId){continue};
+            if(guildInv[i].user !== message.author.id){continue};
             match = 0;
             for(y=0;y<guildInv[i].inv.length;y++){
                 if(location.reqs.includes(guildInv[i].inv[y])){
@@ -462,13 +456,12 @@ async function HeistLocationSelect(message,args,bot,guildId){
         }
         const embed = new MessageEmbed()
             .setColor(`#87a9ff`)
-            .setTitle(`You Have Selected: ${LocationName}`)
+            .setTitle(`You Have Selected: ${interact.customId}`)
             .setAuthor(bot.user.username,bot.user.displayAvatarURL())
             .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot");
-
-        if(match !== locations.reqs.length){await interact.message.delete(); await interact.message.channel.send(`<@${message.author.id}>, You Do Not Have Items for this Heist`);return;}
+        if(match !== location.reqs.length){await interact.message.delete(); await interact.message.channel.send(`<@${message.author.id}>, You Do Not Have Items for this Heist`);return;}
         await interact.update({content: `<@${message.author.id}>`,embeds:[embed], components:[buttons]});
-        HeistSetup(message.author.id,LocationName,interact.guild.id);
+        HeistSetup(message.author.id,interact.customId,interact.guild.id,interact);
     })
     // Any Further Function is Then Handled to the bot.on
 }
@@ -480,14 +473,22 @@ async function HeistSetup(userId,locationName,guildId,Interaction){
             location = locations[i];
         }
     }
+    category = Interaction.guild.channels.cache.find(channel => channel.type == 'GUILD_CATEGORY' && channel.name == "Heists");
+    if(typeof category === 'undefined'){
+        category = await Interaction.guild.channels.create('Heists',{type:"GUILD_CATEGORY"});
+    }
+    heistchannel = await Interaction.guild.channels.create(`$${Interaction.user.username}s-heist`,{type: 'text'});
+    heistchannel.setParent(category.id);
+    heistchannel.send(`<@${userId}>, You have successfuly setup your heist, you can wait for users to join or you can start it.`);
     userStruct = {userid:userId,host:true};
-    heistFileStruct = {server:guildId,location:location,users:[userStruct],started:false,dateStarted:undefined};
+    heistFileStruct = {server:guildId,channel:heistchannel.id,location:location,users:[userStruct],started:false,dateStarted:undefined};
     heistFileName = `heist-${userId}-${guildId}`;
     await saveHeistFile(heistFileName,heistFileStruct).then((status)=>{console.log(status)});
+
 }
 
 async function saveHeistFile(fileName,data){
-    await pglibrary.WriteToJson(data,`./heists/${fileName}`).then((status) => {
+    await pglibrary.WriteToJson(data,`./heists/${fileName}.json`).then((status) => {
         console.log(status);
     }).catch((err)=>{
         console.error(err);
@@ -588,4 +589,37 @@ function DifficultyDisplay(diff){
             break;
     }
     return display;
+}
+
+async function IsUserAlreadyInAHeist(userId,guildId){
+    bool = false;
+    dirArr = fs.readdirSync(`./heists/`);
+    dirArr.forEach(file => {
+        if(file.includes(userId) && file.includes(guildId)){
+            bool = true;
+        }
+        if(!bool && file.includes(guildId)){ // if the user is not the host but is apart of another
+            heistData = JSON.parse(fs.readFileSync(`./heists/${file}`));
+            for(i=0;i<heistData.users.length;i++){
+                if(heistData.users[i].user == userId){
+                    bool = true;
+                }
+            }
+        }
+    });
+    return bool;
+}
+
+async function StartHeist(userId,guildId,message,bot){
+    heistFile = JSON.parse(fs.readFileSync(`./heists/heist-${userId}-${guildId}.json`));
+    heistFile.users.forEach(async user => {
+        if(user.user == userId && user.host){
+            heistFile.started = true;
+            heistFile.date = Date.now();
+            hchannel = message.guild.channels.cache.find(c => c.id = heistFile.channel);
+            hchannel.send(`<@${userId}>, You have started the Heist, Time Until Heist is Finished: ${heistFile.location.timetocomplete} Hour(s)`);
+            await saveHeistFile(`heist-${userId}-${guildId}`,heistFile);
+            setTimeout(() => heisthandler.FinishHeist(userId,guildId,bot),3600000 * heistFile.location.timetocomplete)
+        }
+    })
 }

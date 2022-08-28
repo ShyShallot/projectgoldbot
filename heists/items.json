@@ -1,4 +1,4 @@
-{"items": [
+[
     {"name": "Tier 1 Drill", "cost": 50000},
     {"name": "Tier 2 Drill", "cost":100000}, 
     {"name": "Tier 3 Drill", "cost":250000},
@@ -18,4 +18,4 @@
     {"name": "Small Dufflebags", "cost": 25000},
     {"name": "Medium Dufflebags", "cost": 50000},
     {"name": "Large Dufflebags", "cost": 100000}
-]}
+]
