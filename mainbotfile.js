@@ -9,16 +9,24 @@ const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('
 const pglibrary = require("./libraryfunctions.js");
 const sqlconfig = require('./sql.json');
 const SQL = require('mssql');
+const points_manager = require('./points/manager');
+const levels = require('./levels/level_handler');
 
 bot.commands = new Map(); // New Array for our commands
-bot.on('ready', () => { // Runs everything inside when the bot has successfully logged in and is active
+bot.on('ready', async () => { // Runs everything inside when the bot has successfully logged in and is active
     console.log('PG Bot Ready');
     console.log(`Current Game: ${config.game}`);
     bot.user.setActivity(config.game, {type: 'PLAYING'}); // Set our game status
     for (const file of commandFiles) { // for every file in our commandFiles Mapping
-      const command = require(`./commands/${file}`); // load the data of the file into memory 
-      bot.commands.set(command.name, command); // add our commands to our array
+        const command = require(`./commands/${file}`); // load the data of the file into memory 
+        bot.commands.set(command.name, command); // add our commands to our array
     }
+    await pglibrary.sleep(1000);
+    points_manager.setBot(bot);
+    points_manager.firstSetup();
+    await pglibrary.sleep(1000);
+    levels.setBot(bot);
+    levels.firstSetup();
     Economy() // handle our encomy functions for stuff that has to calculate every so often
 });
 
@@ -32,7 +40,8 @@ bot.on('guildMemberAdd', member => { // When a someone joins the server
         .setColor(0x00AE86)
         .setDescription("Welcome to the Project Gold Discord Server, Please Read <#631010878568923136> before continuing for server links and rules.")
         .setThumbnail("https://i.imgur.com/7s7AuxI.png")
-    bot.channels.cache.get(config.serverid).send({content: config.newUserMessages.Welcome, embeds: [welcomeEmbed] });
+    bot.guilds.cache.get(config.serverid).channels.cache.get(config.welcomeChannel).send({content: config.newUserMessages.Welcome, embeds: [welcomeEmbed] });
+    points_manager.addUser(member.user);
 });
 
 bot.on('guildMemberRemove', member => { // When someone leaves the server
@@ -44,7 +53,8 @@ bot.on('guildMemberRemove', member => { // When someone leaves the server
         .setColor(0x00AE86)
         .setDescription("We wish the best, thanks for stopping by :).")
         .setThumbnail("https://i.imgur.com/7s7AuxI.png")
-    bot.channels.cache.get(config.serverid).send({content: `${name} ${config.newUserMessages.Leave}`, embeds: [welcomeEmbed] });
+        bot.guilds.cache.get(config.serverid).channels.cache.get(config.welcomeChannel).send({content: `${name} ${config.newUserMessages.Leave}`, embeds: [welcomeEmbed] });
+    points_manager.removeUser(member.user.id);
 });
 
 
@@ -54,32 +64,13 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     if (message.author.bot){ // if the message is sent by a bot don't even bother
         return;
     }
+    config.serverid = message.guild.id;
+    points_manager.messagePoints(message.author.id);
+    levels.messageXP(message.author.id,message);
     const args = message.content.slice(config.prefix.length).split(/ +/g); // basic argument by spliting a message by spaces, with the first argument given is args[0]
     const command = args.shift().toLowerCase(); 
-    const eargs = message.content.slice(config.econprefix.length).split(/ +/g);
-    const ecommand = eargs.shift().toLowerCase();
     console.log(command);
-    console.log(ecommand);
     AutomatedMessage(message);
-    if (message.content.startsWith(config.econprefix)) { // this is to extend UnbelievaBoat's functionality
-        switch (ecommand){
-            case 'cf':
-            case 'coinflip':
-                bot.commands.get("coinflip").execute(message, args, bot);
-                break;
-            case 'raffle':
-                bot.commands.get("jackpot").execute(message, args, bot, 0);
-                break;
-            case 'forceraffle':
-                if(message.member.roles.cache.find(role => role.name === config.modrole)){
-                    Jackpot(1);
-                    message.channel.send(`Forcing Raffle Status`);
-                }
-                break;
-            case 'stocks':
-                bot.commands.get("stocks").execute(message, args, bot);
-        }
-    }
     if (!message.content.startsWith(config.prefix) || message.author.bot){ // if the message doesn't start with our prefix don't bother
         return;
     }
@@ -87,7 +78,16 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
     // Base for adding commands: if(command === "name"){
     //  bot.commands.get("name").execute(message, args, bot)
     //}
-
+    cmd = bot.commands.get(command);
+    if(typeof cmd === 'undefined'){return;}
+    if(cmd.admin){
+        if(message.member.roles.cache.find(role => role.name === config.modrole)){
+            cmd.execute(message,args,bot);
+        }
+    } else {
+        cmd.execute(message,args,bot);
+    }
+    return;
     switch (command){
         case 'toggleauto':
             if(message.member.roles.cache.find(role => role.name === config.modrole)){
@@ -129,6 +129,97 @@ bot.on('messageCreate', (message) =>{ // when someone sends a message
                 bot.commands.get("logsize").execute(message,args,bot);
             }
             break;
+        case 'cf':
+        case 'coinflip':
+            bot.commands.get("coinflip").execute(message,args,bot);
+            break;
+        case 'stock':
+        case 'stocks':
+            bot.commands.get("stocks").execute(message,args,bot);
+            break;
+        case 'buy-item':
+            bot.commands.econ.get("buy-item").execute(message,args,bot);
+            break;
+        case 'create-item':
+            bot.commands.econ.get("create-item").execute(message,args,bot);
+            break;
+        case 'delete-item':
+            bot.commands.econ.get("delete-item").execute(message,args,bot);
+            break;
+        case 'dep':
+        case 'deposit':
+            bot.commands.econ.get("deposit").execute(message,args,bot);
+            break;
+        case 'econ-stats':
+            bot.commands.econ.get("econ-stats").execute(message,args,bot);
+            break;
+        case 'bal':
+        case 'balance':
+            bot.commands.econ.get("balance").execute(message,args,bot);
+            break;
+        case 'give':
+            bot.commands.econ.get("give").execute(message,args,bot);
+            break;
+        case 'inv':
+        case 'inventory':
+            bot.commands.econ.get("inventory").execute(message,args,bot);
+            break;
+        case 'store':
+            bot.commands.econ.get("store").execute(message,args,bot);
+            break;
+        case 'reset-econ':
+            bot.commands.econ.get("reset-econ").execute(message,args,bot);
+            break;
+        case 'reset-user':
+            bot.commands.econ.get("reset-user").execute(message,args,bot);
+            break;
+        case 'lb':
+        case 'leaderboard':
+            bot.commands.econ.get("leaderboard").execute(message,args,bot);
+            break;
+        case 'set-econ-symbol':
+            bot.commands.econ.get("set-econ-symbol").execute(message,args,bot);
+            break;
+        case 'use-item':
+            bot.commands.econ.get("use-item").execute(message,args,bot);
+            break;
+        case 'withdraw':
+            bot.commands.econ.get("withdraw").execute(message,args,bot);
+            break;
+        case 'work':
+            bot.commands.econ.get("work").execute(message,args,bot);
+            break;
+        case 'rob':
+            bot.commands.econ.get("rob").execute(message,args,bot);
+            break;
+        case 'crime':
+            bot.commands.econ.get("crime").execute(message,args,bot);
+            break;
+        case 'seteconprop':
+            bot.commands.econ.get("seteconprop").execute(message,args,bot);
+            break;
+        case 'rank':
+            bot.commands.level.get("rank").execute(message,args,bot);
+            break;
+        case 'lvllb':
+            bot.commands.level.get("levellb").execute(message,args,bot);
+            break;
+        case 'lvlrst':
+            if(message.member.roles.cache.find(role => role.name === config.modrole)){
+                bot.commands.level.get("levelreset").execute(message,args,bot);
+            }
+            break;
+        case 'lvlmulti':
+            if(message.member.roles.cache.find(role => role.name === config.modrole)){
+                bot.commands.level.get("levelmulti").execute(message,args,bot);
+            }
+            break;
+        case 'levelcooldown':
+            if(message.member.roles.cache.find(role => role.name === config.modrole)){
+                bot.commands.level.get("levelcooldown").execute(message,args,bot);
+            }
+            break;
+
     }
 });
 bot.login(config.token);
@@ -141,6 +232,7 @@ function AutomatedMessage(message) { // this is to keep annoying as people from 
 }
 
 async function Economy(){ // Janky as fuck but works
+    await pglibrary.sleep(1000);
     while (true) {
         await Heists();
         await Jackpot(0); // Init Raffle
@@ -149,6 +241,7 @@ async function Economy(){ // Janky as fuck but works
             await ClearSQLDB(); // Temp thing till i figure out SQL more
             await WritetoSQLDB();
         }
+        points_manager.checkPausedTimers();
         await pglibrary.sleep(5000);
     }
 }
@@ -164,7 +257,7 @@ async function Jackpot(forced) { // Changed to a raffle but am too lazy to updat
         if (jackpotData.raffleactive == 0){ // if a raffle is not active
             console.log(hour, day);
             console.log(`Raffle Not Active Might Start One`);
-            if ((forced == 1) && jackpotData.raffleactive == 0 || hour >= 12 && jackpotData.raffleactive == 0) { // the Jackpot function was forced and their is no raffle active OR its 12pm and their is no raffle active
+            if ((forced == 1) && jackpotData.raffleactive == 0 || hour >= 12 && hour <= 21 && jackpotData.raffleactive == 0) { // the Jackpot function was forced and their is no raffle active OR its 12pm and their is no raffle active
                 pglibrary.ChannelLog(`Starting Jackpot`, 'Automated Function', bot);
                 console.log(`Starting Jackpot`);
                 await bot.commands.get("jackpot").execute(null, null, bot, 1); // run jackpot.js with a state of 1
@@ -247,6 +340,7 @@ async function StockMarket() {
         console.log(`Logging final stock array`);
         console.log(finalstocks);
         stockmarket.stockmarketactive = 0;
+        stockmarket.lastupdate = Date.now();
         stockmarket.stocks = finalstocks; 
         pglibrary.WriteToJson(stockmarket, './stockmarket.json');
         console.log(`Setting Up timer for reenable`);
@@ -254,7 +348,14 @@ async function StockMarket() {
         console.log(stockTimeout);
         pglibrary.sleep(100);
         console.log(`End of StockMarket func`);
-    }   
+    } else {
+        if(typeof stockmarket.lastupdate === 'undefined'){
+            return;
+        }
+        if(Date.now() >= stockmarket.lastupdate + (stockmarket.updateinterval * 3600000) && stockmarket.active == 0){
+            EnableStockMarket();
+        }
+    }
 }
 
 function GrabStockMarketData(){

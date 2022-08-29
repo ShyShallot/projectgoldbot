@@ -18,6 +18,10 @@ function getRandomInt(max) {
     return Math.floor(Math.random() * max);
 }
 
+function percentage(number, percent){
+    return (percent / 100)*number;
+}
+
 /**
  * Writes JS Object data to a JSON File
  * @param {Object} rawdata An Array Object
@@ -34,6 +38,12 @@ function WriteToJson(rawdata, location) {
         return true;
     });
 }
+
+function ReadJSON(location){
+    return JSON.parse(fs.readFileSync(location,'utf-8'));
+}
+
+
 /**
  * 
  * @param {number} num Number to commafy
@@ -103,4 +113,20 @@ function ChannelLog(content, reason, bot){
     logchannel.send({embeds: [logEmbed]});
 }
 
-module.exports = {numDigits, getRandomInt, WriteToJson, sleep, commafy, convertMS, addHours, ChannelLog};
+function EconChannelLog(content,reason,bot){
+    logchannel = bot.channels.cache.get(config.econLogChannel);
+    if(!logchannel){
+        console.error(`INVALID LOG CHANNEL CANCELING!`);
+        return;
+    }
+    date = new Date();
+    logEmbed = new MessageEmbed()
+    .setTitle(reason)
+    .setDescription(content)
+    .setTimestamp()
+    .setAuthor(`${bot.user.username}`, `${bot.user.avatarURL()}`)
+    .setColor(0x00AE86);
+    logchannel.send({embeds: [logEmbed]});
+}
+
+module.exports = {numDigits, getRandomInt, WriteToJson, sleep, commafy, convertMS, addHours, ChannelLog, EconChannelLog, percentage,ReadJSON};

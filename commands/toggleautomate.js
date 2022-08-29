@@ -6,6 +6,7 @@ module.exports = {
     description: 'Toggle the Automated Message for when some fuck asks for beta release',
     args: '1 or 0',
     active: true,
+    admin: true,
     execute(message, args, bot){
       var data = fs.readFileSync('./automatedmessagestatus.json', 'utf-8');
       var state = JSON.parse(data);

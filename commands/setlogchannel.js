@@ -7,13 +7,10 @@ module.exports = {
     description: 'Set the Log Channel of the bot, Mod Only',
     args: 'ID Of the Log Channel',
     active: true,
+    admin: true,
     execute(message, args, bot){
         modRole = config.modrole;
         console.log(args);
-        if(!message.member.roles.cache.find(role => role.name === modRole)){
-            message.channel.send(`<@${message.author.id}>, you do not have perms for this command`);
-            return;
-        }
         if(!args || args.length == 0){
             message.channel.send(`<@${message.author.id}>, please provide a valid argument`);
             return;

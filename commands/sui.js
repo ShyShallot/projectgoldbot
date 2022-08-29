@@ -1,7 +1,5 @@
 const {MessageEmbed} = require('discord.js'); // required for Rich Message Embeds
 const config = require('../config.json'); // basic config file read
-const { Client } = require('unb-api'); // define our basic client for the UNB-API
-const client = new Client(config.econtoken); // define the rest of the client for economy and verify with our econ token
 const pglibrary = require("../libraryfunctions.js"); // load our custom library functions.
 const fs = require('fs'); // File System for JS 
 // this file handles buying, selling and price check of stocks
