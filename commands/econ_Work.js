@@ -16,12 +16,7 @@ module.exports = {
         amount *= dB.pointsMulti;
         [users,userIndex] = await point_handler.fetchUser(message.author.id,false,guildId);
         if(users[userIndex].workCooldown){
-            timeDiff = pglibrary.convertMS(Math.abs(users[userIndex].lastCrime+db.workCooldownTime));
-            timeDisplay = `${timeDiff.hour} hour(s).`;
-            if(timeDiff.hour < 1){
-                timeDisplay = `${timeDiff.minute} minutes.`;
-            }
-            message.channel.send(`<@${message.author.id}>, You are too damn tired, you can work in ${timeDisplay}`);
+            message.channel.send(`<@${message.author.id}>, You are too damn tired, you can work in ${Math.round(Math.abs(((users[userIndex].setOnCooldown+dB.workCooldownTime-Date.now())/(1000*60*60)) % 24))} hour(s)`);
             return;
         }
         point_handler.work(message.author.id,amount,guildId);

@@ -15,12 +15,7 @@ module.exports = {
         [users,userIndex] = await points_manager.fetchUser(message.author.id,false,guildId);
         db = await points_manager.fetchData(guildId);
         if(users[userIndex].crimeCooldown){
-            timeDiff = pglibrary.convertMS(Math.abs(users[userIndex].lastCrime+db.crimeCooldownTime));
-            timeDisplay = `${timeDiff.hour} hour(s).`;
-            if(timeDiff.hour < 1){
-                timeDisplay = `${timeDiff.minute} minutes.`;
-            }
-            message.channel.send(`<@${message.author.id}>, You have too much heat and cannot commit a crime for ${timeDisplay}`);
+            message.channel.send(`<@${message.author.id}>, You have too much heat and cannot commit a crime for ${Math.round(Math.abs(((users[userIndex].lastCrime+dB.crimeCooldownTime-Date.now())/(1000*60*60)) % 24))} hour(s)`);
             return;
         }
         failChance = 0.45;
