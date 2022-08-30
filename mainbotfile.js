@@ -129,147 +129,41 @@ bot.on('messageCreate', async (message) =>{ // when someone sends a message
     if(cmd.admin){
         if(message.member.roles.cache.find(role => role.name === guildConfig.modrole)){
             cmd.execute(message,args,bot,guildId);
+            return;
         } else {
             if(message.guild.ownerId == message.author.id){
                 cmd.execute(message,args,bot,guildId);
+                return;
             }
         }
     } else {
         await cmd.execute(message,args,bot,guildId);
+        return;
     }
-    return;
     switch (command){
-        case 'toggleauto':
-            if(message.member.roles.cache.find(role => role.name === config.modrole)){
-                bot.commands.get("automsgT").execute(message, args, bot);
-            }
-            break;
-        case 'setgame':
-            bot.commands.get("setgame").execute(message, args, bot);
-            break;
-        case 'setminbet':
-            if(message.member.roles.cache.find(role => role.name === config.modrole)){
-                bot.commands.get("setminbet").execute(message, args, bot);
-            }
-            break;
-        case 'sui':
-            if(message.member.roles.cache.find(role => role.name === config.modrole)){
-                bot.commands.get("sui").execute(message,args,bot);
-            }
-            break;
-        case 'heist':
-            bot.commands.get("heist").execute(message,args,bot);
-            break;
-        case 'setlc':
-            bot.commands.get("logchannelset").execute(message, args, bot);
-            break;
-        case 'help':
-            bot.commands.get("help").execute(message, args, bot, bot.commands);
-            break;
-        case 'uptime':
-            bot.commands.get("uptime").execute(message, args, bot);
-            break;
-        case 'usrmsgs':
-            if(message.member.roles.cache.find(role => role.name === config.modrole)){
-                bot.commands.get("Join and Leave Messages").execute(message,args,bot);
-            }
-            break;
-        case 'logsize':
-            if(message.member.roles.cache.find(role => role.name === config.modrole)){
-                bot.commands.get("logsize").execute(message,args,bot);
-            }
-            break;
         case 'cf':
         case 'coinflip':
             bot.commands.get("coinflip").execute(message,args,bot);
-            break;
-        case 'stock':
-        case 'stocks':
-            bot.commands.get("stocks").execute(message,args,bot);
-            break;
-        case 'buy-item':
-            bot.commands.econ.get("buy-item").execute(message,args,bot);
-            break;
-        case 'create-item':
-            bot.commands.econ.get("create-item").execute(message,args,bot);
-            break;
-        case 'delete-item':
-            bot.commands.econ.get("delete-item").execute(message,args,bot);
             break;
         case 'dep':
         case 'deposit':
             bot.commands.econ.get("deposit").execute(message,args,bot);
             break;
-        case 'econ-stats':
-            bot.commands.econ.get("econ-stats").execute(message,args,bot);
-            break;
         case 'bal':
         case 'balance':
             bot.commands.econ.get("balance").execute(message,args,bot);
-            break;
-        case 'give':
-            bot.commands.econ.get("give").execute(message,args,bot);
             break;
         case 'inv':
         case 'inventory':
             bot.commands.econ.get("inventory").execute(message,args,bot);
             break;
-        case 'store':
-            bot.commands.econ.get("store").execute(message,args,bot);
-            break;
-        case 'reset-econ':
-            bot.commands.econ.get("reset-econ").execute(message,args,bot);
-            break;
-        case 'reset-user':
-            bot.commands.econ.get("reset-user").execute(message,args,bot);
-            break;
         case 'lb':
         case 'leaderboard':
             bot.commands.econ.get("leaderboard").execute(message,args,bot);
             break;
-        case 'set-econ-symbol':
-            bot.commands.econ.get("set-econ-symbol").execute(message,args,bot);
-            break;
-        case 'use-item':
-            bot.commands.econ.get("use-item").execute(message,args,bot);
-            break;
-        case 'withdraw':
-            bot.commands.econ.get("withdraw").execute(message,args,bot);
-            break;
-        case 'work':
-            bot.commands.econ.get("work").execute(message,args,bot);
-            break;
-        case 'rob':
-            bot.commands.econ.get("rob").execute(message,args,bot);
-            break;
-        case 'crime':
-            bot.commands.econ.get("crime").execute(message,args,bot);
-            break;
-        case 'seteconprop':
-            bot.commands.econ.get("seteconprop").execute(message,args,bot);
-            break;
-        case 'rank':
-            bot.commands.level.get("rank").execute(message,args,bot);
-            break;
         case 'lvllb':
             bot.commands.level.get("levellb").execute(message,args,bot);
             break;
-        case 'lvlrst':
-            if(message.member.roles.cache.find(role => role.name === config.modrole)){
-                bot.commands.level.get("levelreset").execute(message,args,bot);
-            }
-            break;
-        case 'lvlmulti':
-            if(message.member.roles.cache.find(role => role.name === config.modrole)){
-                bot.commands.level.get("levelmulti").execute(message,args,bot);
-            }
-            break;
-        case 'levelcooldown':
-            if(message.member.roles.cache.find(role => role.name === config.modrole)){
-                bot.commands.level.get("levelcooldown").execute(message,args,bot);
-            }
-            break;
-
     }
 });
 bot.login(hostconfig.token);
