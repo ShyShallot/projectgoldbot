@@ -14,6 +14,7 @@ const levels = require('./levels/level_handler');
 const masterdb = require('./master-db/masterdb');
 const maths = require('mathjs');
 const heisthandler = require('./heists/heisthandler');
+const { re } = require('mathjs');
 bot.commands = new Map(); // New Array for our commands
 const cusGuildCache = [];
 bot.on('ready', async () => { // Runs everything inside when the bot has successfully logged in and is active
@@ -153,6 +154,8 @@ bot.on('messageCreate', async (message) =>{ // when someone sends a message
             case 'lvllb':
                 bot.commands.get("levellb").execute(message,args,bot);
                 break;
+            default:
+                return;
         }
     }
     if(cmd.admin){
