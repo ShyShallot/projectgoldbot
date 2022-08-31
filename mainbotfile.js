@@ -81,7 +81,7 @@ bot.on('guildMemberAdd', member => { // When a someone joins the server
     }).catch((err) => {
         console.error(err);
     });
-    points_manager.addUser(member.user);
+    points_manager.addUser(member.user,member.guild.id);
 });
 
 bot.on('guildMemberRemove', member => { // When someone leaves the server
@@ -99,7 +99,7 @@ bot.on('guildMemberRemove', member => { // When someone leaves the server
     }).catch((err) => {
         console.error(err);
     });
-    points_manager.removeUser(member.user.id);
+    points_manager.removeUser(member.user.id,member.guild.id);
 });
 
 
