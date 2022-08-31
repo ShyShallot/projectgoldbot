@@ -136,22 +136,22 @@ bot.on('messageCreate', async (message) =>{ // when someone sends a message
                 break;
             case 'dep':
             case 'deposit':
-                bot.commands.econ.get("deposit").execute(message,args,bot);
+                bot.commands.get("deposit").execute(message,args,bot);
                 break;
             case 'bal':
             case 'balance':
-                bot.commands.econ.get("balance").execute(message,args,bot);
+                bot.commands.get("balance").execute(message,args,bot);
                 break;
             case 'inv':
             case 'inventory':
-                bot.commands.econ.get("inventory").execute(message,args,bot);
+                bot.commands.get("inventory").execute(message,args,bot);
                 break;
             case 'lb':
             case 'leaderboard':
-                bot.commands.econ.get("leaderboard").execute(message,args,bot);
+                bot.commands.get("leaderboard").execute(message,args,bot);
                 break;
             case 'lvllb':
-                bot.commands.level.get("levellb").execute(message,args,bot);
+                bot.commands.get("levellb").execute(message,args,bot);
                 break;
         }
     }
