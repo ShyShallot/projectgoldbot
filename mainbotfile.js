@@ -128,7 +128,33 @@ bot.on('messageCreate', async (message) =>{ // when someone sends a message
     //}
     cmd = bot.commands.get(command);
     console.log(`Command to Run: ${command}`);
-    if(typeof cmd === 'undefined'){return;}
+    if(typeof cmd === 'undefined'){
+        switch (command){
+            case 'cf':
+            case 'coinflip':
+                bot.commands.get("coinflip").execute(message,args,bot);
+                break;
+            case 'dep':
+            case 'deposit':
+                bot.commands.econ.get("deposit").execute(message,args,bot);
+                break;
+            case 'bal':
+            case 'balance':
+                bot.commands.econ.get("balance").execute(message,args,bot);
+                break;
+            case 'inv':
+            case 'inventory':
+                bot.commands.econ.get("inventory").execute(message,args,bot);
+                break;
+            case 'lb':
+            case 'leaderboard':
+                bot.commands.econ.get("leaderboard").execute(message,args,bot);
+                break;
+            case 'lvllb':
+                bot.commands.level.get("levellb").execute(message,args,bot);
+                break;
+        }
+    }
     if(cmd.admin){
         if(message.member.roles.cache.find(role => role.name === guildConfig.modrole)){
             cmd.execute(message,args,bot,guildId);
@@ -142,31 +168,6 @@ bot.on('messageCreate', async (message) =>{ // when someone sends a message
     } else {
         await cmd.execute(message,args,bot,guildId);
         return;
-    }
-    switch (command){
-        case 'cf':
-        case 'coinflip':
-            bot.commands.get("coinflip").execute(message,args,bot);
-            break;
-        case 'dep':
-        case 'deposit':
-            bot.commands.econ.get("deposit").execute(message,args,bot);
-            break;
-        case 'bal':
-        case 'balance':
-            bot.commands.econ.get("balance").execute(message,args,bot);
-            break;
-        case 'inv':
-        case 'inventory':
-            bot.commands.econ.get("inventory").execute(message,args,bot);
-            break;
-        case 'lb':
-        case 'leaderboard':
-            bot.commands.econ.get("leaderboard").execute(message,args,bot);
-            break;
-        case 'lvllb':
-            bot.commands.level.get("levellb").execute(message,args,bot);
-            break;
     }
 });
 bot.login(hostconfig.token);
