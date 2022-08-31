@@ -19,6 +19,7 @@ module.exports = {
                 message.channel.send(`<@${message.author.id}>, Successfully Set Server Stock Prefix to ${args[1]}`);
                 return;
             });
+            return;
         }
         if (args[0] == "buy" || args[0] == "sell") { // basic arg test to decide which function to  run
             StockHandler(message,args)
@@ -229,7 +230,7 @@ function ListStock(bot, args, message){
         .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
         .addField(`Stock Price Website`, "https://www.projectgold.dev/stocks/")
         stockdata.stocks.forEach(stock => {
-            //console.log(stock);
+            console.log(stock);
             if(stock.owners.length > 0 && IsUserAlreadyInArray(stock.owners, message.author.id)) {
                 //console.log(stock.owners);
                 user = stock.owners.find(({id}) => id === message.author.id);

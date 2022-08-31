@@ -50,8 +50,11 @@ bot.on('ready', async () => { // Runs everything inside when the bot has success
         }).catch((err) => {
             console.error(err)
         });
-        await masterdb.getGuildJson(curGuild,"config").then(() => {
+        await masterdb.getGuildJson(curGuild,"config").then((guildConfig) => {
             console.log("Guild Has A Config");
+            if(!guildConfig.stockname){
+                pglibrary.ChannelLog(`Warning Server Stock Name is Not Set, Use ${guildConfig.prefix}stockname to set it`,'Unset Config Value',bot,curGuild);
+            }
         }).catch((err) => {
             console.error(err);
             console.log(`Guild Most Likley Doesnt Have a Config Creating`);
@@ -337,17 +340,18 @@ async function StockMarket() {
     console.log("Starting Stock Market");
     var stockmarket = GrabStockMarketData();
     console.log(`Adding Guilds to Stockmarket`);
-    var expectedStockNames = [];
     cusGuildCache.forEach(async curGuild => {
+        console.log(`Adding ${curGuild}`);
         guildConfig = await masterdb.getGuildJson(curGuild,"config");
         //console.log(guildConfig);
         if(typeof guildConfig.stockname !== 'undefined'){
+            console.log(`Guild ${curGuild} has a stock prefix`);
+            console.log(guildConfig.stockname);
             if(!stockmarket.stocks.some(stock => stock.name === guildConfig.stockname)){
+                console.log(`Guild ${curGuild} does not have a stock`);
                 stockmarket.stocks.push({"name":guildConfig.stockname,value:[2000],"owners":[]});
+                console.log(stockmarket.stocks);
             }
-        } else {
-            console.log(`${bot.guilds.cache.get(curGuild).name} Does not have their stock name set`);
-            pglibrary.ChannelLog(`Warning Server Stock Name is Not Set, Use ${guildConfig.prefix}stockname to set it`,'Unset Config Value',bot,curGuild);
         }
     });
     await pglibrary.WriteToJson(stockmarket, './stockmarket.json').then((status) => {console.log(status)});
@@ -405,6 +409,7 @@ async function EnableStockMarket(){
 }
 
 async function CalculateStockPrice(stock) {
+    console.log(stock);
     console.log(stock.value, stock.value[stock.value.length-1]);
     mean = maths.mean(stock.value);
     console.log(`Mean ${mean}`);

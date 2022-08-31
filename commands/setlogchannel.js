@@ -21,6 +21,8 @@ module.exports = {
             return;
         }
         guildConfig = await masterdb.getGuildJson(guildId,"config");
+        guildConfig.logchannel = logchannel.id;
+        await masterdb.writeGuildJsonFile(guildId,'config',guildConfig);
         message.channel.send(`<@${message.author.id}>, Log Channel successfully set to #${logchannel.name}`);
     }
 }
