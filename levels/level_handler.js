@@ -122,14 +122,14 @@ var manager = module.exports = {
             let startTime = Date.now();
             users = dB.users;
             if(users.length <= 0){return;}
-            for(i=0;i<users.length;i++){
-                this.removeUserCooldown(users[i].id,guildId);
-            }
+            users.forEach(user => {
+                this.removeUserCooldown(user.id,guildId);
+            })
             if(dB.levelsRewards.length == 0){return};
             rewards = dB.levelsRewards.sort((a,b) => b.level-a.level);
             //console.log(rewards);
             let guild = this.bot.guilds.cache.get(guildID);
-            let userList = await guild.members.fetch().then(members =>{ // since the cache doesnt get EVERY user we manually ask for each user in the server
+            await guild.members.fetch().then(members =>{ // since the cache doesnt get EVERY user we manually ask for each user in the server
                 console.log(`Checking for existing Levels`);
                 members.forEach(member => {
                     if(member.user.bot){
@@ -162,7 +162,7 @@ var manager = module.exports = {
         }
         let guild = this.bot.guilds.cache.get(guildId);
         let startTime = Date.now();
-        let userList = await guild.members.fetch().then(members =>{ // since the cache doesnt get EVERY user we manually ask for each user in the server
+        await guild.members.fetch().then(members =>{ // since the cache doesnt get EVERY user we manually ask for each user in the server
             members.forEach(member => {
                 if(member.user.bot){
                     console.log(`User is a Bot`);

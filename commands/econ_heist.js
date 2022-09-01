@@ -199,6 +199,7 @@ async function BuyEquipment(message,args,bot,guildId){
     .setTitle(`Heist Equipment Store`)
     .setAuthor(bot.user.username,bot.user.displayAvatarURL())
     .setFooter("Made by ShyShallot: https://github.com/ShyShallot/projectgoldbot")
+    .setDescription("Type Done When You are Done.")
     switch(args[2].toLowerCase()){
         case 'light':
             start = 0;
@@ -251,6 +252,14 @@ async function BuyEquipment(message,args,bot,guildId){
     const interactCollect = equipInter.createMessageComponentCollector({
         filter: ({user}) => user.id = message.author.id
     });
+    const messageCollect = equipInter.channel.createMessageCollector({});
+    messageCollect.on('collect', m => {
+        if(m.content.toLowerCase() == "done" && m.author.id === message.author.id){
+            equipInter.delete();
+            m.delete();
+            message.delete();
+        }
+    });
     interactCollect.on('collect', async interaction => {
         console.log(`INTERACTION FROM: ${interaction.user.id}`)
         for(i=0;i<finalList.length;i++){
@@ -263,8 +272,7 @@ async function BuyEquipment(message,args,bot,guildId){
                     if(!fileStat){
                         fileStruct = [{user:message.author.id,inv:[curItm.name]}];
                         await masterdb.writeGuildJsonFile(guildId,`heistinventories`,fileStruct);
-                        interaction.message.delete();
-                        message.channel.send(`<@${message.author.id}>, You have successfully purchased a ${curItm.name}`);
+                        interaction.reply(`<@${message.author.id}>, You have successfully purchased a ${curItm.name}`);
                         return;
                     }
                     guildInv = await masterdb.getGuildJson(guildId,'heistinventories');
@@ -280,15 +288,13 @@ async function BuyEquipment(message,args,bot,guildId){
                         guildInv.push({user:message.author.id,inv:[curItm.name]});
                     } else {
                         if(guildInv[index].inv.includes(curItm.name)){
-                            interaction.message.delete();
-                            message.channel.send(`<@${message.author.id}>, You already own a ${curItm.name}`);
+                            interaction.reply(`<@${message.author.id}>, You already own ${curItm.name}`);
                             return;
                         }
                         guildInv[index].inv.push(curItm.name);
                     }
                     await masterdb.writeGuildJsonFile(guildId,'heistinventories',guildInv);
-                    interaction.message.delete();
-                    message.channel.send(`<@${message.author.id}>, You have successfully purchased a ${curItm.name} for ${guildPntDB.pointSymbol}${pglibrary.commafy(curItm.cost)}`);
+                    interaction.reply(`<@${message.author.id}>, You have successfully purchased a ${curItm.name} for ${guildPntDB.pointSymbol}${pglibrary.commafy(curItm.cost)}`);
                     points_manager.giveUserPoints(message.author.id,-curItm.cost,'cash',true,guildId);
                     return;
                 } else {
@@ -674,6 +680,20 @@ async function JoinHeist(userId, message ,bot){
     }
     if(targetUserHeist.users.length == 4){
         message.channel.send(`<@${userId}>, this Heist has reached its max limit for players`);
+        return;
+    }
+    guildInv = await masterdb.getGuildJson(message.guild.id,"heistinventories");
+    usrInv = guildInv.filter(user => {
+        user.user === userId
+    });
+    itmMatch = 0;
+    targetUserHeist.location.reqs.forEach(req => {
+        if(usrInv.inv.includes(req)){
+            itmMatch++;
+        }
+    });
+    if(itmMatch != targetUserHeist.location.reqs.length){
+        message.channel.send(`<@${userId}>, You do not have the required items for this heist!`);
         return;
     }
     userStruct = {userid:userId,host:false,name:message.author.username};
