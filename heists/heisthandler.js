@@ -14,7 +14,7 @@ async function FinishHeist(userId,guildId,bot){
     if(heistFile.users.length == 1){
         usersInHeist = 1;
     }
-    diffMulti = 1 + heistFile.location.difficulty;
+    diffMulti = 1 + heistFile.location.difficulty/10;
     extras = await checkForOptReqs(heistFile)/10;
     chance = Math.random()*diffMulti* usersInHeist - extras;
     await HeistPayout(heistFile,chance);
