@@ -4,6 +4,7 @@ const pglibrary = require("../libraryfunctions.js"); // load our custom library 
 const fs = require('fs'); // File System for JS 
 const points_manager = require('../points/manager');
 const masterdb = require('../master-db/masterdb');
+const { arg, string } = require('mathjs');
 // this file handles buying, selling and price check of stocks
 module.exports = {
     name: 'stocks',
@@ -220,8 +221,30 @@ function UserHasEnoughStocks(userID, stock, amount) { // stock should only be a 
 
 
 function ListStock(bot, args, message){
-    stockfile = fs.readFileSync(`./stockmarket.json`, 'utf-8');
-    stockdata = JSON.parse(stockfile);
+    stockdata = JSON.parse(fs.readFileSync(`./stockmarket.json`, 'utf-8'));
+    if(args[1]){
+        stockFN = stockdata.stocks.find(stk => stk.name.toLowerCase() === args[1].toLowerCase());
+        if(typeof stockFN === 'undefined'){return;}
+        let embed = new MessageEmbed()
+            .setTitle(`Stock ${stockFN.name} Info`)
+            .setAuthor(bot.user.username, bot.user.displayAvatarURL())
+            .setColor(`#87a9ff`)
+            .addField(`Current Stock Price`, `$${stockFN.value[stockFN.value.length-1]}`);
+        stockString = ``;
+        back = stockFN.value.length-6;
+        if(stockFN.value.length <= 5){
+            back = 0;
+        }
+        console.log(back);
+        for(i=back;i<stockFN.value.length;i++){
+            console.log(stockFN.value[i]);
+            stockString += `$${stockFN.value[i]}, `;
+        }
+        stockString = stockString.substring(0, stockString.length - 2);
+        embed.addField(`Stock History`, stockString);
+        message.channel.send({content: `<@${message.author.id}>`, embeds: [embed]});
+        return;        
+    };
     let embed = new MessageEmbed()
         .setTitle(`Stock Information`)
         .setAuthor(bot.user.username, bot.user.displayAvatarURL())
