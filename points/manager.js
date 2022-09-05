@@ -320,7 +320,7 @@ var manager = module.exports = {
         [usersData, userIndex] = await this.fetchUser(id,false,guildId);
         if(amount <= dB.users[userIndex].balance.cash){
             dB.users[userIndex].balance.cash -= amount;
-            dB.users[userIndex].balance.bank += amount;
+            dB.users[userIndex].balance.bank += Math.round(amount);
             console.log(dB.users[userIndex]);
             await this.saveDB(dB,guildId);
         } else {

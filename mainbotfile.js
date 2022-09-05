@@ -132,7 +132,7 @@ bot.on('messageCreate', async (message) =>{ // when someone sends a message
     switch (command){
         case 'cf':
         case 'coinflip':
-            bot.commands.get("coinflip").execute(message,args,bot);
+            bot.commands.get("coinflip").execute(message,args,bot,guildId);
             return;
         case 'dep':
         case 'deposit':
