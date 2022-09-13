@@ -46,15 +46,13 @@ async function createLeaderboardEmbed(start,message){
     .setTimestamp()
     .setColor(0x00AE86);
     console.log(startArray, startArray.length);
-    for(i=0;i<startArray.length;i++){
+    for(let i = 0;i<startArray.length;i++){
+        console.log(`Running For Statement`);
         console.log(i);
         user = startArray[i];
-        if(start == 0){
-            start = 1
-        }
         dB = await points_manager.fetchData(message.guild.id);
         console.log(start,i);
-        leaderEmbed.addField(`${start+i}. ${user.username}`, `${dB.pointSymbol}${pglibrary.commafy(user.total)}`);
+        leaderEmbed.addField(`${start+1+i}. ${user.username}`, `${dB.pointSymbol}${pglibrary.commafy(user.total)}`);
     }
     return leaderEmbed;
 }

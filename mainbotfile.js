@@ -14,7 +14,6 @@ const levels = require('./levels/level_handler');
 const masterdb = require('./master-db/masterdb');
 const maths = require('mathjs');
 const heisthandler = require('./heists/heisthandler');
-const { re } = require('mathjs');
 bot.commands = new Map(); // New Array for our commands
 const cusGuildCache = [];
 bot.on('ready', async () => { // Runs everything inside when the bot has successfully logged in and is active
@@ -71,7 +70,7 @@ bot.on('ready', async () => { // Runs everything inside when the bot has success
 });
 
 
-bot.on('guildMemberAdd', member => { // When a someone joins the server
+bot.on('guildMemberAdd', async member => { // When a someone joins the server
     console.log(`User has joined`);
     const name = member.user.username;
     console.log(name);
@@ -80,15 +79,13 @@ bot.on('guildMemberAdd', member => { // When a someone joins the server
         .setColor(0x00AE86)
         .setDescription("Welcome to the Project Gold Discord Server, Please Read <#631010878568923136> before continuing for server links and rules.")
         .setThumbnail("https://i.imgur.com/7s7AuxI.png");
-    masterdb.getGuildJson(member.guild.id,"config").then((guildConfig) =>{
-        bot.guilds.cache.get(member.guild.id).channels.cache.get(guildConfig.welcomeChannel).send({content: `${name} ${guildConfig.newUserMessages.Welcome}`, embeds: [welcomeEmbed] });
-    }).catch((err) => {
-        console.error(err);
-    });
+    console.log(member.guild.id);
+    guildConfig = await masterdb.getGuildJson(member.guild.id,"config").catch((err) => {console.error(err); return;})
+    bot.guilds.cache.get(member.guild.id).channels.cache.get(guildConfig.welcomeChannel).send({content: `${name} ${guildConfig.newUserMessages.Welcome}`, embeds: [welcomeEmbed] });
     points_manager.addUser(member.user,member.guild.id);
 });
 
-bot.on('guildMemberRemove', member => { // When someone leaves the server
+bot.on('guildMemberRemove', async member => { // When someone leaves the server
     console.log(member);
     console.log(`User has left`);
     const name = member.user.username
@@ -116,7 +113,7 @@ bot.on('messageCreate', async (message) =>{ // when someone sends a message
     guildId = message.guild.id;
     guildConfig = await masterdb.getGuildJson(guildId,'config').catch((err) => {console.error(err);return});
     await points_manager.messagePoints(message.author.id,guildId);
-    //levels.messageXP(message.author.id,message,guildId);
+    levels.messageXP(message.author.id,message,guildId);
     const args = message.content.slice(guildConfig.prefix.length).split(/ +/g); // basic argument by spliting a message by spaces, with the first argument given is args[0]
     const command = args.shift().toLowerCase(); 
     //console.log(command);

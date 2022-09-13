@@ -48,7 +48,7 @@ async function createLeaderboardEmbed(start,message){
     .setTitle(`${message.guild.name}'s Server Leaderboard - Users: ${start+1}-${start+startArray.length} out of ${leaderboardArray.length} Users`)
     .setTimestamp()
     .setColor(0x00AE86);
-    for(i=0;i<startArray.length;i++){
+    for(let i=0;i<startArray.length;i++){
         user = startArray[i];
         if(start == 0){
             start = 1

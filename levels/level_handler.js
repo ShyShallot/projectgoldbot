@@ -293,7 +293,7 @@ var manager = module.exports = {
         await this.saveDB(dB,guildId);
     },
     async getUserLevel(id,guildId){
-        user = this.fetchUser(id,true,guildId);
+        user = await this.fetchUser(id,true,guildId);
         console.log(user);
         nextLevel = await this.calculateNextLevel(id,guildId);
         return [user.level, user.xp, nextLevel];   
