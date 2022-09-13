@@ -351,24 +351,26 @@ var manager = module.exports = {
     },
     async setRoleReward(roleID,level,guildId){
         db = await this.fetchData(guildId);
-        filled = false;
-        for(i=0;i<db.levelsRewards.length;i++){
-            if(db.levelsRewards[i].level == level){
-                filled = true;
-            }
+        if(typeof db.levelsRewards === 'undefined'){
+            db.levelsRewards = [];
         }
-        if(!filled){
+        if(db.levelsRewards.some(reward => reward.level == level)){
+            roleIndex = db.levelsRewards.findIndex(reward => reward.level === level);
+            db.levelsRewards[roleIndex].roleID == roleID;
+        } else {
             db.levelsRewards.push({"roleID":roleID,"level": level});
         }
         await this.saveDB(db, guildId);
+        Promise.resolve(`Saved role reward for: ${roleID} at lvl ${level}`);
     },
     async removeRoleReward(level,guildId){
         db = await this.fetchData(guildId);
-        for(i=0;i<db.levelsRewards.length;i++){
-            if(db.levelsRewards[i].level = level){
-                db.levelsRewards.splice(i,1);
-            }
+        if(typeof db.levelsRewards === 'undefined'){
+            return;
         }
+        roleIndex = db.levelsRewards.findIndex(reward => reward.level === level);
+        db.levelsRewards.splice(roleIndex,1);
         await this.saveDB(db,guildId);
+        return Promise.resolve();
     }
 }

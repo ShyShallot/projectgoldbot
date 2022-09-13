@@ -18,7 +18,10 @@ module.exports = {
         if(!roleMention){message.channel.send(`<@${message.author.id}>, No Role Mentioned`); return;}
         level = parseInt(args[1]);
         if(isNaN(level)){message.channel.send(`<@${message.author.id}>, Provided Level is not a Number`);return;}
-        await lvl_mng.setRoleReward(roleMention.id, level,guildId);
+        await lvl_mng.setRoleReward(roleMention.id, level,guildId).catch((err) => {
+            console.error(err);
+            return;
+        });
         message.channel.send(`<@${message.author.id}>, Added ${roleMention.name} to Level ${level}`);
     }
 }
