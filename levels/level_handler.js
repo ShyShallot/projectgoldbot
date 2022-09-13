@@ -39,6 +39,7 @@ var manager = module.exports = {
     },
     async saveDB(newData,guildId){
         await masterdb.writeGuildJsonFile(guildId,"level-db",newData).then(()=>{console.log(`Saved Level Database File for Guild ID: ${guildId}`)}).catch((err)=>{console.error(err)});
+        return Promise.resolve();
     },
     /**
     * Writes JS Object data to a JSON File
@@ -103,7 +104,7 @@ var manager = module.exports = {
     * @returns {boolean} Return True when done
     */
     setup: async function(bool,guildId){ // if the bool is true it overrides everything and force restarts points-db.json
-        dB = await this.fetchData();
+        dB = await this.fetchData(guildId);
         if(typeof dB === 'undefined'){
             deafultConfig = {"setup":true,"xpPerMessage":50,"messageCooldownTime":10000,"xpMultiplier":1,"nextLevelXpMulti":3,"lastupdated":undefined,"levelsRewards":[],"users":[]}
             await this.saveDB(deafultConfig,guildId);
@@ -119,35 +120,34 @@ var manager = module.exports = {
             dB.setup = false;
         }
         if(dB.setup){ // to clear any message cooldowns on startup but only if we have setup before
+            console.log(`Server is setup but checking if users have correct levels`);
             let startTime = Date.now();
             users = dB.users;
             if(users.length <= 0){return;}
-            users.forEach(user => {
-                this.removeUserCooldown(user.id,guildId);
+            users.forEach(async user => {
+                await this.removeUserCooldown(user.id,guildId);
             })
+            console.log(dB.levelsRewards.length);
             if(dB.levelsRewards.length == 0){return};
             rewards = dB.levelsRewards.sort((a,b) => b.level-a.level);
             //console.log(rewards);
-            let guild = this.bot.guilds.cache.get(guildID);
-            await guild.members.fetch().then(members =>{ // since the cache doesnt get EVERY user we manually ask for each user in the server
-                console.log(`Checking for existing Levels`);
-                members.forEach(member => {
-                    if(member.user.bot){
-                        console.log(`User is a Bot`);
-                        return;
-                    }
-                    let user = this.fetchUser(member.id,true,guildId);
-                    //console.log(member.id);
-                    for(i=0;i<rewards.length;i++){
-                        //console.log(rewards[i]);
-                        if(user.level == rewards[i].level){console.log(`${member.user.username} already is set`);return};
-                        //console.log(member.roles.cache);
-                        if(member.roles.cache.some(role => role.id === rewards[i].roleID) && user.level < rewards[i].level){
-                            console.log(`Setting User Data`);
-                            this.setUserData(member.id,rewards[i].level);
-                        }
+            let guild = this.bot.guilds.cache.get(guildId);
+            members = await guild.members.fetch() // since the cache doesnt get EVERY user we manually ask for each user in the server
+            console.log(`Checking for existing Levels`);
+            members.forEach(async member => {
+                if(member.user.bot){
+                    console.log(`User is a Bot`);
+                    return;
+                }
+                dB.levelsRewards.forEach(async reward => {
+                    if(member.roles.cache.some(role =>  role.id === reward.roleID)){
+                        console.log(`User has Role: ${reward.roleID}`)
+                        userIndex = dB.users.findIndex(usr => usr.id === member.user.id);
+                        dB.users[userIndex].level = reward.level;
+                        dB.users[userIndex].xp = 500 * dB.nextLevelXpMulti * reward.level;
                     }
                 });
+                //console.log(member.id);
             });
             console.log(`Done, took: ${Date.now()-startTime}ms`);
             dB.lastupdated = Date.now();
@@ -160,6 +160,7 @@ var manager = module.exports = {
             this.saveDB(dB); 
             pglibrary.sleep(10);
         }
+        console.log(`Server is Not Setup`)
         let guild = this.bot.guilds.cache.get(guildId);
         let startTime = Date.now();
         await guild.members.fetch().then(members =>{ // since the cache doesnt get EVERY user we manually ask for each user in the server
@@ -222,6 +223,7 @@ var manager = module.exports = {
         }
         dB.users = users;
         await this.saveDB(dB,guildId);
+        return Promise.resolve(`Saved User Data for: ${id}`);
     },
     async messageXP(id,message){
         guildId = message.guild.id;
