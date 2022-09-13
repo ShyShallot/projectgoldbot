@@ -49,7 +49,7 @@ async function createLeaderboardEmbed(start,message){
     .setTimestamp()
     .setColor(0x00AE86);
     for(let i=0;i<startArray.length;i++){
-        user = startArray[i];
+        let user = startArray[i];
         if(start == 0){
             start = 1
         }

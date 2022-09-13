@@ -47,9 +47,9 @@ async function createLeaderboardEmbed(start,message){
     .setColor(0x00AE86);
     console.log(startArray, startArray.length);
     for(let i = 0;i<startArray.length;i++){
-        console.log(`Running For Statement`);
         console.log(i);
-        user = startArray[i];
+        let user = startArray[i];
+        console.log(user);
         dB = await points_manager.fetchData(message.guild.id);
         console.log(start,i);
         leaderEmbed.addField(`${start+1+i}. ${user.username}`, `${dB.pointSymbol}${pglibrary.commafy(user.total)}`);
