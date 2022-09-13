@@ -226,7 +226,7 @@ var manager = module.exports = {
     async messageXP(id,message){
         guildId = message.guild.id;
         dB = await this.fetchData(guildId);
-        [users, userIndex] = await this.fetchUser(id,guildId);
+        [users, userIndex] = await this.fetchUser(id,false,guildId);
         console.log(users[userIndex]);
         if(!users[userIndex].cooldown){
             console.log(`Giving User: ${id}, ${dB.xpPerMessage} xp`);
@@ -287,7 +287,7 @@ var manager = module.exports = {
     },
     async levelUpUser(id,guildId){
         dB = await this.fetchData(guildId);
-        [users,userIndex] = await this.fetchUser(id,guildId);
+        [users,userIndex] = await this.fetchUser(id,false,guildId);
         users[userIndex].level++;
         dB.users = users;
         await this.saveDB(dB,guildId);
