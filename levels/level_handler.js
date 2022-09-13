@@ -136,7 +136,7 @@ var manager = module.exports = {
                         console.log(`User is a Bot`);
                         return;
                     }
-                    let user = this.fetchUser(member.id,true);
+                    let user = this.fetchUser(member.id,true,guildId);
                     //console.log(member.id);
                     for(i=0;i<rewards.length;i++){
                         //console.log(rewards[i]);
