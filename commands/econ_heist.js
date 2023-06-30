@@ -101,7 +101,7 @@ function HeistItemData(){
 }
 
 async function HeistInvData(guildId){
-    fileStat = await masterdb.DoesFileExist(guildId,'usersinventory');
+    fileStat = await masterdb.doesFileExist(guildId,'usersinventory');
     if(fileStat){
         data = await masterdb.getGuildJson(guildId,'usersinventory');
         return data;
@@ -267,7 +267,7 @@ async function BuyEquipment(message,args,bot,guildId){
             if(finalList[i].name == interaction.customId){
                 curItm = finalList[i];
                 if(curItm.cost <= UserData.balance.cash){
-                    fileStat = await masterdb.DoesFileExist(guildId,`heistinventories`);
+                    fileStat = await masterdb.doesFileExist(guildId,`heistinventories`);
                     console.log(fileStat);
                     if(!fileStat){
                         fileStruct = [{user:message.author.id,inv:[curItm.name]}];
@@ -336,7 +336,7 @@ async function createEquipmentButtons(start,list){
 
 async function ListUsersInventory(user,message,guildid){
     guildConfig = await masterdb.getGuildJson(guildid,'config');
-    fileStat = await masterdb.DoesFileExist(guildid,'heistinventories');
+    fileStat = await masterdb.doesFileExist(guildid,'heistinventories');
     if(!fileStat){
         message.channel.send(`<@${message.author.id}>, Your Inventory is Currently Empty, to buy an item use: ${guildid.prefix}heist equipment buy [Light, Medium , Heavy]`);
         return;

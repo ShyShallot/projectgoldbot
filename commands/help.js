@@ -7,22 +7,13 @@ module.exports = {
     args: '[Command Name]',
     active: true,
     async execute(message, args, bot){
-        commands = bot.commands;
         guildConfig = await masterdb.getGuildJson(message.guild.id,"config");
-        console.log(args);
         if(args[0]){
-            command = commands.get(args[0]);
-            if(command){
+            console.log(commandToFind);
+            if(commandToFind){
                 var helpembed = new MessageEmbed()
                 .setColor(0xFF4500)
-                .addField(`Command info for ${command.name}`, `About this command: **${command.description}**. Arguments: **${command.args}**`);
-                message.channel.send({embeds: [helpembed]});
-                return;
-            } else {
-                command = commands.econ.get(args[0]);
-                var helpembed = new MessageEmbed()
-                .setColor(0xFF4500)
-                .addField(`Command info for ${command.name}`, `About this command: **${command.description}**. Arguments: **${command.args}**`);
+                .addField(`Command info for ${commandToFind.name}`, `About this command: **${commandToFind.description}**. Arguments: **${commandToFind.args}**`);
                 message.channel.send({embeds: [helpembed]});
                 return;
             }
@@ -37,7 +28,7 @@ module.exports = {
         .addField("Level Commands", '1')
         .addField("Admin Commands", '1');
         var i = 0;
-        for (const command of commands) { // for every file in our commandFiles Mapping
+        for (const command of bot.commands) { // for every file in our commandFiles Mapping
             i++;
             if(command[1].econ && !command[1].admin){
                 field = 2;

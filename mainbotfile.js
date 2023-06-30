@@ -14,6 +14,7 @@ const levels = require('./levels/level_handler');
 const masterdb = require('./master-db/masterdb');
 const maths = require('mathjs');
 const heisthandler = require('./heists/heisthandler');
+var started = false;
 bot.commands = new Map(); // New Array for our commands
 const cusGuildCache = [];
 bot.on('ready', async () => { // Runs everything inside when the bot has successfully logged in and is active
@@ -32,8 +33,9 @@ bot.on('ready', async () => { // Runs everything inside when the bot has success
     console.log(`Added Commands to Array`);
     points_manager.setBot(bot);
     levels.setBot(bot);
-    //console.log(cusGuildCache, cusGuildCache.length);
+    console.log(cusGuildCache, cusGuildCache.length);
     for(const curGuild of cusGuildCache){
+        console.log(`Running Setup for Server: ${bot.guilds.cache.get(curGuild).name}`);
         //console.log(curGuild);
         await points_manager.setup(false,curGuild).then(()=>{
             console.log(`Finished Point Setup for ${bot.guilds.cache.get(curGuild).name}`);
@@ -66,6 +68,7 @@ bot.on('ready', async () => { // Runs everything inside when the bot has success
         })
     }
     console.log(`PG Bot Ready Which took: ${Date.now() - startTime}ms`);
+    started = true;
     Economy() // handle our encomy functions for stuff that has to calculate every so often
 });
 
@@ -81,8 +84,8 @@ bot.on('guildMemberAdd', async member => { // When a someone joins the server
         .setThumbnail("https://i.imgur.com/7s7AuxI.png");
     console.log(member.guild.id);
     guildConfig = await masterdb.getGuildJson(member.guild.id,"config").catch((err) => {console.error(err); return;})
-    bot.guilds.cache.get(member.guild.id).channels.cache.get(guildConfig.welcomeChannel).send({content: `${name} ${guildConfig.newUserMessages.Welcome}`, embeds: [welcomeEmbed] });
-    points_manager.addUser(member.user,member.guild.id);
+    bot.guilds.cache.get(member.guild.id).channels.cache.get(guildConfig.welcomeChannel).send({content: `${name} ${guildConfig.newUserMessages[0]}`, embeds: [welcomeEmbed] });
+    await points_manager.addUser(member.user,member.guild.id);
 });
 
 bot.on('guildMemberRemove', async member => { // When someone leaves the server
@@ -96,7 +99,7 @@ bot.on('guildMemberRemove', async member => { // When someone leaves the server
         .setDescription("We wish the best, thanks for stopping by :).")
         .setThumbnail("https://i.imgur.com/7s7AuxI.png");
     masterdb.getGuildJson(member.guild.id,"config").then((guildConfig) =>{
-        bot.guilds.cache.get(member.guild.id).channels.cache.get(guildConfig.welcomeChannel).send({content: `${name} ${guildConfig.newUserMessages.Leave}`, embeds: [welcomeEmbed] });
+        bot.guilds.cache.get(member.guild.id).channels.cache.get(guildConfig.welcomeChannel).send({content: `${name} ${guildConfig.newUserMessages[1]}`, embeds: [welcomeEmbed] });
     }).catch((err) => {
         console.error(err);
     });
@@ -110,10 +113,13 @@ bot.on('messageCreate', async (message) =>{ // when someone sends a message
     if (message.author.bot){ // if the message is sent by a bot don't even bother
         return;
     }
-    guildId = message.guild.id;
+    if(!started){
+        return;
+    }
+    var guildId = message.guild.id;
     guildConfig = await masterdb.getGuildJson(guildId,'config').catch((err) => {console.error(err);return});
     await points_manager.messagePoints(message.author.id,guildId);
-    levels.messageXP(message.author.id,message,guildId);
+    await levels.messageXP(message.author.id,message,guildId);
     const args = message.content.slice(guildConfig.prefix.length).split(/ +/g); // basic argument by spliting a message by spaces, with the first argument given is args[0]
     const command = args.shift().toLowerCase(); 
     //console.log(command);
@@ -124,8 +130,6 @@ bot.on('messageCreate', async (message) =>{ // when someone sends a message
     // Base for adding commands: if(command === "name"){
     //  bot.commands.get("name").execute(message, args, bot)
     //}
-    cmd = bot.commands.get(command);
-    console.log(`Command to Run: ${command}`);
     switch (command){
         case 'cf':
         case 'coinflip':
@@ -151,6 +155,8 @@ bot.on('messageCreate', async (message) =>{ // when someone sends a message
             bot.commands.get("levellb").execute(message,args,bot);
             return;
     }
+    cmd = bot.commands.get(command);
+    console.log(`Command to Run: ${command}`);
     if(typeof cmd === 'undefined'){return;}
     if(cmd.admin){
         if(message.member.roles.cache.find(role => role.name === guildConfig.modrole)){
@@ -195,7 +201,7 @@ async function Economy(){ // Janky as fuck but works
 // Jackpot Functions Related Functions
 async function UpdateJackpotData(guildId){ // update the jackpot data array
     console.log(guildId);
-    fileStatus = await masterdb.DoesFileExist(guildId,"jackpot");
+    fileStatus = await masterdb.doesFileExist(guildId,"jackpot");
     if(fileStatus){
         return await masterdb.getGuildJson(guildId,"jackpot");
     } else {
@@ -500,7 +506,7 @@ function HeistLocationData(){
 async function HeistsLocationsSetup(guildId){
     defaultLocations = HeistLocationData();
     console.log(`Setting Up Locations for Guild: ${bot.guilds.cache.get(guildId).name}`);
-    fileStatus = await masterdb.DoesFileExist(guildId,"locations");
+    fileStatus = await masterdb.doesFileExist(guildId,"locations");
     if(!fileStatus){
         for(i=0;i<defaultLocations.length;i++){
             defaultLocations[i].madeunavailable = undefined;
@@ -513,7 +519,7 @@ async function HeistsLocationsSetup(guildId){
             return Promise.reject(err);
         });
     }
-    cooldownStat = await masterdb.DoesFileExist(guildId,'heistcooldowns');
+    cooldownStat = await masterdb.doesFileExist(guildId,'heistcooldowns');
     if(!cooldownStat){
         emptArr = [];
         await masterdb.writeGuildJsonFile(guildId,'heistcooldowns',emptArr).then((status) =>{

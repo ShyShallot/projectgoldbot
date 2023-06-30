@@ -9,7 +9,8 @@ module.exports = {
     args: 'Heads/Tails | Bet Amount',
     active: true,
     econ: true,
-    async execute(message, args, bot,guildId){
+    async execute(message, args, bot){
+        guildId = message.guild.id;
         guildConfig = await masterdb.getGuildJson(guildId,"config");
         [cash,bank] = await points_manager.getUserBalance(message.author.id,guildId);
         console.log(cash, bank);

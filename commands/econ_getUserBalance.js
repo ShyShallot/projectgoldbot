@@ -10,9 +10,10 @@ module.exports = {
     active: true,
     econ: true,
     async execute(message, args, bot){
-        dB = await points_manager.fetchData(message.guild.id);
-        leaderboardArray = await points_manager.sortForLeaderboard(message.guild.id);
-        balanceEmbed = new MessageEmbed()
+        var dB = await points_manager.fetchData(message.guild.id);
+        var leaderboardArray = await points_manager.sortForLeaderboard(message.guild.id);
+        var pointSymbol = dB.pointSymbol;
+        var balanceEmbed = new MessageEmbed()
         .setTitle(message.author.username)
         .setDescription(`Leaderboard Ranking: Not Yet`)
         .setTimestamp()
@@ -30,9 +31,9 @@ module.exports = {
             }
             balanceEmbed.title = target.user.username;
             balanceEmbed.description = `Leaderboard Ranking: ${position+1}`;
-            balanceEmbed.fields[0].value = `${dB.pointSymbol}${pglibrary.commafy(cash)}`;
-            balanceEmbed.fields[1].value = `${dB.pointSymbol}${pglibrary.commafy(bank)}`;
-            balanceEmbed.fields[2].value = `${dB.pointSymbol}${pglibrary.commafy(cash+bank)}`;
+            balanceEmbed.fields[0].value = `${pointSymbol}${pglibrary.commafy(cash)}`;
+            balanceEmbed.fields[1].value = `${pointSymbol}${pglibrary.commafy(bank)}`;
+            balanceEmbed.fields[2].value = `${pointSymbol}${pglibrary.commafy(cash+bank)}`;
             message.channel.send({embeds:[balanceEmbed]});
         } else {
             [cash,bank] = await points_manager.getUserBalance(message.author.id,message.guild.id);
@@ -42,9 +43,9 @@ module.exports = {
                 }
             }
             balanceEmbed.description = `Leaderboard Ranking: ${position+1}`;
-            balanceEmbed.fields[0].value = `${dB.pointSymbol}${pglibrary.commafy(cash)}`;
-            balanceEmbed.fields[1].value = `${dB.pointSymbol}${pglibrary.commafy(bank)}`;
-            balanceEmbed.fields[2].value = `${dB.pointSymbol}${pglibrary.commafy(cash+bank)}`;
+            balanceEmbed.fields[0].value = `${pointSymbol}${pglibrary.commafy(cash)}`;
+            balanceEmbed.fields[1].value = `${pointSymbol}${pglibrary.commafy(bank)}`;
+            balanceEmbed.fields[2].value = `${pointSymbol}${pglibrary.commafy(cash+bank)}`;
             message.channel.send({embeds:[balanceEmbed]});
         }
     }
