@@ -82,7 +82,7 @@ function CalculateMultiplier(bet) {
 
 async function FlipCoin(cash, args, message) {
     guildId = message.guild.id;
-    guildConfig = await masterdb.getGuildJson(guildId,"config");
+    guildConfig = await masterdb.getGuildConfig(guildId)
     if (args[1] <= cash) { // check if the user has enough cash to place a bet
         console.log("User has enough money in cash");
         var parsedMinBet = parseInt(guildConfig.mincoinbet); // turn the minimum bet found in config.json 
