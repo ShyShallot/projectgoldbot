@@ -7,8 +7,9 @@ module.exports = {
     args: '[Command Name]',
     active: true,
     async execute(message, args, bot){
-        guildConfig = await masterdb.getGuildJson(message.guild.id,"config");
+        guildConfig = await masterdb.getGuildConfig(message.guild.id);
         if(args[0]){
+            commandToFind = bot.commands.get(args[0]);
             console.log(commandToFind);
             if(commandToFind){
                 var helpembed = new MessageEmbed()

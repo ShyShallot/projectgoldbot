@@ -7,8 +7,6 @@ const fs = require('fs'); // File System for JS
 const talkedRecently = new Set(); // unused for cooldown
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js')); // read our commands folder for every command file
 const pglibrary = require("./libraryfunctions.js");
-const sqlconfig = require('./sql.json');
-const SQL = require('mssql');
 const points_manager = require('./points/manager');
 const levels = require('./levels/level_handler');
 const masterdb = require('./master-db/masterdb');
@@ -34,42 +32,17 @@ bot.on('ready', async () => { // Runs everything inside when the bot has success
     points_manager.setBot(bot);
     levels.setBot(bot);
     console.log(cusGuildCache, cusGuildCache.length);
+    await masterdb.connect()
     for(const curGuild of cusGuildCache){
         console.log(`Running Setup for Server: ${bot.guilds.cache.get(curGuild).name}`);
-        //console.log(curGuild);
-        await points_manager.setup(false,curGuild).then(()=>{
-            console.log(`Finished Point Setup for ${bot.guilds.cache.get(curGuild).name}`);
-        }).catch((err) => {
-            console.error(err);
-        });
-        await points_manager.ItemsSetup(curGuild).then(()=>{
-            console.log(`Finished Item Setup for ${bot.guilds.cache.get(curGuild).name}`);
-        }).catch((err) => {
-            console.error(err);
-        });
-        await levels.setup(false,curGuild).then(() => {
-            console.log("Level Manager Setup Done");
-        }).catch((err) => {
-            console.error(err)
-        });
-        await masterdb.getGuildJson(curGuild,"config").then((guildConfig) => {
-            console.log("Guild Has A Config");
-            if(!guildConfig.stockname){
-                pglibrary.ChannelLog(`Warning Server Stock Name is Not Set, Use ${guildConfig.prefix}stockname to set it`,'Unset Config Value',bot,curGuild);
-            }
-        }).catch((err) => {
-            console.error(err);
-            console.log(`Guild Most Likley Doesnt Have a Config Creating`);
-            defaultconfig = {"serverid":curGuild,"newUserMessages":[{"Welcome":"<@313159590285934595>, a new user has joined"},{"Leave":" has left :("}],"prefix":"pg","mincoinbet":"0"}
-            masterdb.writeGuildJsonFile(curGuild,"config",defaultconfig)
-        });
-        await HeistsLocationsSetup(curGuild).then((status) => {
-            console.log(status);
-        })
+        console.log(curGuild)
+        await masterdb.setup(curGuild,bot)
     }
-    console.log(`PG Bot Ready Which took: ${Date.now() - startTime}ms`);
     started = true;
-    Economy() // handle our encomy functions for stuff that has to calculate every so often
+    Economy() // handle our encomy functions for stuff that has to calculate every so often*/
+    started = true
+    console.log(`PG Bot Ready Which took: ${Date.now() - startTime}ms`);
+
 });
 
 
@@ -83,9 +56,13 @@ bot.on('guildMemberAdd', async member => { // When a someone joins the server
         .setDescription("Welcome to the Project Gold Discord Server, Please Read <#631010878568923136> before continuing for server links and rules.")
         .setThumbnail("https://i.imgur.com/7s7AuxI.png");
     console.log(member.guild.id);
-    guildConfig = await masterdb.getGuildJson(member.guild.id,"config").catch((err) => {console.error(err); return;})
-    bot.guilds.cache.get(member.guild.id).channels.cache.get(guildConfig.welcomeChannel).send({content: `${name} ${guildConfig.newUserMessages[0]}`, embeds: [welcomeEmbed] });
-    await points_manager.addUser(member.user,member.guild.id);
+    guildConfig = await masterdb.getGuildConfig(member.guild.id)
+    if(guildConfig.welcomeChannel == undefined){
+        pglibrary.ChannelLog("Welcome channel is not set","Unset Setting",bot,member.guild.id);
+        return;
+    }
+    bot.guilds.cache.get(member.guild.id).channels.cache.get(guildConfig.welcomeChannel).send({content: `${name} ${guildConfig.welcomeMessage}`, embeds: [welcomeEmbed] });
+    member.roles.add(guildConfig.defaultRole)
 });
 
 bot.on('guildMemberRemove', async member => { // When someone leaves the server
@@ -98,12 +75,12 @@ bot.on('guildMemberRemove', async member => { // When someone leaves the server
         .setColor(0x00AE86)
         .setDescription("We wish the best, thanks for stopping by :).")
         .setThumbnail("https://i.imgur.com/7s7AuxI.png");
-    masterdb.getGuildJson(member.guild.id,"config").then((guildConfig) =>{
-        bot.guilds.cache.get(member.guild.id).channels.cache.get(guildConfig.welcomeChannel).send({content: `${name} ${guildConfig.newUserMessages[1]}`, embeds: [welcomeEmbed] });
-    }).catch((err) => {
-        console.error(err);
-    });
-    points_manager.removeUser(member.user.id,member.guild.id);
+    guildConfig = await masterdb.getGuildConfig(member.guild.id)
+    if(guildConfig.welcomeChannel == undefined){
+        pglibrary.ChannelLog("Welcome channel is not set","Unset Setting",bot,member.guild.id);
+        return;
+    }
+    bot.guilds.cache.get(member.guild.id).channels.cache.get(guildConfig.welcomeChannel).send({content: `${name} ${guildConfig.leaveMessage}`, embeds: [welcomeEmbed] });
 });
 
 
@@ -117,12 +94,13 @@ bot.on('messageCreate', async (message) =>{ // when someone sends a message
         return;
     }
     var guildId = message.guild.id;
-    guildConfig = await masterdb.getGuildJson(guildId,'config').catch((err) => {console.error(err);return});
+    guildConfig = await masterdb.getGuildConfig(guildId)
     await points_manager.messagePoints(message.author.id,guildId);
     await levels.messageXP(message.author.id,message,guildId);
+    await masterdb.editUserValue(guildId,message.author.id,"cooldown", 1)
+    setTimeout( () => removeEarnCooldown(guildId,message.author.id), guildConfig.earn_cooldown)
     const args = message.content.slice(guildConfig.prefix.length).split(/ +/g); // basic argument by spliting a message by spaces, with the first argument given is args[0]
     const command = args.shift().toLowerCase(); 
-    //console.log(command);
     if (!message.content.startsWith(guildConfig.prefix) || message.author.bot){ // if the message doesn't start with our prefix don't bother
         return;
     }
@@ -159,7 +137,7 @@ bot.on('messageCreate', async (message) =>{ // when someone sends a message
     console.log(`Command to Run: ${command}`);
     if(typeof cmd === 'undefined'){return;}
     if(cmd.admin){
-        if(message.member.roles.cache.find(role => role.name === guildConfig.modrole)){
+        if(message.member.roles.cache.find(role => role.name === guildConfig.adminRole)){
             cmd.execute(message,args,bot,guildId);
             return;
         } else {
@@ -178,157 +156,24 @@ bot.login(hostconfig.token);
 async function Economy(){ // Janky as fuck but works
     await pglibrary.sleep(1000);
     while (true) {
-        await Heists().then((status)=>{
-           console.log(status);
-        }).catch((err) => {console.error(err);});
+        //await Heists().then((status)=>{
+        //   console.log(status);
+        //}).catch((err) => {console.error(err);});
         //await Jackpot(false).then((status)=>{
         //    console.log(status);
         //}).catch((err) => {console.error(err);}); 
-        await StockMarket().then(()=>{
-            console.log(`Finished Stock Market Function`);
-        }).catch((err) => {console.error(err);});
-        if(hostconfig.sql == 1){
-            await ClearSQLDB(); // Temp thing till i figure out SQL more
-            await WritetoSQLDB();
-        }
+        //await StockMarket().then(()=>{
+        //    console.log(`Finished Stock Market Function`);
+        //}).catch((err) => {console.error(err);});
         cusGuildCache.forEach(async guild =>{
+            console.log("GUILD ID: " + guild);
             await points_manager.checkPausedTimers(guild);
         });
         await pglibrary.sleep(5000);
     }
 }
 
-// Jackpot Functions Related Functions
-async function UpdateJackpotData(guildId){ // update the jackpot data array
-    console.log(guildId);
-    fileStatus = await masterdb.doesFileExist(guildId,"jackpot");
-    if(fileStatus){
-        return await masterdb.getGuildJson(guildId,"jackpot");
-    } else {
-        file = {"raffleactive":false,"rafflepot":0,"lastraffleday":0,"users":[]};
-        await masterdb.writeGuildJsonFile(guildId,'jackpot',file).then(() => {
-            console.log("Jackpot File was saved");
-        }).catch((err) => {console.error(err)});
-        return file;
-    }
-}
 
-async function Jackpot(forced) { // Changed to a raffle but am too lazy to update names -- Dyl 8/28/2021 also this function is a janky mess
-    console.log(`Checking For Jackpot Status`);
-    //console.log(cusGuildCache);
-    for(const curGuild of cusGuildCache){
-        console.log(`Running Jackpot for Guild: ${curGuild}`);
-        guildConfig = await masterdb.getGuildJson(curGuild,"config");
-        jackpotData = await UpdateJackpotData(curGuild);
-        //console.log(`Jackpot Data: ${jackpotData}`);
-        if(typeof jackpotData === 'undefined'){
-            UpdateJackpotData(curGuild);
-            return;
-        }
-        //console.log(jackpotData);
-        var [day, hour] = UpdateDate(); // set a var day and hour from the return from UpdateDate()
-        console.log(day, hour);
-        if (forced || RaffleValid(jackpotData, day)) { // if the Jackpot function was forced or the Raffle is Valid to start
-            if (jackpotData.raffleactive == false){ // if a raffle is not active
-                console.log(hour, day);
-                console.log(`Raffle Not Active Might Start One`);
-                if ((forced) && jackpotData.raffleactive == false || hour >= 12 && hour <= 21 && jackpotData.raffleactive == false) { // the Jackpot function was forced and their is no raffle active OR its 12pm and their is no raffle active
-                    //pglibrary.ChannelLog(`Starting Jackpot`, 'Automated Function', bot);
-                    console.log(`Starting Jackpot`);
-                    var startingAmounts = [500, 750, 1000, 1250, 1500, 1750, 2000, 2500, 3000, 4000]; // an array of defined starting amounts to then randomly pick from
-                    var startingamountIndex = pglibrary.getRandomInt(startingAmounts.length); // pick a random number ranging from 0 to the amount of entry's in our startingAmounts array
-                    var startingamount = startingAmounts[startingamountIndex]; // our final starting amount is equal to our startingAmounts array's picked index
-                    console.log(startingamount);
-                    var startingamountMultipliers = [0.95, 1, 1.15, 1.2, 1.35, 1.5, 1.65, 1.75, 2]; // this is pretty much the same process as picking our startingAmount
-                    var startingamountMultipliersIndex = pglibrary.getRandomInt(startingamountMultipliers.length);
-                    var startingMultiplier = startingamountMultipliers[startingamountMultipliersIndex];
-                    var bigmulti = Math.random(); // get a random number ranging from 0 to 1, as an example it could return 0.57124867 and so on
-                    console.log(bigmulti);
-                    if (bigmulti >= 0.98) { // if our random number is greater than or equal to 0.98, pretty much a 2% chance
-                        console.log(`Big Multiplier`);
-                        var startingMultiplier = 5; // if above is true set our multiplier to 5 no matter what
-                    }
-                    console.log(startingMultiplier);
-                    if(!guildConfig.jackpotrole){
-                        guildConfig.jackpotrole = "PLEASE SET JACKPOT ROLE"
-                    }
-                    if(typeof guildConfig.econchannel === 'undefined' || !guildConfig.econchannel){
-                        jackpotData.raffleactive = false
-                        return;
-                    }
-                    const embed = new MessageEmbed() // create a new embed var
-                        .setTitle("Raffle")
-                        .setAuthor(`${bot.user.username}`, bot.user.displayAvatarURL())
-                        .setColor("#2bff00")
-                        .setDescription(`<@&${guildConfig.jackpotrole}>, a Raffle has been started, Raffle Pot is: ${Math.round(startingamount * startingMultiplier)} points.`);
-                    bot.guilds.cache.get(curGuild).channels.cache.get(guildConfig.econchannel).send({ content: `<@&${guildConfig.jackpotrole}>`, embeds: [embed] }); 
-                    jackpotData.raffleactive = true;
-                }
-            } else { // else if there is a raffle active
-                jackpotData = await UpdateJackpotData(curGuild);
-                console.log(`Raffle Currently Active`);
-                console.log(hour, day);
-                if ((forced) && jackpotData.raffleactive == true || hour >= 22 && jackpotData.raffleactive == true) { // the Jackpot function was forced and their is a raffle active OR its 10pm and their is a raffle active
-                    //pglibrary.ChannelLog(`Stopping Jackpot`, 'Automated Function', bot);
-                    console.log('Stop Jackpot');
-                    if(jackpotData.users.length >= 5){
-                        if(!guildConfig.jackpotrole){
-                            guildConfig.jackpotrole = "PLEASE SET JACKPOT ROLE"
-                        }
-                        if(typeof guildConfig.econchannel === 'undefined'){
-                            jackpotData.raffleactive = false
-                            return;
-                        }
-                        randomPick = pglibrary.getRandomInt(jackpotData.users.length);
-                        console.log(`Pick: ${randomPick}`);
-                        winner = data.users[randomPick];
-                        points_manager.giveUserPoints(winner.id,jackpotData.rafflepot,cash,true,curGuild);
-                        winEmbed = new MessageEmbed()
-                        .setTitle("Raffle")
-                        .setAuthor(`${winner.username}`, winner.displayAvatarURL())
-                        .setColor("#2bff00")
-                        .setDescription(`<@&${jackpotid}>, <@${winner.id}> has won the raffle and has gained ${gain} points!`)
-                        bot.guilds.cache.get(curGuild).channels.cache.get(guildConfig.econchannel).send({ content: `<@&${jackpotid}>`, embeds: [embed] }); 
-                        // add raffle channel id to per server config
-                        console.log("Resetting Jackpot.JSON");
-                        ResetRaffleJson(data);
-                    }
-                    //await sleep(20000);
-                } else {
-                    //await sleep(20000);
-                }
-            }
-        } 
-        jackpotData = await UpdateJackpotData(curGuild); // update jackpotData to constatly check if a raffle is active or not
-        if (forced) { // because the forceraffle function runs the function again and creates essenatilly another instance of it, if the jackpot function was forced stop it, this does not interupt the naturally ran jackpot function
-            console.log(`Stopping Forced Raffle Run`);
-            return;
-        }
-    }
-    return Promise.resolve(`Finished Jackpot`)
-    //await sleep(20000); // wait 20 seconds to keep this from running every possible tick
-}
-
-async function ResetRaffleJson(data,guildId) {
-    var jsonupdate = {raffleactive: false, rafflepot: 0, lastraffleday: SetLastRaffleDay(data), users: []}; // empty and reset our json file
-    masterdb.writeGuildJsonFile(guildId,jackpot,jsonupdate).then(()=>{
-        console.log(`Finished Writing to ${guildId}'s Jackpot File`);
-        return true;
-    }).catch(()=>{
-        console.error(`Couldnt Write to Guild ${guildId} Jackpot File, ID could be wrong or file doesnt exist`);
-    });
-    
-}
-
-function RaffleValid(json, day) { // a simple function that checks if the current day is equal to the last day found in jackpot.json
-    if (!(json.lastraffleday == day)) {
-        console.log(`Raffle is allowed to start. ${json.lastraffleday}, ${day}`);
-        return true;
-    } else {
-        console.log(`Raffle is not allowed to start. ${json.lastraffleday}, ${day}`);
-        return false;
-    }
-}
 
 function UpdateDate(){ // update the date
     var date = new Date();
@@ -346,7 +191,7 @@ async function StockMarket() {
     console.log(`Adding Guilds to Stockmarket`);
     cusGuildCache.forEach(async curGuild => {
         console.log(`Adding ${curGuild}`);
-        guildConfig = await masterdb.getGuildJson(curGuild,"config");
+        guildConfig = await masterdb.getGuildConfig(curGuild)
         //console.log(guildConfig);
         if(typeof guildConfig.stockname !== 'undefined'){
             console.log(`Guild ${curGuild} has a stock prefix`);
@@ -427,6 +272,10 @@ async function CalculateStockPrice(stock) {
         finalValue = 0;
     }
     return finalValue;
+}
+
+async function removeEarnCooldown(guildId, userId){
+    await masterdb.editUserValue(guildId,userId,"cooldown", 0)
 }
 
 async function StockCrash(stock) {
@@ -531,96 +380,3 @@ async function HeistsLocationsSetup(guildId){
     }
     return Promise.resolve(`Finished Location Setup`);
 }
-
-
-
-// Database Related Functions
-
-async function ClearSQLDB(){
-    console.log("Clearing MSSQL DB");
-    var SQLconfig = {
-        server: sqlconfig.server,
-        user: sqlconfig.user,
-        password: sqlconfig.password,
-        database: sqlconfig.database,
-        port: 1433,
-        trustServerCertificate: true,
-        options: {
-            "encrypt": true
-        }
-    }
-    try{
-        var dbConn = new SQL.ConnectionPool(SQLconfig);
-        dbConn.connect().then(function() {
-            var transaction = new SQL.Transaction(dbConn);
-            transaction.begin().then(function (){
-                var request = new SQL.Request(transaction);
-                request.query('DELETE FROM StockInfo', function(err, result){
-                    if(err) {
-                        console.log(err);
-                    }
-                    transaction.commit().then(function (recordSet){
-                        console.log(`Cleared Stock Info Table`);
-                        console.log(recordSet);
-                        dbConn.close();
-                    });
-                });
-            });
-        });
-    } catch{
-        console.log(`Something Went wrong, most likely could not connect to SQL Database`);
-    }
-    
-}
-
-async function WritetoSQLDB() {
-    console.log("Writing to MSSQL DB");
-    var stockmarket = GrabStockMarketData();
-
-    var SQLconfig = {
-        server: sqlconfig.server,
-        user: sqlconfig.user,
-        password: sqlconfig.password,
-        database: sqlconfig.database,
-        port: 1433,
-        trustServerCertificate: true,
-        options: {
-            "encrypt": true
-        }
-    }
-
-    const table = new SQL.Table(`StockInfo`);
-    table.create = true;
-    table.columns.add('Name', SQL.NVarChar(10), {nullable: true});
-    table.columns.add('Price', SQL.Int, {nullable: true});
-    console.log(table);
-    stockmarket.stocks.forEach(stock => {
-        console.log(stock);
-        table.rows.add(stock.name, stock.price);
-    });
-    console.log(table);
-    try{
-        var dbConn = new SQL.ConnectionPool(SQLconfig);
-        dbConn.connect().then(function() {
-            var transaction = new SQL.Transaction(dbConn);
-            transaction.begin().then(function (){
-                var request = new SQL.Request(transaction);
-                request.bulk(table, (err, result) => {
-                    if(err) {
-                        console.log(err);
-                    }
-                    if(result){
-                        console.log(result);
-                    }
-                    transaction.commit().then(function (recordSet){
-                        console.log(recordSet);
-                        dbConn.close();
-                    });
-                });
-            });
-        });
-    } catch{
-        console.log(`Something Went wrong, most likely could not connect to SQL Database`);
-    }
-    
-} // https://docs.microsoft.com/en-us/sql/connect/node-js/step-3-proof-of-concept-connecting-to-sql-using-node-js?view=sql-server-ver15

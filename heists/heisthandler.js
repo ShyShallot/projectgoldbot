@@ -40,11 +40,11 @@ async function FinishHeist(userId,guildId,bot){
         usersString += `<@${user.userid}>, `
     });
     if(chance <= 0.5){
-        heistchannel.send(usersString + `The Heist was successful, you all will have your payout of: ${guildPntDB.pointSymbol}${pglibrary.commafy(heistFile.location.maxreward)}, Go home and celebrate.`);
+        heistchannel.send(usersString + `The Heist was successful, you all will have your payout of: ${guildPntDB.point_symbol}${pglibrary.commafy(heistFile.location.maxreward)}, Go home and celebrate.`);
     } else if(chance > 0.5 && chance <= 0.55){
         heistchannel.send(usersString + `The Heist was went the wrong way, but you still made it out alive and not in cuffs, Say goodbye to the money and well as your items.`);
     } else {
-        heistchannel.send(usersString + `The Heist was a complete disaster you idiots, you will not only be in cuffs but will lose ${guildPntDB.pointSymbol}${pglibrary.commafy(heistFile.location.maxreward)}, Have fun being in debt.`);
+        heistchannel.send(usersString + `The Heist was a complete disaster you idiots, you will not only be in cuffs but will lose ${guildPntDB.point_symbol}${pglibrary.commafy(heistFile.location.maxreward)}, Have fun being in debt.`);
     }
     fs.unlinkSync(`./heists/heist-${userId}-${guildId}.json`);
     

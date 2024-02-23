@@ -11,15 +11,8 @@ module.exports = {
     admin: true,
     async execute(message, args, bot){
         if(message.mentions.roles.first()){
-            guildConfig = await masterdb.getGuildJson(message.guild.id,"config");
-            guildConfig.modrole = message.mentions.roles.first().name;
-            await masterdb.writeGuildJsonFile(message.guild.id,"config",guildConfig).then((status => {
-                console.log(status);
-                message.channel.send(`<@${message.author.id}>, Successfully set the ADmin Role to: ${message.mentions.roles.first().name}`);
-            })).catch((err)=>{
-                console.error(err);
-                message.channel.send(`<@${message.author.id}>, Failed to set Role, Either Try again or Contact Support`);
-            });
+            adminRole = message.mentions.roles.first().name;
+            await masterdb.editGuildValue(message.guild.id,"adminRole",adminRole)
         } else {
             message.channel.send(`<@${message.author.id}>, Please Mention a role`);
         }

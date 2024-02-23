@@ -58,8 +58,8 @@ const handler = module.exports = {
                 }
             }
             dB = await point_handler.fetchData(guildId);
-            console.log(dB.pointSymbol);
-            randomString = randomString.replace('$symbol', dB.pointSymbol.toString());
+            console.log(dB.point_symbol);
+            randomString = randomString.replace('$symbol', dB.point_symbol.toString());
             console.log(randomString);
             randomString = randomString.replace('$amount', `${lib.commafy(amount)}`);
             res(randomString);

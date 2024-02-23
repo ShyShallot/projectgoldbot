@@ -16,9 +16,9 @@ module.exports = {
         .setTitle(`Server Total Stats`)
         .setTimestamp()
         .setColor(0x00AE86)
-        .addField('Cash:', `${dB.pointSymbol}${pglibrary.commafy(cash)}`, true)
-        .addField('Bank:', `${dB.pointSymbol}${pglibrary.commafy(bank)}`, true)
-        .addField('Total:', `${dB.pointSymbol}${pglibrary.commafy(total)}`, true);
+        .addField('Cash:', `${dB.point_symbol}${pglibrary.commafy(cash)}`, true)
+        .addField('Bank:', `${dB.point_symbol}${pglibrary.commafy(bank)}`, true)
+        .addField('Total:', `${dB.point_symbol}${pglibrary.commafy(total)}`, true);
         message.channel.send({embeds:[balanceEmbed]});
     }
 }

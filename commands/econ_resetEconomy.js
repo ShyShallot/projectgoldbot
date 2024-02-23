@@ -7,7 +7,7 @@ module.exports = {
     name: 'reset-econ',
     description: 'Reset the Economy for the Entire Server - Mod Only!',
     args: 'None',
-    active: true,
+    active: false,
     admin: true,
     econ: true,
     async execute(message, args, bot){

@@ -3,6 +3,7 @@ const fs = require('fs'); // File System for JS
 const pglibrary = require("../libraryfunctions.js");
 const points_manager = require('../points/manager');
 const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discord.js');
+const masterdb = require('../master-db/masterdb.js');
 module.exports = {
     name: 'store',
     description: "Lists all items available in the Server's Item Store",
@@ -10,7 +11,8 @@ module.exports = {
     active: true,
     econ: true,
     async execute(message, args, bot,guildId){
-        items = await points_manager.fetchItems(guildId);
+        let dB = await masterdb.getGuildConfig(guildId)
+        let items = dB.items
         if(items.length <= 0){
             message.channel.send(`<@${message.author.id}>, This server doesn't have any Items`);
             return;
@@ -60,7 +62,7 @@ async function createItemEmbed(start,message,guildId){
         } else {
             type = "Use"
         }
-        itemEmbed.addField(`${item.name}`, `Cost: ${dB.pointSymbol}${pglibrary.commafy(item.price)}, Type: ${type}`);
+        itemEmbed.addField(`${item.name}`, `Cost: ${dB.point_symbol}${pglibrary.commafy(item.price)}, Type: ${type}`);
     }
     return itemEmbed;
 }

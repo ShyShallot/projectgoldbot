@@ -3,6 +3,7 @@ const fs = require('fs'); // File System for JS
 const pglibrary = require("../libraryfunctions.js");
 const points_manager = require('../points/manager');
 const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discord.js');
+const masterdb = require('../master-db/masterdb.js');
 module.exports = {
     name: 'leaderboard',
     description: 'Get the Server Leaderboard for most points',
@@ -47,12 +48,9 @@ async function createLeaderboardEmbed(start,message){
     .setColor(0x00AE86);
     console.log(startArray, startArray.length);
     for(let i = 0;i<startArray.length;i++){
-        console.log(i);
         let user = startArray[i];
-        console.log(user);
-        dB = await points_manager.fetchData(message.guild.id);
-        console.log(start,i);
-        leaderEmbed.addField(`${start+1+i}. ${user.username}`, `${dB.pointSymbol}${pglibrary.commafy(user.total)}`);
+        dB = await masterdb.getGuildConfig(message.guild.id)
+        leaderEmbed.addField(`${start+1+i}. ${user.username}`, `${dB.point_symbol}${pglibrary.commafy(user.total)}`);
     }
     return leaderEmbed;
 }

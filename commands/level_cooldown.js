@@ -8,7 +8,7 @@ module.exports = {
     name: 'levelcooldown',
     description: 'Sets the Server Level Cooldown per Message',
     args: 'First Arg: Time in Seconds',
-    active: true,
+    active: false,
     admin: true,
     level: true,
     async execute(message, args, bot){

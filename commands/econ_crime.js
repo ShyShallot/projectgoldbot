@@ -4,6 +4,7 @@ const pglibrary = require("../libraryfunctions.js");
 const points_manager = require('../points/manager');
 const string_handler = require('../stringHandler');
 const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discord.js');
+const masterdb = require('../master-db/masterdb.js');
 module.exports = {
     name: 'crime',
     description: 'Become the criminal',
@@ -12,10 +13,10 @@ module.exports = {
     econ: true,
     async execute(message, args, bot){
         guildId = message.guild.id;
-        [users,userIndex] = await points_manager.fetchUser(message.author.id,false,guildId);
-        db = await points_manager.fetchData(guildId);
-        if(users[userIndex].crimeCooldown){
-            message.channel.send(`<@${message.author.id}>, You have too much heat and cannot commit a crime for ${Math.round(Math.abs(((users[userIndex].lastCrime+dB.crimeCooldownTime-Date.now())/(1000*60*60)) % 24))} hour(s)`);
+        let user = await masterdb.getUser(guildId, message.author.id)
+        db = await masterdb.getGuildConfig(guildId)
+        if(user.crime_cooldown == 1){
+            message.channel.send(`<@${message.author.id}>, You have too much heat and cannot commit a crime for ${Math.round(Math.abs(((user.last_crime+dB.crime_cooldown_time-Date.now())/(1000*60*60)) % 24))} hour(s)`);
             return;
         }
         failChance = 0.45;

@@ -14,9 +14,7 @@ module.exports = {
         if(args[0]){
             bet = parseInt(args[0]);
             if(!isNaN(bet)){
-                guildConfig = await masterdb.getGuildJson(guildId,"config");
-                guildConfig.mincoinbet = bet;
-                await masterdb.writeGuildJsonFile(guildId,"config",guildConfig).then((status) => {
+                await masterdb.editGuildValue(guildId,"mincoinbet",bet).then((status) => {
                     message.channel.send(`Successfully Set Server Minimum Bet to: ${bet} points.`);
                 });
             } else {

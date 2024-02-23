@@ -3,6 +3,7 @@ const fs = require('fs'); // File System for JS
 const pglibrary = require("../libraryfunctions.js");
 const points_manager = require('../points/manager');
 const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discord.js');
+const masterdb = require('../master-db/masterdb.js');
 module.exports = {
     name: 'inventory',
     description: "Check your's or another user's Item Inventory Contents",
@@ -18,7 +19,7 @@ module.exports = {
         } else {
             userObject = message.author;
         }  
-        user = await points_manager.fetchUser(userObject.id, true,guildId);
+        user = await masterdb.getUser(guildId, userObject.id)
         if(!user){
             message.channel.send(`<@${message.author.id}>, That user does not exist in the Database`);
             return;

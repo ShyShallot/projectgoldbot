@@ -3,6 +3,7 @@ const fs = require('fs'); // File System for JS
 const pglibrary = require("../libraryfunctions.js");
 const points_manager = require('../points/manager');
 const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discord.js');
+const masterdb = require('../master-db/masterdb.js');
 module.exports = {
     name: 'deposit',
     description: 'Deposit all your Points in Cash into the Bank',
@@ -11,6 +12,7 @@ module.exports = {
     econ: true,
     async execute(message, args, bot){
         guildId = message.guild.id;
+        const dB = await masterdb.getGuildConfig(guildId)
         if(args[0]){
             console.log(args[0]);
             if(args[0] == "all"){
@@ -32,7 +34,7 @@ module.exports = {
             if(err){
                 message.channel.send(err);
             } else {
-                message.channel.send(`<@${message.author.id}>, You have successfully deposited ${dB.pointSymbol}${pglibrary.commafy(amount)}`);
+                message.channel.send(`<@${message.author.id}>, You have successfully deposited ${dB.point_symbol}${pglibrary.commafy(amount)}`);
             }
         } else {
             message.channel.send(`<@${message.author.id}>, Please provide a valid argument`);

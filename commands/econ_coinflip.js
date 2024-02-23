@@ -2,6 +2,8 @@ const {MessageEmbed} = require('discord.js');
 const config = require('../config.json');
 const masterdb = require('../master-db/masterdb');
 const points_manager = require('../points/manager');
+const randomNum = require('../mersenne-twister');
+const M = new randomNum.MersenneTwister();
 // this file handles the coinflip command
 module.exports = {
     name: 'coinflip',
@@ -11,7 +13,7 @@ module.exports = {
     econ: true,
     async execute(message, args, bot){
         guildId = message.guild.id;
-        guildConfig = await masterdb.getGuildJson(guildId,"config");
+        guildConfig = await masterdb.getGuildConfig(guildId);
         [cash,bank] = await points_manager.getUserBalance(message.author.id,guildId);
         console.log(cash, bank);
         console.log(args[0]); // grab the arguments from the command
@@ -88,7 +90,7 @@ async function FlipCoin(cash, args, message) {
             console.log("Bet is over min");
             console.log(cash);
             points_manager.giveUserPoints(message.author.id, -args[1], "cash", true,guildId);
-            var landing = Math.random() * 1.15; // the landing of the coin * 1.15, this makes it so it doesn't constantly land on 1 side to many times
+            var landing = M.random();
             console.log(landing);
             if (landing <= 0.5 && args[0] == "heads"){ // if the landing is less than or equal to 0.5 and the user chose heads
                 console.log("Landed on heads and won");

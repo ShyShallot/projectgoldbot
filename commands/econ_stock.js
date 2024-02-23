@@ -10,7 +10,7 @@ module.exports = {
     name: 'stocks',
     description: 'Buy and Sell stocks as they go up and down', 
     args: '1st Args: Buy | Sell, 2nd Args: Stock Name, 3rd Args: Amount to Buy/Sell',
-    active: true,
+    active: false,
     econ: true,
     async execute(message, args, bot){
         console.log(args);

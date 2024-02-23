@@ -11,8 +11,7 @@ module.exports = {
     active: true,
     econ: true,
     async execute(message, args, bot){
-        guildconfig = await masterdb.getGuildJson(message.guild.id,"config");
-        dB = await points_manager.fetchData(message.guild.id);
+        const dB = await masterdb.getGuildConfig(message.guild.id)
         if(message.member.roles.cache.find(role => role.name === guildconfig.modrole) && args[3] == `false`){
             if(args[0] && args[1] && args[2]){
                 target = message.mentions.members.first();
@@ -22,7 +21,7 @@ module.exports = {
                     message.channel.send(err);
                     return;
                 }
-                message.channel.send(`<@${message.author.id}>, You gave <@${target.id}> ${dB.pointSymbol}${pglibrary.commafy(amount)}`);
+                message.channel.send(`<@${message.author.id}>, You gave <@${target.id}> ${dB.point_symbol}${pglibrary.commafy(amount)}`);
             } else {
                 message.channel.send(`Please Mention a Valid Target/Provide an Amount and Location Arg`);
             }
@@ -36,7 +35,7 @@ module.exports = {
                     message.channel.send(err);
                     return;
                 }
-                message.channel.send(`<@${message.author.id}>, You donated ${dB.pointSymbol}${pglibrary.commafy(amount)} to <@${target.id}>!`);
+                message.channel.send(`<@${message.author.id}>, You donated ${dB.point_symbol}${pglibrary.commafy(amount)} to <@${target.id}>!`);
             } else {
                 message.channel.send(`Please Mention a Valid Target/Provide an Amount and Location Arg`);
             }

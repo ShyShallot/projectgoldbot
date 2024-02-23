@@ -3,6 +3,7 @@ const Discord = require('discord.js');
 const fs = require('fs');
 module.exports = {
     name: 'rate',
+    active: false,
     description: 'Rate the bot 1-10',
     execute(message, args, bot){
             const ratings = {

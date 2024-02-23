@@ -10,7 +10,7 @@ module.exports = {
     name: 'jackpot',
     description: 'Join the Public Raffle',
     args: 'No Arguments',
-    active: true,
+    active: false,
     econ:true,
    * execute(message, args, bot, jackpotState){
         if (!message && jackpotState == 1) { // hacky solution for starting the jackpot from our mainbotfile.js

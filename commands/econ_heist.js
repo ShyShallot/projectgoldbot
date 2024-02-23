@@ -10,7 +10,7 @@ module.exports = {
     name: 'heist',
     description: 'Setup and Start or Join Heists to earn large amounts of money',
     args: 'Possible First Args: list/l | setup | join/j | split | status | start | cancel | equipment | give | inv/inventory',
-    active: true,
+    active: false,
     econ: true,
     async execute(message, args, bot,guildId){
         console.log(args);
@@ -155,19 +155,19 @@ async function ListEquipment(message, bot){
             if(embed.fields[0].value.startsWith(`1`)){
                 embed.fields[0].value = ``;
             }
-            embed.fields[0].value += `${item.name}, \n Cost: ${guildPntDB.pointSymbol}${pglibrary.commafy(item.cost)} \n \n`;
+            embed.fields[0].value += `${item.name}, \n Cost: ${guildPntDB.point_symbol}${pglibrary.commafy(item.cost)} \n \n`;
         }
         if(item.name.includes(`Tier 2`) || item.name.includes(`Medium`)){
             if(embed.fields[1].value.startsWith(`1`)){
                 embed.fields[1].value = ``;
             }
-            embed.fields[1].value += `${item.name}, \n Cost: ${guildPntDB.pointSymbol}${pglibrary.commafy(item.cost)} \n \n`;
+            embed.fields[1].value += `${item.name}, \n Cost: ${guildPntDB.point_symbol}${pglibrary.commafy(item.cost)} \n \n`;
         }
         if(item.name.includes(`Tier 3`) || item.name.includes(`Large`)){
             if(embed.fields[2].value.startsWith(`1`)){
                 embed.fields[2].value = ``;
             }
-            embed.fields[2].value += `${item.name}, \n Cost: ${guildPntDB.pointSymbol}${pglibrary.commafy(item.cost)} \n \n`;
+            embed.fields[2].value += `${item.name}, \n Cost: ${guildPntDB.point_symbol}${pglibrary.commafy(item.cost)} \n \n`;
         }
     });
     message.channel.send({content: `<@${message.author.id}>`, embeds: [embed]});
@@ -226,7 +226,7 @@ async function BuyEquipment(message,args,bot,guildId){
                         if(embed.fields[i].value.startsWith(`1`)){
                             embed.fields[i].value = ``;
                         }
-                        embed.fields[i].value += `${item.name}, \n Cost: ${guildPntDB.pointSymbol}${pglibrary.commafy(item.cost)} \n \n`;
+                        embed.fields[i].value += `${item.name}, \n Cost: ${guildPntDB.point_symbol}${pglibrary.commafy(item.cost)} \n \n`;
                     }
                     break;
                 case 'Tier 2 Equipment':
@@ -234,7 +234,7 @@ async function BuyEquipment(message,args,bot,guildId){
                         if(embed.fields[i].value.startsWith(`1`)){
                             embed.fields[i].value = ``;
                         }
-                        embed.fields[i].value += `${item.name}, \n Cost: ${guildPntDB.pointSymbol}${pglibrary.commafy(item.cost)} \n \n`;
+                        embed.fields[i].value += `${item.name}, \n Cost: ${guildPntDB.point_symbol}${pglibrary.commafy(item.cost)} \n \n`;
                     }
                     break;
                 case 'Tier 3 Equipment':
@@ -242,7 +242,7 @@ async function BuyEquipment(message,args,bot,guildId){
                         if(embed.fields[i].value.startsWith(`1`)){
                             embed.fields[i].value = ``;
                         }
-                        embed.fields[i].value += `${item.name}, \n Cost: ${guildPntDB.pointSymbol}${pglibrary.commafy(item.cost)} \n \n`;
+                        embed.fields[i].value += `${item.name}, \n Cost: ${guildPntDB.point_symbol}${pglibrary.commafy(item.cost)} \n \n`;
                     }
                     break;
             }
@@ -294,7 +294,7 @@ async function BuyEquipment(message,args,bot,guildId){
                         guildInv[index].inv.push(curItm.name);
                     }
                     await masterdb.writeGuildJsonFile(guildId,'heistinventories',guildInv);
-                    interaction.reply(`<@${message.author.id}>, You have successfully purchased a ${curItm.name} for ${guildPntDB.pointSymbol}${pglibrary.commafy(curItm.cost)}`);
+                    interaction.reply(`<@${message.author.id}>, You have successfully purchased a ${curItm.name} for ${guildPntDB.point_symbol}${pglibrary.commafy(curItm.cost)}`);
                     points_manager.giveUserPoints(message.author.id,-curItm.cost,'cash',true,guildId);
                     return;
                 } else {

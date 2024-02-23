@@ -8,7 +8,7 @@ module.exports = {
     name: 'levelreset',
     description: 'Resets a User or the whole server',
     args: 'server || Mention Target',
-    active: true,
+    active: false,
     admin: true,
     level: true,
     async execute(message, args, bot){

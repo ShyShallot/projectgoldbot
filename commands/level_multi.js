@@ -4,6 +4,7 @@ const config = require('../config.json'); // basic load of config file
 const pglibrary = require("../libraryfunctions.js");
 const lvl_mng = require('../levels/level_handler');
 const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discord.js');
+const masterdb = require('../master-db/masterdb.js');
 module.exports = {
     name: 'levelmulti',
     description: 'Sets the Server Multiplier',
@@ -18,7 +19,7 @@ module.exports = {
             }
             guildId = message.guild.id;
             await lvl_mng.setMultiplier(parseInt(args[0]), args[1],guildId);
-            db = await lvl_mng.fetchData(guildId);
+            db = await masterdb.getGuildConfig(guildId)
             message.channel.send(`<@${message.author.id}>, Successfully set the Level Multiplier to: ${db.xpMultiplier}`)
         }
     }

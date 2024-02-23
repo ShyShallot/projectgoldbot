@@ -7,7 +7,7 @@ module.exports = {
     name: 'reset-user',
     description: "Reset a User's Economy Stats - Mod Only!",
     args: 'Mention Target User',
-    active: true,
+    active: false,
     admin: true,
     econ: true,
     async execute(message, args, bot){

@@ -8,7 +8,7 @@ module.exports = {
     name: 'seteconprop',
     description: 'Adds a new Property for all users, HAS TO BE DEFINED IN SCRIPT ALREADY (ADMIN ONLY)',
     args: "1. Property Name (No Spaces) | 2. Property Value (NO SPACES) (Don't provide a value to remove the property) |",
-    active: true,
+    active: false,
     admin: true,
     econ: true,
     async execute(message, args, bot){

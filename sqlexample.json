@@ -1,1 +1,1 @@
-{"server": "SERVER IP", "user": "USERNAME", "password": "SET PASSWORD", "database": "DATABASE NAME"}
+{"host":"IP","user":"USER","password":"PASSWORD","db":"DATABASE"}

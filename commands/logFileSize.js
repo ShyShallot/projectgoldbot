@@ -6,7 +6,7 @@ module.exports = {
     name: 'logsize',
     description: `Debug thing`,
     args: 'N/A',
-    active: true,
+    active: false,
     execute(message, args, bot){
         try{
             logFile = fs.statSync(`./${config.logfileName}`);

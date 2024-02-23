@@ -14,9 +14,7 @@ module.exports = {
             message.channel.send(`<@${message.author.id}>, Please Provide an argument`);
         }
         if(args[0]){
-            guildConfig = await masterdb.getGuildJson(message.guild.id,"config");
-            guildConfig.prefix = args[0];
-            await masterdb.writeGuildJsonFile(message.guild.id,"config",guildConfig).then((status => {
+            await masterdb.editGuildValue(message.guild.id,"prefix",args[0]).then((status => {
                 console.log(status);
                 message.channel.send(`<@${message.author.id}>, Successfully set the Server Prefix to: ${args[0]}`);
             })).catch((err)=>{

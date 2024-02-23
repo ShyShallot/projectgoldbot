@@ -1,7 +1,6 @@
 const fs = require('fs'); // File System for JS
 const config = require('./config.json');
-const {MessageEmbed, Message} = require('discord.js');
-const masterdb = require('./master-db/masterdb');
+const {MessageEmbed, Message} = require('discord.js');6
 /**
  * Gets the digit length of any positive or negative number
  * @param {number} x Any Number 
@@ -17,6 +16,11 @@ function numDigits(x) { // taken from https://stackoverflow.com/a/28203456 god b
  */
 function getRandomInt(max) {
     return Math.floor(Math.random() * max);
+}
+
+function randomNegative(){
+    let ran = Math.random();
+    return (ran < 0.5 ? -1 : 1);
 }
 
 function percentage(number, percent){
@@ -100,40 +104,6 @@ function addHours(date, hours) {
     return newDate;
 }
 
-async function ChannelLog(content, reason, bot,guildId){
-    serverConfig = await masterdb.getGuildJson(guildId,'config');
-    logchannel = bot.guilds.cache.get(guildId).channels.cache.get(serverConfig.logchannel);
-    if(!logchannel){
-        console.log(`INVALID LOG CHANNEL CANCELING!`);
-        return;
-    }
-    date = new Date();
-    logEmbed = new MessageEmbed()
-    .setTitle(reason)
-    .setDescription(content)
-    .setTimestamp()
-    .setAuthor(`${bot.user.username}`, `${bot.user.avatarURL()}`)
-    .setColor(0x00AE86);
-    logchannel.send({embeds: [logEmbed]});
-}
-
-async function EconChannelLog(content,reason,bot,guildId){
-    guildConfig = await masterdb.getGuildJson(guildId,"config");
-    logchannel = bot.channels.cache.get(guildId.econLogChannel);
-    if(!logchannel){
-        console.error(`INVALID LOG CHANNEL CANCELING!`);
-        return;
-    }
-    date = new Date();
-    logEmbed = new MessageEmbed()
-    .setTitle(reason)
-    .setDescription(content)
-    .setTimestamp()
-    .setAuthor(`${bot.user.username}`, `${bot.user.avatarURL()}`)
-    .setColor(0x00AE86);
-    logchannel.send({embeds: [logEmbed]});
-}
-
 function NormSInv(p) {
     var a1 = -39.6968302866538, a2 = 220.946098424521, a3 = -275.928510446969;
     var a4 = 138.357751867269, a5 = -30.6647980661472, a6 = 2.50662827745924;
@@ -171,4 +141,5 @@ function NormSInv(p) {
     return retVal;
 }
 
-module.exports = {numDigits, getRandomInt, WriteToJson, sleep, commafy, convertMS, addHours, ChannelLog, EconChannelLog, percentage,ReadJSON,NormSInv};
+  
+module.exports = {numDigits, getRandomInt, randomNegative, WriteToJson, sleep, commafy, convertMS, addHours, percentage,ReadJSON,NormSInv,};

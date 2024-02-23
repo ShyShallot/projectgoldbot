@@ -7,7 +7,7 @@ module.exports = {
     name: 'sui',
     description: 'Set the Update Interval of the Stock Update',
     args: 'A Number between 1-23', 
-    active: true,
+    active: false,
     execute(message, args, bot){
         if(args[0]){
             argN = parseInt(args[0]);

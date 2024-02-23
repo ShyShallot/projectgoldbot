@@ -20,9 +20,8 @@ module.exports = {
             message.channel.send(`<@${message.author.id}>, please provide a valid channel id`);
             return;
         }
-        guildConfig = await masterdb.getGuildJson(guildId,"config");
-        guildConfig.logchannel = logchannel.id;
-        await masterdb.writeGuildJsonFile(guildId,'config',guildConfig);
+
+        await masterdb.editGuildValue(guildId, "logchannel",args[0])
         message.channel.send(`<@${message.author.id}>, Log Channel successfully set to #${logchannel.name}`);
     }
 }
