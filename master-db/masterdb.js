@@ -34,9 +34,7 @@ const masterdb = module.exports = {
         if (existsValue == 1){
           console.log(`${guildId} is Setup`)
           let config = await this.getGuildConfig(guildId)
-          console.log(config.defaultRole)
           if(typeof config.defaultRole === "string"){
-            console.log(this.getGuildConfig(guildId).defaultRole)
             let guild = bot.guilds.cache.get(guildId);
             let role = guild.roles.cache.find(role => role.id === config.defaultRole)
             await guild.members.fetch().then(async (members) =>{ // since the cache doesnt get EVERY user we manually ask for each user in the server
@@ -47,6 +45,8 @@ const masterdb = module.exports = {
               })
             })
           }
+
+          this.setUserLevels(guildId, bot)
           return
         }
     
@@ -402,23 +402,25 @@ const masterdb = module.exports = {
     return valid_keys[key]
   },
 
-  setUserLevels: async function(guildId){
+  setUserLevels: async function(guildId, bot){
     let dB = await this.getGuildConfig(guildId);
     if (dB.levelsRewards.length == 0){
       return
     }
-    let guild = this.bot.guilds.cache.get(guildId);
+    let guild = bot.guilds.cache.get(guildId);
     await guild.members.fetch().then(async (members) =>{ // since the cache doesnt get EVERY user we manually ask for each user in the server
         members.forEach(async (member) => {
           for(let i=0;i<dB.levelsRewards.length;i++){
-            reward = dB.levelsRewards[i];
-            if(member.roles.cache.some(role => role.id === reward.roleID)){
-                let user = await masterdb.getUser(guild,member.user.id)
+            let reward = dB.levelsRewards[i];
+            const doesUserHaveReward = member.roles.cache.some(role => role.id === reward.roleID)
+            if(doesUserHaveReward){
+                let user = await masterdb.getUser(guildId,member.user.id)
+                if(user === undefined){continue;}
+                console.log(reward.level, user.username)
                 if(user.xp <= (reward.level * dB.nextLevelXpMulti) * dB.xpForLevelUp){
                   await masterdb.editUserValue(guildId,member.user.id, "level",reward.level)
                   await masterdb.editUserValue(guildId,member.user.id, "xp",(reward.level * dB.nextLevelXpMulti) * dB.xpForLevelUp)
                 }
-                break;
             }
           }
         })

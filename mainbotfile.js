@@ -45,6 +45,9 @@ bot.on('ready', async () => { // Runs everything inside when the bot has success
 
 });
 
+bot.on('guildCreate', async (guild) => {
+    await masterdb.setup(guild.id,bot)
+})
 
 bot.on('guildMemberAdd', async member => { // When a someone joins the server
     console.log(`User has joined`);
@@ -61,7 +64,7 @@ bot.on('guildMemberAdd', async member => { // When a someone joins the server
         pglibrary.ChannelLog("Welcome channel is not set","Unset Setting",bot,member.guild.id);
         return;
     }
-    bot.guilds.cache.get(member.guild.id).channels.cache.get(guildConfig.welcomeChannel).send({content: `${name} ${guildConfig.welcomeMessage}`, embeds: [welcomeEmbed] });
+    member.guild.channels.cache.get(guildConfig.welcomeChannel).send({content: `${name} ${guildConfig.welcomeMessage}`, embeds: [welcomeEmbed] });
     member.roles.add(guildConfig.defaultRole)
 });
 
@@ -80,7 +83,7 @@ bot.on('guildMemberRemove', async member => { // When someone leaves the server
         pglibrary.ChannelLog("Welcome channel is not set","Unset Setting",bot,member.guild.id);
         return;
     }
-    bot.guilds.cache.get(member.guild.id).channels.cache.get(guildConfig.welcomeChannel).send({content: `${name} ${guildConfig.leaveMessage}`, embeds: [welcomeEmbed] });
+    member.guild.channels.cache.get(guildConfig.welcomeChannel).send({content: `${name} ${guildConfig.leaveMessage}`, embeds: [welcomeEmbed] });
 });
 
 

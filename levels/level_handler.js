@@ -70,7 +70,7 @@ var manager = module.exports = {
         if(user.xp >= await this.calculateNextLevel(id,guildId)){
             await this.giveRole(message.member, user.level++,guildId).then((status) => {console.log(status)}).catch((err) => {console.error(err); return;});
             await this.levelUpUser(id,guildId);
-            message.channel.send(`<@${message.author.id}>, You have leveled up to Level ${dB.users[userIndex].level++}!`);
+            message.channel.send(`<@${message.author.id}>, You have leveled up to Level ${user.level}!`);
         }
     },
     async sortForLeaderboard(guildId){
@@ -148,7 +148,7 @@ var manager = module.exports = {
         }
     },
     async setRoleReward(roleID,level,guildId){
-        let db = await this.fetchData(guildId);
+        let db = await masterdb.getGuildConfig(guildId)
         if(db.levelsRewards.some(reward => reward.level == level)){
             roleIndex = db.levelsRewards.findIndex(reward => reward.level === level);
             db.levelsRewards[roleIndex].roleID == roleID;
