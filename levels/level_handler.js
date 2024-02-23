@@ -90,8 +90,8 @@ var manager = module.exports = {
     async calculateNextLevel(id,guildId){
         let dB = await masterdb.getGuildConfig(guildId)
         user = await masterdb.getUser(guildId,id)
-        startingXp = 500 * dB.nextLevelXpMulti;
-        nextLevelXPReq = startingXp * user.level;
+        startingXp = dB.xpForLevelUp * dB.nextLevelXpMulti;
+        nextLevelXPReq = startingXp * (user.level + 1);
         return nextLevelXPReq;
     },
     async levelUpUser(id,guildId){

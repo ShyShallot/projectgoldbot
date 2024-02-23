@@ -11,10 +11,11 @@ module.exports = {
     level: true,
     async execute(message, args, bot){
         guildId = message.guild.id;
-        if(args[1]){
-            target = message.mentions.members.first();
+        if(args[0]){
+            let target = message.mentions.members.first();
+            target = target.user
             if(typeof target === 'undefined'){
-                //message.channel.send(`<@${message.author.id}>, Mentioned User is not a valid target`)
+                message.channel.send(`<@${message.author.id}>, Mentioned User is not a valid target`)
                 return;
             } else {
                 [level,xp,nextXP] = await levels.getUserLevel(target.id,guildId);
@@ -32,6 +33,7 @@ module.exports = {
 }
 
 async function Embed(user,level,xp,nextXP,guildId){
+    console.log(user)
     leaderBoard = await levels.sortForLeaderboard(guildId);
     for(i=0;i<leaderBoard.length;i++){
         if(leaderBoard[i].username == user.username){

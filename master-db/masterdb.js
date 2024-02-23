@@ -425,5 +425,21 @@ const masterdb = module.exports = {
           }
         })
     })
+  },
+
+  resetUserData: async function(guildId,bot){
+
+    await this.connection.execute(`TRUNCATE TABLE guild_users_${guildId}`)
+
+    let guild = bot.guilds.cache.get(guildId);
+      let userList = await guild.members.fetch()
+      for(const member of userList){
+          user = member[1].user;
+          if(user.bot){
+              console.error(`User ${user.username} is a Bot`);
+              continue;
+          }
+          await this.insertUserData(user,guildId)
+      }
   }
 };
