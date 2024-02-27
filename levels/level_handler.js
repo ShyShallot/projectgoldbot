@@ -167,5 +167,15 @@ var manager = module.exports = {
         roleIndex = db.levelsRewards.findIndex(reward => reward.level === level);
         db.levelsRewards.splice(roleIndex,1);
         await masterdb.editGuildValue(guildId,"levelsRewards", db.levelsRewards)
+    },
+    async getRoleReward(level, guildId, bot){
+        let db = await masterdb.getGuildConfig(guildId)
+        level = parseInt(level)
+        roleIndex = db.levelsRewards.findIndex(reward => reward.level === level);
+        console.log(roleIndex)
+        if (db.levelsRewards[roleIndex] === undefined){
+            return null
+        }
+        return bot.guilds.cache.get(guildId).roles.cache.get(db.levelsRewards[roleIndex].roleID)
     }
 }
