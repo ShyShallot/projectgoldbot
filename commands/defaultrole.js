@@ -5,6 +5,7 @@ const pglibrary = require("../libraryfunctions.js");
 const lvl_mng = require('../levels/level_handler');
 const masterdb = require('../master-db/masterdb');
 const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discord.js');
+const { LogAction } = require('../logfunctions.js');
 module.exports = {
     name: 'defaultrole',
     description: 'Set or see the default role',
@@ -42,6 +43,8 @@ module.exports = {
         let defaultRoleNew = roleMention.id
 
         message.channel.send(`<@${message.author.id}>, Set the Default Role to: ${roleMention.name}`);
+
+        LogAction(`User ${message.author.username} has set the Default Role to: ${roleMention.name}`, `Default Role Set`, bot, message.guild.id)
 
         await masterdb.editGuildValue(guildId,"defaultRole",defaultRoleNew)
     }

@@ -46,7 +46,7 @@ const masterdb = module.exports = {
             })
           }
 
-          this.setUserLevels(guildId, bot)
+          await this.setUserLevels(guildId, bot)
           return
         }
     
@@ -67,7 +67,7 @@ const masterdb = module.exports = {
 
       this.connection.execute(`UPDATE guild_config_${guildId} SET setup='1'`)
 
-      this.setUserLevels(guildId)
+      await this.setUserLevels(guildId)
 
     } catch (err) {
       console.error(err)

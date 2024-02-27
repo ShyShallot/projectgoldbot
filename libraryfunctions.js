@@ -142,4 +142,4 @@ function NormSInv(p) {
 }
 
   
-module.exports = {numDigits, getRandomInt, randomNegative, WriteToJson, sleep, commafy, convertMS, addHours, percentage,ReadJSON,NormSInv,};
+module.exports = {numDigits, getRandomInt, randomNegative, WriteToJson, sleep, commafy, convertMS, addHours, percentage,ReadJSON,NormSInv};

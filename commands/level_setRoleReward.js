@@ -5,6 +5,7 @@ const pglibrary = require("../libraryfunctions.js");
 const lvl_mng = require('../levels/level_handler');
 const masterdb = require('../master-db/masterdb');
 const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discord.js');
+const { LogAction } = require('../logfunctions.js');
 module.exports = {
     name: 'lvlrewards',
     description: 'Gives rank to user on level requirement',
@@ -42,5 +43,7 @@ module.exports = {
             return;
         });
         message.channel.send(`<@${message.author.id}>, Added ${roleMention.name} to Level ${level}`);
+
+        LogAction(`User ${message.author.username} has added the Role ${roleMention.name} as Reward for Level ${level}`, `Level Reward Add`, bot, message.guild.id)
     }
 }

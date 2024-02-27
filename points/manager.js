@@ -29,7 +29,7 @@ var manager = module.exports = {
                 new_amount = ((amount - pglibrary.percentage(amount, dB.pointsTax)) * dB.points_multi);
                 new_amount = Math.round(new_amount*100)/100;
             }
-            let finalAmount = new_amount+base_cash_balance
+            let finalAmount = new_amount+base_bank_balance
             await masterdb.editUserValue(guildId,id,"balance_bank",finalAmount)
         } else if(location == "cash"){
             let base_cash_balance = user.balance_cash

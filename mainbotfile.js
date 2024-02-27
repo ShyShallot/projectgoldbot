@@ -12,6 +12,7 @@ const levels = require('./levels/level_handler');
 const masterdb = require('./master-db/masterdb');
 const maths = require('mathjs');
 const heisthandler = require('./heists/heisthandler');
+const { LogAction } = require('./logfunctions.js');
 var started = false;
 bot.commands = new Map(); // New Array for our commands
 const cusGuildCache = [];
@@ -66,7 +67,14 @@ bot.on('guildMemberAdd', async member => { // When a someone joins the server
         return;
     }
     member.guild.channels.cache.get(guildConfig.welcomeChannel).send({content: `${name} ${guildConfig.welcomeMessage}`, embeds: [welcomeEmbed] });
-    member.roles.add(guildConfig.defaultRole)
+    const defaultRole = member.guild.roles.cache.get(guildConfig.defaultRole)
+    if (defaultRole !== undefined){
+        console.log(defaultRole)
+        member.roles.add(defaultRole)
+    } else {
+        LogAction(`No Default role is Set please use ${guildConfig.prefix}defaultrole to add one`, `No Default Role`, bot, member.guild.id)
+    }
+    LogAction(`User: ${name} has joined the Server`, `Member Join`, bot, member.guild.id)
 });
 
 bot.on('guildMemberRemove', async member => { // When someone leaves the server
@@ -85,6 +93,7 @@ bot.on('guildMemberRemove', async member => { // When someone leaves the server
         return;
     }
     member.guild.channels.cache.get(guildConfig.welcomeChannel).send({content: `${name} ${guildConfig.leaveMessage}`, embeds: [welcomeEmbed] });
+    LogAction(`User: ${name} has left the Server`, `Member Leave`, bot, member.guild.id)
 });
 
 

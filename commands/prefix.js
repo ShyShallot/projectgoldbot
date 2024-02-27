@@ -3,6 +3,7 @@ const Discord = require('discord.js');
 const fs = require('fs');
 const pglibrary = require('../libraryfunctions');
 const masterdb = require('../master-db/masterdb');
+const { LogAction } = require('../logfunctions');
 module.exports = {
     name: 'prefix',
     description: 'Sets the Servers Prefix, One Word or Letter Only Anything past a space will be excluded',
@@ -17,6 +18,8 @@ module.exports = {
             await masterdb.editGuildValue(message.guild.id,"prefix",args[0]).then((status => {
                 console.log(status);
                 message.channel.send(`<@${message.author.id}>, Successfully set the Server Prefix to: ${args[0]}`);
+
+                LogAction(`User ${message.author.username} has set server Prefix to: ${args[0]}`, `Server Prefix Set`, bot, message.guild.id)
             })).catch((err)=>{
                 console.error(err);
                 message.channel.send(`<@${message.author.id}>, Failed to set Prefix, Either Try again or Contact Support`);

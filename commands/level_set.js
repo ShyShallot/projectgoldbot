@@ -4,6 +4,7 @@ const config = require('../config.json'); // basic load of config file
 const pglibrary = require("../libraryfunctions.js");
 const lvl_mng = require('../levels/level_handler');
 const {MessageEmbed, Message, MessageActionRow, MessageButton} = require('discord.js');
+const { LogAction } = require('../logfunctions.js');
 module.exports = {
     name: 'setlvl',
     description: 'Sets Level or XP to targeted User, Note that it adds for XP and Sets for Level',
@@ -20,11 +21,15 @@ module.exports = {
         if(args[1] == "xp"){
             bool = true;
             string = `gave <@${message.mentions.users.first().id}> ${args[2]} XP`;
+            LogAction(`User ${message.author.username} has set ${message.mentions.users.first().username}'s XP to ${args[2]}`, `Xp Set`, bot, message.guild.id)
         } else if(args[1] == "level"){
             bool = false;
             string = `set <@${message.mentions.users.first().id}> to Level ${args[2]}`;
+            LogAction(`User ${message.author.username} has set ${message.mentions.users.first().username}'s Level to ${args[2]}`, `Xp Set`, bot, message.guild.id)
         }
         await lvl_mng.setUserData(message.mentions.users.first().id, parseInt(args[2]), bool,guildId);
         message.channel.send(`<@${message.author.id}>, Successfully ${string}`);
+
+        
     }
 }
