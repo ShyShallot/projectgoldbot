@@ -89,9 +89,9 @@ const masterdb = module.exports = {
               inv TEXT,
               cooldown BOOLEAN,
               work_cooldown BOOLEAN,
-              set_on_cooldown TIMESTAMP NULL DEFAULT NULL,
+              set_on_cooldown BIGINT NULL DEFAULT NULL,
               crime_cooldown BOOLEAN,
-              last_crime TIMESTAMP NULL DEFAULT NULL,
+              last_crime BIGINT NULL DEFAULT NULL,
               level INT,
               xp INT
           )

@@ -217,7 +217,8 @@ var manager = module.exports = {
         user.balance_cash = Math.round(user.balance_cash*100)/100; // round to the hundredths place
         user.work_cooldown = 1;
         user.set_on_cooldown = Date.now();
-        await masterdb.editUserValue(guildId,id,"balance_cash",balance_cash)
+        console.log(id)
+        await masterdb.editUserValue(guildId,id,"balance_cash",user.balance_cash)
         await masterdb.editUserValue(guildId,id,"set_on_cooldown",user.set_on_cooldown)
         await masterdb.editUserValue(guildId,id,"work_cooldown",user.work_cooldown)
         setTimeout(()=> this.removeWorkCooldown(id), dB.work_cooldown_time);
@@ -233,7 +234,7 @@ var manager = module.exports = {
         user.balance_cash = Math.round(user.balance_cash*100)/100; // round to the hundredths place
         user.crime_cooldown = 1;
         user.last_crime = Date.now();
-        await masterdb.editUserValue(guildId,id,"balance_cash",balance_cash)
+        await masterdb.editUserValue(guildId,id,"balance_cash",user.balance_cash)
         await masterdb.editUserValue(guildId,id,"last_crime",user.last_crime)
         await masterdb.editUserValue(guildId,id,"crime_cooldown",user.crime_cooldown)
         setTimeout(()=> this.removeCrimeCooldown(id), dB.crime_cooldown_time);

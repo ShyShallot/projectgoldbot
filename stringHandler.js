@@ -2,6 +2,7 @@ const fs = require('fs');
 const lib = require('./libraryfunctions');
 const os = require('os');
 const point_handler = require('./points/manager');
+const masterdb = require('./master-db/masterdb');
 const handler = module.exports = {
     dir: null,
     platform: os.platform(),
@@ -57,7 +58,7 @@ const handler = module.exports = {
                     console.log(randomString);
                 }
             }
-            dB = await point_handler.fetchData(guildId);
+            dB = await masterdb.getGuildConfig(guildId)
             console.log(dB.point_symbol);
             randomString = randomString.replace('$symbol', dB.point_symbol.toString());
             console.log(randomString);
