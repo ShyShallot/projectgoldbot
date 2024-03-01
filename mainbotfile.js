@@ -164,6 +164,24 @@ bot.on('messageCreate', async (message) =>{ // when someone sends a message
         return;
     }
 });
+
+bot.on('messageDelete', async(message) => {
+    if (message.author.id === bot.user.id){
+        return
+    }
+    LogAction(message.content,`Message by ${message.author.tag} was deleted`, bot, message.guild.id)
+})
+
+bot.on('messageUpdate', async (oldMessage, newMessage) => {
+    if (oldMessage.author.id === bot.user.id){
+        return
+    }
+    if(oldMessage.content == "" && newMessage.content == ""){
+        return
+    }
+    LogAction(`Old Message: ${oldMessage.content} \n New Message: ${newMessage.content}`,`${newMessage.author.displayName} Updated their Message`, bot, oldMessage.guild.id)
+})
+
 bot.login(hostconfig.token);
 
 async function Economy(){ // Janky as fuck but works

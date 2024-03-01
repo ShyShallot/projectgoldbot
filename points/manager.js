@@ -258,13 +258,13 @@ var manager = module.exports = {
             if(users[i].work_cooldown && typeof users[i].set_on_cooldown !== 'undefined'){
                 if(Date.now() >= users[i].set_on_cooldown + dB.work_cooldown_time){
                     await masterdb.editUserValue(guildId,users[i].user_id,"work_cooldown",0)
-                    await masterdb.editUserValue(guildId,users[i].user_id,"set_on_cooldown",null)
+                    await masterdb.editUserValue(guildId,users[i].user_id,"set_on_cooldown",0)
                 }
             }
             if(users[i].crimeCooldown && typeof users[i].last_crime !== 'undefined'){
                 if(Date.now() >= crime_cooldown[i].last_crime + dB.crime_cooldown_time){
                     await masterdb.editUserValue(guildId,users[i].user_id,"crime_cooldown",0)
-                    await masterdb.editUserValue(guildId,users[i].user_id,"last_crime",null)
+                    await masterdb.editUserValue(guildId,users[i].user_id,"last_crime",0)
                 }
             }
         }
