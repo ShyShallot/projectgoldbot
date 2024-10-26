@@ -1,0 +1,21 @@
+[
+    {"name": "Tier 1 Drill", "cost": 50000},
+    {"name": "Tier 2 Drill", "cost":100000}, 
+    {"name": "Tier 3 Drill", "cost":250000},
+
+    {"name": "Tier 1 Armor", "cost": 150000},
+    {"name":"Tier 2 Armor", "cost":250000},
+    {"name": "Tier 3 Armor", "cost": 500000},
+
+    {"name": "Tier 1 Weaponry", "cost": 100000},
+    {"name":"Tier 2 Weaponry", "cost":  350000},
+    {"name": "Tier 3 Weaponry", "cost": 500000},
+    
+    {"name": "Tier 1 Medkit", "cost": 25000},
+    {"name":"Tier 2 Medkit", "cost":  55000},
+    {"name": "Tier 3 Medkit", "cost": 150000},
+
+    {"name": "Small Dufflebags", "cost": 25000},
+    {"name": "Medium Dufflebags", "cost": 50000},
+    {"name": "Large Dufflebags", "cost": 100000}
+]

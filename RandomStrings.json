@@ -1,0 +1,24 @@
+{
+    "workStrings": [
+      "You worked at a fast food place for Srandom hours and served Srandom customers, earning $symbol$amount.",
+      "You took a side gig delivering packages for Srandom hours, covering Srandom miles and made $symbol$amount.",
+      "You did freelance graphic design for Srandom clients over Srandom hours and earned $symbol$amount.",
+      "You spent Srandom hours coding for a startup and fixed Srandom bugs, getting paid $symbol$amount.",
+      "You worked as a bartender for Srandom hours, serving Srandom drinks, and earned $symbol$amount."
+    ],
+    "crimeStrings": [
+      "You hijacked Srandom cars and sold them on the black market for $symbol$amount.",
+      "You hacked into a bank's system for Srandom hours and managed to siphon off $symbol$amount.",
+      "You ran an underground poker game for Srandom hours and earned $symbol$amount.",
+      "You stole Srandom wallets at a crowded event and walked away with $symbol$amount.",
+      "You spent Srandom hours plotting and successfully robbed a jewelry store, making $symbol$amount."
+    ],
+    "failStrings": [
+      "You slipped on a wet floor during a heist and broke your leg. The hospital bill is $symbol$amount.",
+      "You tried to outrun the cops but crashed your car, and now you need $symbol$amount to fix it.",
+      "Your lock-picking skills failed, and you had to bribe your way out of jail for $symbol$amount.",
+      "You got caught during a burglary and had to pay $symbol$amount to avoid prison time.",
+      "You miscalculated while hacking into a system and triggered an alarm. It cost you $symbol$amount to cover up the mess."
+    ]
+  }
+  
