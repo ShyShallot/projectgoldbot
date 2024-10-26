@@ -46,7 +46,7 @@ bot.on('ready', async () => { // Runs everything inside when the bot has success
         await masterdb.setup(curGuild,bot)
     }
 
-    Economy() // handle our encomy functions for stuff that has to calculate every so often*/
+    //Economy() // handle our encomy functions for stuff that has to calculate every so often*/
     started = true
     
     console.log(`PG Bot Ready Which took: ${Date.now() - startTime}ms`);
