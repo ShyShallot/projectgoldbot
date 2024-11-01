@@ -28,7 +28,7 @@ module.exports = {
         if(target){
             user = target;
         }
-        [bank,cash] = await points_manager.getUserBalance(user.id,message.guild.id);
+        [cash,bank] = await points_manager.getUserBalance(user.id,message.guild.id);
         for(i=0;i<leaderboardArray.length;i++){
             if(leaderboardArray[i].username === user.username){
                 position = i;

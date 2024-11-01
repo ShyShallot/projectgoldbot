@@ -10,7 +10,7 @@ const masterdb = module.exports = {
 
   connection: null,
 
-  connect: async function(){
+  connect: async function () {
     this.connection = mysqlpromise.createPool({
       host: sqlConfig.host,
       user: sqlConfig.user,
@@ -19,58 +19,63 @@ const masterdb = module.exports = {
       waitForConnections: true
     })
 
-    
+
   },
 
-  setup: async function(guildId, bot){
+  setup: async function (guildId, bot) {
     try {
 
-        let command = `SELECT * FROM guild_config_${guildId} WHERE EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = '${sqlConfig.db}' AND table_name = 'guild_config_${guildId}')`
+      let command = `SELECT * FROM guild_config_${guildId} WHERE EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = '${sqlConfig.db}' AND table_name = 'guild_config_${guildId}')`
 
-        let db = await this.connection.execute(command)
+      let db = await this.connection.execute(command)
 
-        db = db[0][0]
+      db = db[0][0]
 
-        if (db.setup == 1){ // check if server has a config table
-          let config = await this.getGuildConfig(guildId)
-          if(typeof config.defaultRole === "string"){
-            let guild = bot.guilds.cache.get(guildId);
-            let role = guild.roles.cache.find(role => role.id === config.defaultRole)
-            console.log("Checking if Users Levels/usernames are properly set")
-            await guild.members.fetch().then(async (members) =>{ // since the cache doesnt get EVERY user we manually ask for each user in the server
-              for(const member of members.values()){
-                if(!member.roles.cache.has(role.id)){
-                  member.roles.add(role)
-                }
-                let userEntry = await this.getUser(guildId, member.user.id)
+      if (db.setup == 1) { // check if server has a config table
+        let config = await this.getGuildConfig(guildId)
+        if (typeof config.defaultRole === "string") {
+          let guild = bot.guilds.cache.get(guildId);
 
-                if (userEntry != undefined){
-                  if (userEntry.username !== member.user.username) {
-                    console.log("Old Username: " + userEntry.username + ", New: " + member.user.username)
-                    this.editUserValue(guildId,member.user.id, "username", member.user.username)
-                  }
-                }
-  
+          let role = guild.roles.cache.find(role => role.id === config.defaultRole)
+
+          console.log("Checking if Users Levels/usernames are properly set")
+
+          let conn = await this.connection.getConnection()
+
+          await guild.members.fetch().then(async (members) => { // since the cache doesnt get EVERY user we manually ask for each user in the server
+            for (const member of members.values()) {
+              if (!member.roles.cache.has(role.id)) {
+                member.roles.add(role)
               }
-            })
-          }
-          await this.setUserLevels(guildId, bot)
+              let userEntry = await this.getUser(guildId, member.user.id)
 
-          console.log(`${guildId} is Setup`)
-          return;
+              if (userEntry != undefined) {
+                if (userEntry.username !== member.user.username) {
+                  console.log("Old Username: " + userEntry.username + ", New: " + member.user.username)
+                  this.editUserValue(guildId, member.user.id, "username", member.user.username)
+                }
+              }
+
+            }
+          })
         }
-    
+        await this.setUserLevels(guildId, bot)
+
+        console.log(`${guildId} is Setup`)
+        return;
+      }
+
       await this.createTables(guildId)
 
       let guild = bot.guilds.cache.get(guildId);
       let userList = await guild.members.fetch()
-      for(const member of userList){
-          user = member[1].user;
-          if(user.bot){
-              console.error(`User ${user.username} is a Bot`);
-              continue;
-          }
-          await this.insertUserData(user,guildId)
+      for (const member of userList) {
+        user = member[1].user;
+        if (user.bot) {
+          console.error(`User ${user.username} is a Bot`);
+          continue;
+        }
+        await this.insertUserData(user, guildId)
       }
 
       console.log("SERVER IS SETUP")
@@ -84,8 +89,8 @@ const masterdb = module.exports = {
     }
   },
 
-  createTables: async function(guildId){
-    try{
+  createTables: async function (guildId) {
+    try {
 
       const guildConfigTableName = `guild_config_${guildId}`
       const guildUserTableName = `guild_users_${guildId}`
@@ -143,13 +148,13 @@ const masterdb = module.exports = {
       await this.connection.execute(createUserTableSQL)
 
       await this.setupGuildConfig(guildId)
-    } catch (err){
+    } catch (err) {
       console.error(err)
     }
   },
 
-  insertUserData: async function(user, guildId){
-    try{
+  insertUserData: async function (user, guildId) {
+    try {
       const userConfig = {
         user_id: user.id,
         username: user.username,
@@ -187,7 +192,7 @@ const masterdb = module.exports = {
         )
       `;
 
-      await this.connection.execute(insertDataQuery, userData, function(err, result){
+      await this.connection.execute(insertDataQuery, userData, function (err, result) {
         if (err) throw err;
         console.log("DONE")
       })
@@ -197,7 +202,7 @@ const masterdb = module.exports = {
     }
   },
 
-  setupGuildConfig: async function(guildId){
+  setupGuildConfig: async function (guildId) {
 
     const guildConfig = {
       setup: 0,
@@ -258,7 +263,7 @@ const masterdb = module.exports = {
       guildConfig.defaultRole,
       guildConfig.game,
       guildConfig.pointsTax
-  ];
+    ];
 
     const insertDataQuery = `
         INSERT INTO guild_config_${guildId} (setup, point_symbol, earn_cooldown, work_cooldown_time, crime_cooldown_time, points_per_message, points_multi, points_tax, starting_balance, max_inventory_size, welcomeMessage, leaveMessage, prefix, mincoinbet, logchannel, welcomeChannel, items, levelsRewards, xpPerMessage, messageCooldownTime, xpMultiplier, nextLevelXpMulti, xpForLevelUp, adminRole, defaultRole, game, pointsTax
@@ -267,14 +272,14 @@ const masterdb = module.exports = {
         )
     `;
 
-    await this.connection.execute(insertDataQuery, values, function(err, result){
+    await this.connection.execute(insertDataQuery, values, function (err, result) {
       if (err) throw err;
       console.log("DONE")
     })
 
   },
 
-  getGuildConfig: async function(guildId){
+  getGuildConfig: async function (guildId) {
     const query = `
       SELECT * FROM guild_config_${guildId}
     `
@@ -283,11 +288,11 @@ const masterdb = module.exports = {
 
     result = result[0][0]
 
-    for(let key in result){
-      if(typeof result[key] !== 'string'){
+    for (let key in result) {
+      if (typeof result[key] !== 'string') {
         continue;
       }
-      if(result[key].startsWith('[') && result[key].endsWith(']')){
+      if (result[key].startsWith('[') && result[key].endsWith(']')) {
         result[key] = JSON.parse(result[key])
       }
     }
@@ -295,22 +300,22 @@ const masterdb = module.exports = {
     return result
   },
 
-  editGuildValue: async function(guildId, key, value){
-    if (!this.checkIfKeyIsValid(key)){
+  editGuildValue: async function (guildId, key, value) {
+    if (!this.checkIfKeyIsValid(key)) {
       return
     }
 
-    if(typeof value === 'object' && value !== null){
+    if (typeof value === 'object' && value !== null) {
       value = JSON.stringify(value)
     }
 
     await this.connection.execute(`UPDATE guild_config_${guildId} SET ${key}='${value}'`)
-    
+
 
     console.log("Done setting " + key + ", to: " + value)
   },
 
-  getUser: async function(guildId, userId){
+  getUser: async function (guildId, userId) {
     const query = `
       SELECT * FROM guild_users_${guildId} WHERE user_id LIKE ${userId}
     `
@@ -319,11 +324,11 @@ const masterdb = module.exports = {
 
     result = result[0][0]
 
-    for(let key in result){
-      if(typeof result[key] !== 'string'){
+    for (let key in result) {
+      if (typeof result[key] !== 'string') {
         continue;
       }
-      if(result[key].startsWith('[') && result[key].endsWith(']')){
+      if (result[key].startsWith('[') && result[key].endsWith(']')) {
         result[key] = JSON.parse(result[key])
       }
     }
@@ -331,21 +336,25 @@ const masterdb = module.exports = {
     return result
   },
 
-  editUserValue: async function(guildId, userId, key, value){
-    if (!this.checkIfKeyIsValid(key)){
+  editUserValue: async function (guildId, userId, key, value, queue, queue_conn) {
+    if (!this.checkIfKeyIsValid(key)) {
       return
     }
 
-    if(typeof value === 'object' && value !== null){
+    if (typeof value === 'object' && value !== null) {
       value = JSON.stringify(value)
     }
 
-    await this.connection.execute(`UPDATE guild_users_${guildId} SET ${key}='${value}' WHERE user_id = '${userId}'`)
-    
+    if (queue & queue_conn != undefined){
+      await queue_conn.query(`UPDATE guild_users_${guildId} SET ${key}='${value}' WHERE user_id = '${userId}'`)
+    } else {
+      await this.connection.execute(`UPDATE guild_users_${guildId} SET ${key}='${value}' WHERE user_id = '${userId}'`)
+    }
+
     console.log("Done setting " + key + " to: " + value)
   },
 
-  getAllUsers: async function(guildId){
+  getAllUsers: async function (guildId) {
     const query = `
       SELECT * FROM guild_users_${guildId}
     `
@@ -354,22 +363,22 @@ const masterdb = module.exports = {
 
     result = result[0]
 
-    for(let i=0;i<result.length;i++){
-      for(let key in result[i]){
-        if(typeof result[i][key] !== 'string'){
+    for (let i = 0; i < result.length; i++) {
+      for (let key in result[i]) {
+        if (typeof result[i][key] !== 'string') {
           continue;
         }
-        if(result[i][key].startsWith('[') && result[i][key].endsWith(']')){
+        if (result[i][key].startsWith('[') && result[i][key].endsWith(']')) {
           result[i][key] = JSON.parse(result[i][key])
         }
       }
     }
-    
+
 
     return result
   },
 
-  checkIfKeyIsValid: function(key){
+  checkIfKeyIsValid: function (key) {
     valid_keys = {
       setup: true,
       point_symbol: true,
@@ -413,32 +422,32 @@ const masterdb = module.exports = {
     return valid_keys[key]
   },
 
-  setUserLevels: async function(guildId, bot){
+  setUserLevels: async function (guildId, bot) {
     let dB = await this.getGuildConfig(guildId);
-    if (dB.levelsRewards.length == 0){
+    if (dB.levelsRewards.length == 0) {
       return
     }
     let guild = bot.guilds.cache.get(guildId);
-    await guild.members.fetch().then(async (members) =>{ // since the cache doesnt get EVERY user we manually ask for each user in the server
-        for(const member of members.values()){
-          for(let i=0;i<dB.levelsRewards.length;i++){
-            let reward = dB.levelsRewards[i];
-            const doesUserHaveReward = member.roles.cache.some(role => role.id === reward.roleID)
-            if(doesUserHaveReward){
-                let user = await masterdb.getUser(guildId,member.user.id)
-                if(user === undefined){continue;}
-                console.log(reward.level, user.username)
-                if(user.xp < (reward.level * dB.nextLevelXpMulti) * dB.xpForLevelUp){
-                  await masterdb.editUserValue(guildId,member.user.id, "level",reward.level)
-                  await masterdb.editUserValue(guildId,member.user.id, "xp",(reward.level * dB.nextLevelXpMulti) * dB.xpForLevelUp)
-                }
+    await guild.members.fetch().then(async (members) => { // since the cache doesnt get EVERY user we manually ask for each user in the server
+      for (const member of members.values()) {
+        for (let i = 0; i < dB.levelsRewards.length; i++) {
+          let reward = dB.levelsRewards[i];
+          const doesUserHaveReward = member.roles.cache.some(role => role.id === reward.roleID)
+          if (doesUserHaveReward) {
+            let user = await masterdb.getUser(guildId, member.user.id)
+            if (user === undefined) { continue; }
+            console.log(reward.level, user.username)
+            if (user.xp < (reward.level * dB.nextLevelXpMulti) * dB.xpForLevelUp) {
+              await masterdb.editUserValue(guildId, member.user.id, "level", reward.level)
+              await masterdb.editUserValue(guildId, member.user.id, "xp", (reward.level * dB.nextLevelXpMulti) * dB.xpForLevelUp)
             }
           }
         }
+      }
     })
   },
 
-  resetUserData: async function(guildId,bot){
+  resetUserData: async function (guildId, bot) {
 
     await this.connection.execute(`TRUNCATE TABLE guild_users_${guildId}`)
 

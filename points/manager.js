@@ -101,7 +101,7 @@ var manager = module.exports = {
     },
     async getUserBalance(id, guildId){
         user = await masterdb.getUser(guildId,id)
-        return [user.balance_bank, user.balance_cash]
+        return [user.balance_cash, user.balance_bank]
     },
     async getServerStats(guildId){
         startTime = Date.now();
