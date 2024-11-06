@@ -123,7 +123,7 @@ var manager = module.exports = {
             user.balance_cash -= amount;
             user.balance_bank += Math.round(amount);
             await masterdb.editUserValue(guildId,id,"balance_cash",user.balance_cash)
-            await masterdb.editUserValue(guildId,id,"balance_cash",user.balance_bank)
+            await masterdb.editUserValue(guildId,id,"balance_bank",user.balance_bank)
         } else {
             err = "Not Enough Points to Deposit";
             return err;
@@ -136,7 +136,7 @@ var manager = module.exports = {
             user.balance_cash += amount;
             user.balance_bank -= Math.round(amount);
             await masterdb.editUserValue(guildId,id,"balance_cash",user.balance_cash)
-            await masterdb.editUserValue(guildId,id,"balance_cash",user.balance_bank)
+            await masterdb.editUserValue(guildId,id,"balance_bank",user.balance_bank)
         } else {
             err = "Not Enough Points to Deposit";
             return err;
