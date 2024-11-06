@@ -12,9 +12,10 @@ module.exports = {
     econ: true,
     async execute(message, args, bot){
         const dB = await masterdb.getGuildConfig(message.guild.id)
-        if(message.member.roles.cache.find(role => role.name === guildconfig.modrole) && args[3] == `false`){
+        if(message.member.roles.cache.find(role => role.name === dB.adminrole) && args[3] == `false`){
             if(args[0] && args[1] && args[2]){
                 target = message.mentions.members.first();
+                target = target.user;
                 amount = parseInt(args[1]);
                 err = await points_manager.giveUserPoints(target.id, amount, args[2], true, message.guild.id);
                 if(err){
@@ -28,6 +29,7 @@ module.exports = {
         } else {
             if(args[0] && args[1] && args[2]){
                 target = message.mentions.members.first();
+                target = target.user;
                 amount = parseInt(args[1]);
                 location = args[2];
                 err = await points_manager.donatePoints(message.author.id, target.id, amount, location ,message.guild.id);
