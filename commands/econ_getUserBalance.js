@@ -26,7 +26,7 @@ module.exports = {
         let user = message.author;
         let target = message.mentions.members.first();
         if(target){
-            user = target;
+            user = target.user;
         }
         [cash,bank] = await points_manager.getUserBalance(user.id,message.guild.id);
         for(i=0;i<leaderboardArray.length;i++){
